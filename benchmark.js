@@ -30,7 +30,7 @@ var brotli = require('brotli'),
     path = require('path'),
     Progress = require('progress'),
     querystring = require('querystring'),
-    Table = require('cli-table'),
+    Table = require('cli-table3'),
     url = require('url'),
     zlib = require('zlib');
 
@@ -297,7 +297,7 @@ run(fileNames.map(function(fileName) {
 
     function testWillPeavy(done) {
       readText(filePath, function(data) {
-        var options = url.parse('https://www.willpeavy.com/minifier/');
+        var options = url.parse('https://www.willpeavy.com/tools/minifier/');
         options.method = 'POST';
         options.headers = {
           'Content-Type': 'application/x-www-form-urlencoded'

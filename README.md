@@ -1,14 +1,14 @@
 # HTMLMinifier
 
-[![NPM version](https://img.shields.io/npm/v/html-minifier.svg)](https://www.npmjs.com/package/html-minifier)
-[![Build Status](https://img.shields.io/travis/kangax/html-minifier.svg)](https://travis-ci.org/kangax/html-minifier)
-[![Dependency Status](https://img.shields.io/david/kangax/html-minifier.svg)](https://david-dm.org/kangax/html-minifier)
+[![NPM version](https://img.shields.io/npm/v/html-minifier-terser.svg)](https://www.npmjs.com/package/html-minifier-terser)
+[![Build Status](https://img.shields.io/travis/DanielRuf/html-minifier-terser.svg)](https://travis-ci.org/DanielRuf/html-minifier-terser)
+[![Dependency Status](https://img.shields.io/david/DanielRuf/html-minifier-terser.svg)](https://david-dm.org/DanielRuf/html-minifier-terser)
 
-[HTMLMinifier](https://kangax.github.io/html-minifier/) is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
+[HTMLMinifier](https://danielruf.github.io/html-minifier-terser/) is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
 
 See [corresponding blog post](http://perfectionkills.com/experimenting-with-html-minifier/) for all the gory details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier/#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier/#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier/#field_testing) and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier/#cost_and_benefits).
 
-[Test suite is available online](https://kangax.github.io/html-minifier/tests/).
+[Test suite is available online](https://danielruf.github.io/html-minifier-terser/tests/).
 
 Also see corresponding [Ruby wrapper](https://github.com/stereobooster/html_minifier), and for Node.js, [Grunt plugin](https://github.com/gruntjs/grunt-contrib-htmlmin), [Gulp module](https://github.com/jonschlinkert/gulp-htmlmin), [Koa middleware wrapper](https://github.com/koajs/html-minifier) and [Express middleware wrapper](https://github.com/melonmanchan/express-minify-html).
 
@@ -20,19 +20,18 @@ How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Pe
 
 | Site                                                                         | Original size *(KB)* | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
 | ---------------------------------------------------------------------------- |:--------------------:| ------------:| --------:| ----------:| ------------------:|
-| [Google](https://www.google.com/)                                            | 46                   | **42**       | 46       | 48         | 46                 |
-| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 125                  | **98**       | 111      | 117        | 111                |
-| [Twitter](https://twitter.com/)                                              | 207                  | **165**      | 200      | 224        | 200                |
-| [Stack Overflow](https://stackoverflow.com/)                                 | 253                  | **195**      | 207      | 215        | 204                |
-| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | 228        | 269                |
-| [BBC](https://www.bbc.co.uk/)                                                | 298                  | **239**      | 290      | 291        | 280                |
-| [Amazon](https://www.amazon.co.uk/)                                          | 422                  | **316**      | 412      | 425        | n/a                |
-| [NBC](https://www.nbc.com/)                                                  | 553                  | **530**      | 552      | 553        | 534                |
-| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 565                  | **461**      | 548      | 569        | 548                |
-| [New York Times](https://www.nytimes.com/)                                   | 678                  | **606**      | 675      | 670        | n/a                |
+| [Google](https://www.google.com/)                                            | 45                   | **41**       | 45       | 46         | 45                 |
+| [Stack Overflow](https://stackoverflow.com/)                                 | 115                  | **82**       | 90       | 92         | 88                 |
+| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 132                  | **105**      | 118      | 123        | 118                |
+| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | 229        | 269                |
+| [Twitter](https://twitter.com/)                                              | 289                  | **238**      | 282      | 314        | 282                |
+| [BBC](https://www.bbc.co.uk/)                                                | 298                  | **233**      | 289      | 291        | 269                |
+| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 574                  | **468**      | 557      | 578        | 557                |
+| [Amazon](https://www.amazon.co.uk/)                                          | 702                  | **343**      | 692      | 704        | n/a                |
+| [NBC](https://www.nbc.com/)                                                  | 844                  | **805**      | 843      | 844        | n/a                |
 | [Eloquent Javascript](https://eloquentjavascript.net/1st_edition/print.html) | 870                  | **815**      | 840      | 864        | n/a                |
-| [ES6 table](https://kangax.github.io/compat-table/es6/)                      | 5911                 | **5051**     | 5595     | n/a        | n/a                |
-| [ES draft](https://tc39.github.io/ecma262/)                                  | 6126                 | **5495**     | 5664     | n/a        | n/a                |
+| [New York Times](https://www.nytimes.com/)                                   | 1304                 | **1183**     | 1301     | 1295       | n/a                |
+| [ES draft](https://tc39.github.io/ecma262/)                                  | 6347                 | **5686**     | 5863     | n/a        | n/a                |
 
 ## Options Quick Reference
 
@@ -130,7 +129,7 @@ npm install html-minifier
 From Git:
 
 ```shell
-git clone git://github.com/kangax/html-minifier.git
+git clone git://github.com/DanielRuf/html-minifier-terser.git
 cd html-minifier
 npm link .
 ```

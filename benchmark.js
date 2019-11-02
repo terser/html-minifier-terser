@@ -20,7 +20,7 @@ else if (installed.status) {
   process.exit(installed.status);
 }
 
-var brotli = require('brotli'),
+var iltorb = require('iltorb'),
     chalk = require('chalk'),
     fork = require('child_process').fork,
     fs = require('fs'),
@@ -254,7 +254,7 @@ run(fileNames.map(function(fileName) {
         // Apply Brotli on minified output
         function(done) {
           readBuffer(info.filePath, function(data) {
-            var output = new Buffer(brotli.compress(data, true).buffer);
+            var output = new Buffer(iltorb.compressSync(data));
             writeBuffer(info.brFilePath, output, function() {
               info.brTime = Date.now();
               // Open and read the size of the minified+brotli output

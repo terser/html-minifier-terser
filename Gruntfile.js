@@ -32,23 +32,15 @@ module.exports = function(grunt) {
           banner: '<%= banner %>',
           preBundleCB: function() {
             var fs = require('fs');
-            var UglifyJS = require('uglify-js');
-            var files = {};
-            UglifyJS.FILES.forEach(function(file) {
-              files[file] = fs.readFileSync(file, 'utf8');
-            });
-            fs.writeFileSync('./dist/uglify.js', UglifyJS.minify(files, {
-              compress: false,
-              mangle: false,
-              wrap: 'exports'
-            }).code);
+            var file = fs.readFileSync('./node_modules/terser/dist/bundle.min.js');
+            fs.writeFileSync('./dist/terser.js', file);
           },
           postBundleCB: function(err, src, next) {
-            require('fs').unlinkSync('./dist/uglify.js');
+            require('fs').unlinkSync('./dist/terser.js');
             next(err, src);
           },
           require: [
-            './dist/uglify.js:uglify-js',
+            './dist/terser.js:terser',
             './src/htmlminifier.js:html-minifier'
           ]
         },
@@ -90,13 +82,13 @@ module.exports = function(grunt) {
       ]
     },
 
-    uglify: {
+    terser: {
       options: {
-        banner: '<%= banner %>',
         compress: true,
-        mangle: true,
-        preserveComments: false,
-        report: 'min'
+        mangle: true
+      },
+      beautify: {
+        comments: 'all'
       },
       minify: {
         files: {
@@ -107,7 +99,7 @@ module.exports = function(grunt) {
   });
 
   grunt.loadNpmTasks('grunt-browserify');
-  grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-terser');
   grunt.loadNpmTasks('grunt-eslint');
 
   function report(type, details) {
@@ -178,7 +170,7 @@ module.exports = function(grunt) {
   grunt.registerTask('dist', [
     'replace',
     'browserify',
-    'uglify'
+    'terser'
   ]);
 
   grunt.registerTask('test', [

@@ -72,7 +72,8 @@ function toByteArray (b64) {
     ? validLen - 4
     : validLen
 
-  for (var i = 0; i < len; i += 4) {
+  var i
+  for (i = 0; i < len; i += 4) {
     tmp =
       (revLookup[b64.charCodeAt(i)] << 18) |
       (revLookup[b64.charCodeAt(i + 1)] << 12) |
@@ -175,6 +176,10 @@ arguments[4][2][0].apply(exports,arguments)
 
 var base64 = require('base64-js')
 var ieee754 = require('ieee754')
+var customInspectSymbol =
+  (typeof Symbol === 'function' && typeof Symbol.for === 'function')
+    ? Symbol.for('nodejs.util.inspect.custom')
+    : null
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -211,7 +216,9 @@ function typedArraySupport () {
   // Can typed array instances can be augmented?
   try {
     var arr = new Uint8Array(1)
-    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function () { return 42 } }
+    var proto = { foo: function () { return 42 } }
+    Object.setPrototypeOf(proto, Uint8Array.prototype)
+    Object.setPrototypeOf(arr, proto)
     return arr.foo() === 42
   } catch (e) {
     return false
@@ -240,7 +247,7 @@ function createBuffer (length) {
   }
   // Return an augmented `Uint8Array` instance
   var buf = new Uint8Array(length)
-  buf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(buf, Buffer.prototype)
   return buf
 }
 
@@ -290,7 +297,7 @@ function from (value, encodingOrOffset, length) {
   }
 
   if (value == null) {
-    throw TypeError(
+    throw new TypeError(
       'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
       'or Array-like Object. Received type ' + (typeof value)
     )
@@ -342,8 +349,8 @@ Buffer.from = function (value, encodingOrOffset, length) {
 
 // Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
 // https://github.com/feross/buffer/pull/148
-Buffer.prototype.__proto__ = Uint8Array.prototype
-Buffer.__proto__ = Uint8Array
+Object.setPrototypeOf(Buffer.prototype, Uint8Array.prototype)
+Object.setPrototypeOf(Buffer, Uint8Array)
 
 function assertSize (size) {
   if (typeof size !== 'number') {
@@ -447,7 +454,8 @@ function fromArrayBuffer (array, byteOffset, length) {
   }
 
   // Return an augmented `Uint8Array` instance
-  buf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(buf, Buffer.prototype)
+
   return buf
 }
 
@@ -769,6 +777,9 @@ Buffer.prototype.inspect = function inspect () {
   if (this.length > max) str += ' ... '
   return '<Buffer ' + str + '>'
 }
+if (customInspectSymbol) {
+  Buffer.prototype[customInspectSymbol] = Buffer.prototype.inspect
+}
 
 Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
   if (isInstance(target, Uint8Array)) {
@@ -894,7 +905,7 @@ function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
         return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
       }
     }
-    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+    return arrayIndexOf(buffer, [val], byteOffset, encoding, dir)
   }
 
   throw new TypeError('val must be string, number or Buffer')
@@ -1223,7 +1234,7 @@ function hexSlice (buf, start, end) {
 
   var out = ''
   for (var i = start; i < end; ++i) {
-    out += toHex(buf[i])
+    out += hexSliceLookupTable[buf[i]]
   }
   return out
 }
@@ -1260,7 +1271,8 @@ Buffer.prototype.slice = function slice (start, end) {
 
   var newBuf = this.subarray(start, end)
   // Return an augmented `Uint8Array` instance
-  newBuf.__proto__ = Buffer.prototype
+  Object.setPrototypeOf(newBuf, Buffer.prototype)
+
   return newBuf
 }
 
@@ -1749,6 +1761,8 @@ Buffer.prototype.fill = function fill (val, start, end, encoding) {
     }
   } else if (typeof val === 'number') {
     val = val & 255
+  } else if (typeof val === 'boolean') {
+    val = Number(val)
   }
 
   // Invalid ranges are not set to a default, so can range check early.
@@ -1804,11 +1818,6 @@ function base64clean (str) {
     str = str + '='
   }
   return str
-}
-
-function toHex (n) {
-  if (n < 16) return '0' + n.toString(16)
-  return n.toString(16)
 }
 
 function utf8ToBytes (string, units) {
@@ -1941,8 +1950,22 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
+// Create lookup table for `toString('hex')`
+// See: https://github.com/feross/buffer/issues/219
+var hexSliceLookupTable = (function () {
+  var alphabet = '0123456789abcdef'
+  var table = new Array(256)
+  for (var i = 0; i < 16; ++i) {
+    var i16 = i * 16
+    for (var j = 0; j < 16; ++j) {
+      table[i16 + j] = alphabet[i] + alphabet[j]
+    }
+  }
+  return table
+})()
+
 }).call(this,require("buffer").Buffer)
-},{"base64-js":1,"buffer":4,"ieee754":105}],5:[function(require,module,exports){
+},{"base64-js":1,"buffer":4,"ieee754":104}],5:[function(require,module,exports){
 module.exports = {
   "100": "Continue",
   "101": "Switching Protocols",
@@ -2187,7 +2210,7 @@ function calculateStatsFrom(styles, context) {
 }
 
 }).call(this,require('_process'))
-},{"./optimizer/level-0/optimize":9,"./optimizer/level-1/optimize":10,"./optimizer/level-2/optimize":29,"./optimizer/validator":57,"./options/compatibility":59,"./options/fetch":60,"./options/format":61,"./options/inline":64,"./options/inline-request":62,"./options/inline-timeout":63,"./options/optimization-level":65,"./options/rebase":67,"./options/rebase-to":66,"./reader/input-source-map-tracker":71,"./reader/read-sources":77,"./writer/simple":99,"./writer/source-maps":100,"_process":112}],8:[function(require,module,exports){
+},{"./optimizer/level-0/optimize":9,"./optimizer/level-1/optimize":10,"./optimizer/level-2/optimize":29,"./optimizer/validator":57,"./options/compatibility":59,"./options/fetch":60,"./options/format":61,"./options/inline":64,"./options/inline-request":62,"./options/inline-timeout":63,"./options/optimization-level":65,"./options/rebase":67,"./options/rebase-to":66,"./reader/input-source-map-tracker":71,"./reader/read-sources":77,"./writer/simple":99,"./writer/source-maps":100,"_process":109}],8:[function(require,module,exports){
 var Hack = {
   ASTERISK: 'asterisk',
   BANG: 'bang',
@@ -10192,7 +10215,7 @@ module.exports = {
   formatFrom: formatFrom
 };
 
-},{"../utils/override":95,"os":109}],62:[function(require,module,exports){
+},{"../utils/override":95,"os":107}],62:[function(require,module,exports){
 (function (process){
 var url = require('url');
 
@@ -10218,7 +10241,7 @@ function proxyOptionsFrom(httpProxy) {
 module.exports = inlineRequestFrom;
 
 }).call(this,require('_process'))
-},{"../utils/override":95,"_process":112,"url":162}],63:[function(require,module,exports){
+},{"../utils/override":95,"_process":109,"url":163}],63:[function(require,module,exports){
 var DEFAULT_TIMEOUT = 5000;
 
 function inlineTimeoutFrom(option) {
@@ -10478,7 +10501,7 @@ function rebaseToFrom(option) {
 module.exports = rebaseToFrom;
 
 }).call(this,require('_process'))
-},{"_process":112,"path":110}],67:[function(require,module,exports){
+},{"_process":109,"path":108}],67:[function(require,module,exports){
 function rebaseFrom(rebaseOption) {
   return undefined === rebaseOption ? true : !!rebaseOption;
 }
@@ -10824,7 +10847,7 @@ function applySourceMapTo(token, inputSourceMapTracker) {
 module.exports = applySourceMaps;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"../tokenizer/token":84,"../utils/has-protocol":88,"../utils/is-data-uri-resource":89,"../utils/is-remote-resource":93,"./is-allowed-resource":72,"./match-data-uri":75,"./rebase-local-map":78,"./rebase-remote-map":79,"buffer":4,"fs":3,"path":110}],70:[function(require,module,exports){
+},{"../tokenizer/token":84,"../utils/has-protocol":88,"../utils/is-data-uri-resource":89,"../utils/is-remote-resource":93,"./is-allowed-resource":72,"./match-data-uri":75,"./rebase-local-map":78,"./rebase-remote-map":79,"buffer":4,"fs":3,"path":108}],70:[function(require,module,exports){
 var split = require('../utils/split');
 
 var BRACE_PREFIX = /^\(/;
@@ -10921,7 +10944,7 @@ function track(maps, source, data) {
 
 module.exports = inputSourceMapTracker;
 
-},{"source-map":155}],72:[function(require,module,exports){
+},{"source-map":142}],72:[function(require,module,exports){
 var path = require('path');
 var url = require('url');
 
@@ -11000,7 +11023,7 @@ function isRemoteRule(rule) {
 
 module.exports = isAllowedResource;
 
-},{"../utils/has-protocol":88,"../utils/is-remote-resource":93,"path":110,"url":162}],73:[function(require,module,exports){
+},{"../utils/has-protocol":88,"../utils/is-remote-resource":93,"path":108,"url":163}],73:[function(require,module,exports){
 var fs = require('fs');
 var path = require('path');
 
@@ -11128,7 +11151,7 @@ function loadOriginalSourceFromLocalUri(relativeUri, loadContext) {
 
 module.exports = loadOriginalSources;
 
-},{"../utils/has-protocol":88,"../utils/is-remote-resource":93,"./is-allowed-resource":72,"fs":3,"path":110}],74:[function(require,module,exports){
+},{"../utils/has-protocol":88,"../utils/is-remote-resource":93,"./is-allowed-resource":72,"fs":3,"path":108}],74:[function(require,module,exports){
 var http = require('http');
 var https = require('https');
 var url = require('url');
@@ -11204,7 +11227,7 @@ function loadRemoteResource(uri, inlineRequest, inlineTimeout, callback) {
 
 module.exports = loadRemoteResource;
 
-},{"../utils/is-http-resource":90,"../utils/is-https-resource":91,"../utils/override":95,"http":156,"https":104,"url":162}],75:[function(require,module,exports){
+},{"../utils/is-http-resource":90,"../utils/is-https-resource":91,"../utils/override":95,"http":143,"https":103,"url":163}],75:[function(require,module,exports){
 var DATA_URI_PATTERN = /^data:(\S*?)?(;charset=[^;]+)?(;[^,]+?)?,(.+)/;
 
 function matchDataUri(uri) {
@@ -11568,7 +11591,7 @@ function wrapInMedia(tokens, mediaQuery, metadata) {
 module.exports = readSources;
 
 }).call(this,{"isBuffer":require("../../../is-buffer/index.js")},require('_process'))
-},{"../../../is-buffer/index.js":107,"../tokenizer/marker":83,"../tokenizer/token":84,"../tokenizer/tokenize":85,"../utils/has-protocol":88,"../utils/is-import":92,"../utils/is-remote-resource":93,"./apply-source-maps":69,"./extract-import-url-and-media":70,"./is-allowed-resource":72,"./load-original-sources":73,"./normalize-path":76,"./rebase":80,"./rebase-local-map":78,"./rebase-remote-map":79,"./restore-import":81,"_process":112,"fs":3,"path":110}],78:[function(require,module,exports){
+},{"../../../is-buffer/index.js":106,"../tokenizer/marker":83,"../tokenizer/token":84,"../tokenizer/tokenize":85,"../utils/has-protocol":88,"../utils/is-import":92,"../utils/is-remote-resource":93,"./apply-source-maps":69,"./extract-import-url-and-media":70,"./is-allowed-resource":72,"./load-original-sources":73,"./normalize-path":76,"./rebase":80,"./rebase-local-map":78,"./rebase-remote-map":79,"./restore-import":81,"_process":109,"fs":3,"path":108}],78:[function(require,module,exports){
 var path = require('path');
 
 function rebaseLocalMap(sourceMap, sourceUri, rebaseTo) {
@@ -11585,7 +11608,7 @@ function rebaseLocalMap(sourceMap, sourceUri, rebaseTo) {
 
 module.exports = rebaseLocalMap;
 
-},{"path":110}],79:[function(require,module,exports){
+},{"path":108}],79:[function(require,module,exports){
 var path = require('path');
 var url = require('url');
 
@@ -11601,7 +11624,7 @@ function rebaseRemoteMap(sourceMap, sourceUri) {
 
 module.exports = rebaseRemoteMap;
 
-},{"path":110,"url":162}],80:[function(require,module,exports){
+},{"path":108,"url":163}],80:[function(require,module,exports){
 var extractImportUrlAndMedia = require('./extract-import-url-and-media');
 var restoreImport = require('./restore-import');
 var rewriteUrl = require('./rewrite-url');
@@ -11833,7 +11856,7 @@ function rewriteUrl(originalUrl, rebaseConfig, pathOnly) {
 module.exports = rewriteUrl;
 
 }).call(this,require('_process'))
-},{"_process":112,"path":110,"url":162}],83:[function(require,module,exports){
+},{"_process":109,"path":108,"url":163}],83:[function(require,module,exports){
 var Marker = {
   ASTERISK: '*',
   AT: '@',
@@ -13111,118 +13134,7 @@ function serializeStylesAndSourceMap(tokens, context) {
 module.exports = serializeStylesAndSourceMap;
 
 }).call(this,require('_process'))
-},{"../utils/is-remote-resource":93,"./helpers":97,"_process":112,"source-map":155}],101:[function(require,module,exports){
-(function (Buffer){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-
-function isArray(arg) {
-  if (Array.isArray) {
-    return Array.isArray(arg);
-  }
-  return objectToString(arg) === '[object Array]';
-}
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
-}
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
-}
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
-}
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
-}
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
-}
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return objectToString(re) === '[object RegExp]';
-}
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-exports.isObject = isObject;
-
-function isDate(d) {
-  return objectToString(d) === '[object Date]';
-}
-exports.isDate = isDate;
-
-function isError(e) {
-  return (objectToString(e) === '[object Error]' || e instanceof Error);
-}
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = Buffer.isBuffer;
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
-}
-
-}).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":107}],102:[function(require,module,exports){
+},{"../utils/is-remote-resource":93,"./helpers":97,"_process":109,"source-map":142}],101:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13747,7 +13659,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],103:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/he v1.2.0 by @mathias | MIT license */
 ;(function(root) {
@@ -14096,7 +14008,7 @@ function functionBindPolyfill(context) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],104:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 var http = require('http')
 var url = require('url')
 
@@ -14129,7 +14041,7 @@ function validateParams (params) {
   return params
 }
 
-},{"http":156,"url":162}],105:[function(require,module,exports){
+},{"http":143,"url":163}],104:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = (nBytes * 8) - mLen - 1
@@ -14215,32 +14127,36 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],106:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
+    if (superCtor) {
+      ctor.super_ = superCtor
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      })
+    }
   };
 } else {
   // old school shim for old browsers
   module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    var TempCtor = function () {}
-    TempCtor.prototype = superCtor.prototype
-    ctor.prototype = new TempCtor()
-    ctor.prototype.constructor = ctor
+    if (superCtor) {
+      ctor.super_ = superCtor
+      var TempCtor = function () {}
+      TempCtor.prototype = superCtor.prototype
+      ctor.prototype = new TempCtor()
+      ctor.prototype.constructor = ctor
+    }
   }
 }
 
-},{}],107:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -14263,14 +14179,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],108:[function(require,module,exports){
-var toString = {}.toString;
-
-module.exports = Array.isArray || function (arr) {
-  return toString.call(arr) == '[object Array]';
-};
-
-},{}],109:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -14321,7 +14230,7 @@ exports.homedir = function () {
 	return '/'
 };
 
-},{}],110:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 (function (process){
 // .dirname, .basename, and .extname methods are extracted from Node.js v8.11.1,
 // backported and transplited with Babel, with backwards-compat fixes
@@ -14627,55 +14536,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":112}],111:[function(require,module,exports){
-(function (process){
-'use strict';
-
-if (!process.version ||
-    process.version.indexOf('v0.') === 0 ||
-    process.version.indexOf('v1.') === 0 && process.version.indexOf('v1.8.') !== 0) {
-  module.exports = { nextTick: nextTick };
-} else {
-  module.exports = process
-}
-
-function nextTick(fn, arg1, arg2, arg3) {
-  if (typeof fn !== 'function') {
-    throw new TypeError('"callback" argument must be a function');
-  }
-  var len = arguments.length;
-  var args, i;
-  switch (len) {
-  case 0:
-  case 1:
-    return process.nextTick(fn);
-  case 2:
-    return process.nextTick(function afterTickOne() {
-      fn.call(null, arg1);
-    });
-  case 3:
-    return process.nextTick(function afterTickTwo() {
-      fn.call(null, arg1, arg2);
-    });
-  case 4:
-    return process.nextTick(function afterTickThree() {
-      fn.call(null, arg1, arg2, arg3);
-    });
-  default:
-    args = new Array(len - 1);
-    i = 0;
-    while (i < args.length) {
-      args[i++] = arguments[i];
-    }
-    return process.nextTick(function afterTick() {
-      fn.apply(null, args);
-    });
-  }
-}
-
-
-}).call(this,require('_process'))
-},{"_process":112}],112:[function(require,module,exports){
+},{"_process":109}],109:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -14861,7 +14722,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],113:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.1 by @mathias */
 ;(function(root) {
@@ -15398,7 +15259,7 @@ process.umask = function() { return 0; };
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],114:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15484,7 +15345,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],115:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15571,2584 +15432,13 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],116:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":114,"./encode":115}],117:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// a duplex stream is just a stream that is both readable and writable.
-// Since JS doesn't have multiple prototypal inheritance, this class
-// prototypally inherits from Readable, and then parasitically from
-// Writable.
-
-'use strict';
-
-/*<replacement>*/
-
-var pna = require('process-nextick-args');
-/*</replacement>*/
-
-/*<replacement>*/
-var objectKeys = Object.keys || function (obj) {
-  var keys = [];
-  for (var key in obj) {
-    keys.push(key);
-  }return keys;
-};
-/*</replacement>*/
-
-module.exports = Duplex;
-
-/*<replacement>*/
-var util = require('core-util-is');
-util.inherits = require('inherits');
-/*</replacement>*/
-
-var Readable = require('./_stream_readable');
-var Writable = require('./_stream_writable');
-
-util.inherits(Duplex, Readable);
-
-{
-  // avoid scope creep, the keys array can then be collected
-  var keys = objectKeys(Writable.prototype);
-  for (var v = 0; v < keys.length; v++) {
-    var method = keys[v];
-    if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable.prototype[method];
-  }
-}
-
-function Duplex(options) {
-  if (!(this instanceof Duplex)) return new Duplex(options);
-
-  Readable.call(this, options);
-  Writable.call(this, options);
-
-  if (options && options.readable === false) this.readable = false;
-
-  if (options && options.writable === false) this.writable = false;
-
-  this.allowHalfOpen = true;
-  if (options && options.allowHalfOpen === false) this.allowHalfOpen = false;
-
-  this.once('end', onend);
-}
-
-Object.defineProperty(Duplex.prototype, 'writableHighWaterMark', {
-  // making it explicit this property is not enumerable
-  // because otherwise some prototype manipulation in
-  // userland will fail
-  enumerable: false,
-  get: function () {
-    return this._writableState.highWaterMark;
-  }
-});
-
-// the no-half-open enforcer
-function onend() {
-  // if we allow half-open state, or if the writable side ended,
-  // then we're ok.
-  if (this.allowHalfOpen || this._writableState.ended) return;
-
-  // no more data can be written.
-  // But allow more writes to happen in this tick.
-  pna.nextTick(onEndNT, this);
-}
-
-function onEndNT(self) {
-  self.end();
-}
-
-Object.defineProperty(Duplex.prototype, 'destroyed', {
-  get: function () {
-    if (this._readableState === undefined || this._writableState === undefined) {
-      return false;
-    }
-    return this._readableState.destroyed && this._writableState.destroyed;
-  },
-  set: function (value) {
-    // we ignore the value if the stream
-    // has not been initialized yet
-    if (this._readableState === undefined || this._writableState === undefined) {
-      return;
-    }
-
-    // backward compatibility, the user is explicitly
-    // managing destroyed
-    this._readableState.destroyed = value;
-    this._writableState.destroyed = value;
-  }
-});
-
-Duplex.prototype._destroy = function (err, cb) {
-  this.push(null);
-  this.end();
-
-  pna.nextTick(cb, err);
-};
-},{"./_stream_readable":119,"./_stream_writable":121,"core-util-is":101,"inherits":106,"process-nextick-args":111}],118:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// a passthrough stream.
-// basically just the most minimal sort of Transform stream.
-// Every written chunk gets output as-is.
-
-'use strict';
-
-module.exports = PassThrough;
-
-var Transform = require('./_stream_transform');
-
-/*<replacement>*/
-var util = require('core-util-is');
-util.inherits = require('inherits');
-/*</replacement>*/
-
-util.inherits(PassThrough, Transform);
-
-function PassThrough(options) {
-  if (!(this instanceof PassThrough)) return new PassThrough(options);
-
-  Transform.call(this, options);
-}
-
-PassThrough.prototype._transform = function (chunk, encoding, cb) {
-  cb(null, chunk);
-};
-},{"./_stream_transform":120,"core-util-is":101,"inherits":106}],119:[function(require,module,exports){
-(function (process,global){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-'use strict';
-
-/*<replacement>*/
-
-var pna = require('process-nextick-args');
-/*</replacement>*/
-
-module.exports = Readable;
-
-/*<replacement>*/
-var isArray = require('isarray');
-/*</replacement>*/
-
-/*<replacement>*/
-var Duplex;
-/*</replacement>*/
-
-Readable.ReadableState = ReadableState;
-
-/*<replacement>*/
-var EE = require('events').EventEmitter;
-
-var EElistenerCount = function (emitter, type) {
-  return emitter.listeners(type).length;
-};
-/*</replacement>*/
-
-/*<replacement>*/
-var Stream = require('./internal/streams/stream');
-/*</replacement>*/
-
-/*<replacement>*/
-
-var Buffer = require('safe-buffer').Buffer;
-var OurUint8Array = global.Uint8Array || function () {};
-function _uint8ArrayToBuffer(chunk) {
-  return Buffer.from(chunk);
-}
-function _isUint8Array(obj) {
-  return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
-}
-
-/*</replacement>*/
-
-/*<replacement>*/
-var util = require('core-util-is');
-util.inherits = require('inherits');
-/*</replacement>*/
-
-/*<replacement>*/
-var debugUtil = require('util');
-var debug = void 0;
-if (debugUtil && debugUtil.debuglog) {
-  debug = debugUtil.debuglog('stream');
-} else {
-  debug = function () {};
-}
-/*</replacement>*/
-
-var BufferList = require('./internal/streams/BufferList');
-var destroyImpl = require('./internal/streams/destroy');
-var StringDecoder;
-
-util.inherits(Readable, Stream);
-
-var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
-
-function prependListener(emitter, event, fn) {
-  // Sadly this is not cacheable as some libraries bundle their own
-  // event emitter implementation with them.
-  if (typeof emitter.prependListener === 'function') return emitter.prependListener(event, fn);
-
-  // This is a hack to make sure that our error handler is attached before any
-  // userland ones.  NEVER DO THIS. This is here only because this code needs
-  // to continue to work with older versions of Node.js that do not include
-  // the prependListener() method. The goal is to eventually remove this hack.
-  if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
-}
-
-function ReadableState(options, stream) {
-  Duplex = Duplex || require('./_stream_duplex');
-
-  options = options || {};
-
-  // Duplex streams are both readable and writable, but share
-  // the same options object.
-  // However, some cases require setting options to different
-  // values for the readable and the writable sides of the duplex stream.
-  // These options can be provided separately as readableXXX and writableXXX.
-  var isDuplex = stream instanceof Duplex;
-
-  // object stream flag. Used to make read(n) ignore n and to
-  // make all the buffer merging and length checks go away
-  this.objectMode = !!options.objectMode;
-
-  if (isDuplex) this.objectMode = this.objectMode || !!options.readableObjectMode;
-
-  // the point at which it stops calling _read() to fill the buffer
-  // Note: 0 is a valid value, means "don't call _read preemptively ever"
-  var hwm = options.highWaterMark;
-  var readableHwm = options.readableHighWaterMark;
-  var defaultHwm = this.objectMode ? 16 : 16 * 1024;
-
-  if (hwm || hwm === 0) this.highWaterMark = hwm;else if (isDuplex && (readableHwm || readableHwm === 0)) this.highWaterMark = readableHwm;else this.highWaterMark = defaultHwm;
-
-  // cast to ints.
-  this.highWaterMark = Math.floor(this.highWaterMark);
-
-  // A linked list is used to store data chunks instead of an array because the
-  // linked list can remove elements from the beginning faster than
-  // array.shift()
-  this.buffer = new BufferList();
-  this.length = 0;
-  this.pipes = null;
-  this.pipesCount = 0;
-  this.flowing = null;
-  this.ended = false;
-  this.endEmitted = false;
-  this.reading = false;
-
-  // a flag to be able to tell if the event 'readable'/'data' is emitted
-  // immediately, or on a later tick.  We set this to true at first, because
-  // any actions that shouldn't happen until "later" should generally also
-  // not happen before the first read call.
-  this.sync = true;
-
-  // whenever we return null, then we set a flag to say
-  // that we're awaiting a 'readable' event emission.
-  this.needReadable = false;
-  this.emittedReadable = false;
-  this.readableListening = false;
-  this.resumeScheduled = false;
-
-  // has it been destroyed
-  this.destroyed = false;
-
-  // Crypto is kind of old and crusty.  Historically, its default string
-  // encoding is 'binary' so we have to make this configurable.
-  // Everything else in the universe uses 'utf8', though.
-  this.defaultEncoding = options.defaultEncoding || 'utf8';
-
-  // the number of writers that are awaiting a drain event in .pipe()s
-  this.awaitDrain = 0;
-
-  // if true, a maybeReadMore has been scheduled
-  this.readingMore = false;
-
-  this.decoder = null;
-  this.encoding = null;
-  if (options.encoding) {
-    if (!StringDecoder) StringDecoder = require('string_decoder/').StringDecoder;
-    this.decoder = new StringDecoder(options.encoding);
-    this.encoding = options.encoding;
-  }
-}
-
-function Readable(options) {
-  Duplex = Duplex || require('./_stream_duplex');
-
-  if (!(this instanceof Readable)) return new Readable(options);
-
-  this._readableState = new ReadableState(options, this);
-
-  // legacy
-  this.readable = true;
-
-  if (options) {
-    if (typeof options.read === 'function') this._read = options.read;
-
-    if (typeof options.destroy === 'function') this._destroy = options.destroy;
-  }
-
-  Stream.call(this);
-}
-
-Object.defineProperty(Readable.prototype, 'destroyed', {
-  get: function () {
-    if (this._readableState === undefined) {
-      return false;
-    }
-    return this._readableState.destroyed;
-  },
-  set: function (value) {
-    // we ignore the value if the stream
-    // has not been initialized yet
-    if (!this._readableState) {
-      return;
-    }
-
-    // backward compatibility, the user is explicitly
-    // managing destroyed
-    this._readableState.destroyed = value;
-  }
-});
-
-Readable.prototype.destroy = destroyImpl.destroy;
-Readable.prototype._undestroy = destroyImpl.undestroy;
-Readable.prototype._destroy = function (err, cb) {
-  this.push(null);
-  cb(err);
-};
-
-// Manually shove something into the read() buffer.
-// This returns true if the highWaterMark has not been hit yet,
-// similar to how Writable.write() returns true if you should
-// write() some more.
-Readable.prototype.push = function (chunk, encoding) {
-  var state = this._readableState;
-  var skipChunkCheck;
-
-  if (!state.objectMode) {
-    if (typeof chunk === 'string') {
-      encoding = encoding || state.defaultEncoding;
-      if (encoding !== state.encoding) {
-        chunk = Buffer.from(chunk, encoding);
-        encoding = '';
-      }
-      skipChunkCheck = true;
-    }
-  } else {
-    skipChunkCheck = true;
-  }
-
-  return readableAddChunk(this, chunk, encoding, false, skipChunkCheck);
-};
-
-// Unshift should *always* be something directly out of read()
-Readable.prototype.unshift = function (chunk) {
-  return readableAddChunk(this, chunk, null, true, false);
-};
-
-function readableAddChunk(stream, chunk, encoding, addToFront, skipChunkCheck) {
-  var state = stream._readableState;
-  if (chunk === null) {
-    state.reading = false;
-    onEofChunk(stream, state);
-  } else {
-    var er;
-    if (!skipChunkCheck) er = chunkInvalid(state, chunk);
-    if (er) {
-      stream.emit('error', er);
-    } else if (state.objectMode || chunk && chunk.length > 0) {
-      if (typeof chunk !== 'string' && !state.objectMode && Object.getPrototypeOf(chunk) !== Buffer.prototype) {
-        chunk = _uint8ArrayToBuffer(chunk);
-      }
-
-      if (addToFront) {
-        if (state.endEmitted) stream.emit('error', new Error('stream.unshift() after end event'));else addChunk(stream, state, chunk, true);
-      } else if (state.ended) {
-        stream.emit('error', new Error('stream.push() after EOF'));
-      } else {
-        state.reading = false;
-        if (state.decoder && !encoding) {
-          chunk = state.decoder.write(chunk);
-          if (state.objectMode || chunk.length !== 0) addChunk(stream, state, chunk, false);else maybeReadMore(stream, state);
-        } else {
-          addChunk(stream, state, chunk, false);
-        }
-      }
-    } else if (!addToFront) {
-      state.reading = false;
-    }
-  }
-
-  return needMoreData(state);
-}
-
-function addChunk(stream, state, chunk, addToFront) {
-  if (state.flowing && state.length === 0 && !state.sync) {
-    stream.emit('data', chunk);
-    stream.read(0);
-  } else {
-    // update the buffer info.
-    state.length += state.objectMode ? 1 : chunk.length;
-    if (addToFront) state.buffer.unshift(chunk);else state.buffer.push(chunk);
-
-    if (state.needReadable) emitReadable(stream);
-  }
-  maybeReadMore(stream, state);
-}
-
-function chunkInvalid(state, chunk) {
-  var er;
-  if (!_isUint8Array(chunk) && typeof chunk !== 'string' && chunk !== undefined && !state.objectMode) {
-    er = new TypeError('Invalid non-string/buffer chunk');
-  }
-  return er;
-}
-
-// if it's past the high water mark, we can push in some more.
-// Also, if we have no data yet, we can stand some
-// more bytes.  This is to work around cases where hwm=0,
-// such as the repl.  Also, if the push() triggered a
-// readable event, and the user called read(largeNumber) such that
-// needReadable was set, then we ought to push more, so that another
-// 'readable' event will be triggered.
-function needMoreData(state) {
-  return !state.ended && (state.needReadable || state.length < state.highWaterMark || state.length === 0);
-}
-
-Readable.prototype.isPaused = function () {
-  return this._readableState.flowing === false;
-};
-
-// backwards compatibility.
-Readable.prototype.setEncoding = function (enc) {
-  if (!StringDecoder) StringDecoder = require('string_decoder/').StringDecoder;
-  this._readableState.decoder = new StringDecoder(enc);
-  this._readableState.encoding = enc;
-  return this;
-};
-
-// Don't raise the hwm > 8MB
-var MAX_HWM = 0x800000;
-function computeNewHighWaterMark(n) {
-  if (n >= MAX_HWM) {
-    n = MAX_HWM;
-  } else {
-    // Get the next highest power of 2 to prevent increasing hwm excessively in
-    // tiny amounts
-    n--;
-    n |= n >>> 1;
-    n |= n >>> 2;
-    n |= n >>> 4;
-    n |= n >>> 8;
-    n |= n >>> 16;
-    n++;
-  }
-  return n;
-}
-
-// This function is designed to be inlinable, so please take care when making
-// changes to the function body.
-function howMuchToRead(n, state) {
-  if (n <= 0 || state.length === 0 && state.ended) return 0;
-  if (state.objectMode) return 1;
-  if (n !== n) {
-    // Only flow one buffer at a time
-    if (state.flowing && state.length) return state.buffer.head.data.length;else return state.length;
-  }
-  // If we're asking for more than the current hwm, then raise the hwm.
-  if (n > state.highWaterMark) state.highWaterMark = computeNewHighWaterMark(n);
-  if (n <= state.length) return n;
-  // Don't have enough
-  if (!state.ended) {
-    state.needReadable = true;
-    return 0;
-  }
-  return state.length;
-}
-
-// you can override either this method, or the async _read(n) below.
-Readable.prototype.read = function (n) {
-  debug('read', n);
-  n = parseInt(n, 10);
-  var state = this._readableState;
-  var nOrig = n;
-
-  if (n !== 0) state.emittedReadable = false;
-
-  // if we're doing read(0) to trigger a readable event, but we
-  // already have a bunch of data in the buffer, then just trigger
-  // the 'readable' event and move on.
-  if (n === 0 && state.needReadable && (state.length >= state.highWaterMark || state.ended)) {
-    debug('read: emitReadable', state.length, state.ended);
-    if (state.length === 0 && state.ended) endReadable(this);else emitReadable(this);
-    return null;
-  }
-
-  n = howMuchToRead(n, state);
-
-  // if we've ended, and we're now clear, then finish it up.
-  if (n === 0 && state.ended) {
-    if (state.length === 0) endReadable(this);
-    return null;
-  }
-
-  // All the actual chunk generation logic needs to be
-  // *below* the call to _read.  The reason is that in certain
-  // synthetic stream cases, such as passthrough streams, _read
-  // may be a completely synchronous operation which may change
-  // the state of the read buffer, providing enough data when
-  // before there was *not* enough.
-  //
-  // So, the steps are:
-  // 1. Figure out what the state of things will be after we do
-  // a read from the buffer.
-  //
-  // 2. If that resulting state will trigger a _read, then call _read.
-  // Note that this may be asynchronous, or synchronous.  Yes, it is
-  // deeply ugly to write APIs this way, but that still doesn't mean
-  // that the Readable class should behave improperly, as streams are
-  // designed to be sync/async agnostic.
-  // Take note if the _read call is sync or async (ie, if the read call
-  // has returned yet), so that we know whether or not it's safe to emit
-  // 'readable' etc.
-  //
-  // 3. Actually pull the requested chunks out of the buffer and return.
-
-  // if we need a readable event, then we need to do some reading.
-  var doRead = state.needReadable;
-  debug('need readable', doRead);
-
-  // if we currently have less than the highWaterMark, then also read some
-  if (state.length === 0 || state.length - n < state.highWaterMark) {
-    doRead = true;
-    debug('length less than watermark', doRead);
-  }
-
-  // however, if we've ended, then there's no point, and if we're already
-  // reading, then it's unnecessary.
-  if (state.ended || state.reading) {
-    doRead = false;
-    debug('reading or ended', doRead);
-  } else if (doRead) {
-    debug('do read');
-    state.reading = true;
-    state.sync = true;
-    // if the length is currently zero, then we *need* a readable event.
-    if (state.length === 0) state.needReadable = true;
-    // call internal read method
-    this._read(state.highWaterMark);
-    state.sync = false;
-    // If _read pushed data synchronously, then `reading` will be false,
-    // and we need to re-evaluate how much data we can return to the user.
-    if (!state.reading) n = howMuchToRead(nOrig, state);
-  }
-
-  var ret;
-  if (n > 0) ret = fromList(n, state);else ret = null;
-
-  if (ret === null) {
-    state.needReadable = true;
-    n = 0;
-  } else {
-    state.length -= n;
-  }
-
-  if (state.length === 0) {
-    // If we have nothing in the buffer, then we want to know
-    // as soon as we *do* get something into the buffer.
-    if (!state.ended) state.needReadable = true;
-
-    // If we tried to read() past the EOF, then emit end on the next tick.
-    if (nOrig !== n && state.ended) endReadable(this);
-  }
-
-  if (ret !== null) this.emit('data', ret);
-
-  return ret;
-};
-
-function onEofChunk(stream, state) {
-  if (state.ended) return;
-  if (state.decoder) {
-    var chunk = state.decoder.end();
-    if (chunk && chunk.length) {
-      state.buffer.push(chunk);
-      state.length += state.objectMode ? 1 : chunk.length;
-    }
-  }
-  state.ended = true;
-
-  // emit 'readable' now to make sure it gets picked up.
-  emitReadable(stream);
-}
-
-// Don't emit readable right away in sync mode, because this can trigger
-// another read() call => stack overflow.  This way, it might trigger
-// a nextTick recursion warning, but that's not so bad.
-function emitReadable(stream) {
-  var state = stream._readableState;
-  state.needReadable = false;
-  if (!state.emittedReadable) {
-    debug('emitReadable', state.flowing);
-    state.emittedReadable = true;
-    if (state.sync) pna.nextTick(emitReadable_, stream);else emitReadable_(stream);
-  }
-}
-
-function emitReadable_(stream) {
-  debug('emit readable');
-  stream.emit('readable');
-  flow(stream);
-}
-
-// at this point, the user has presumably seen the 'readable' event,
-// and called read() to consume some data.  that may have triggered
-// in turn another _read(n) call, in which case reading = true if
-// it's in progress.
-// However, if we're not ended, or reading, and the length < hwm,
-// then go ahead and try to read some more preemptively.
-function maybeReadMore(stream, state) {
-  if (!state.readingMore) {
-    state.readingMore = true;
-    pna.nextTick(maybeReadMore_, stream, state);
-  }
-}
-
-function maybeReadMore_(stream, state) {
-  var len = state.length;
-  while (!state.reading && !state.flowing && !state.ended && state.length < state.highWaterMark) {
-    debug('maybeReadMore read 0');
-    stream.read(0);
-    if (len === state.length)
-      // didn't get any data, stop spinning.
-      break;else len = state.length;
-  }
-  state.readingMore = false;
-}
-
-// abstract method.  to be overridden in specific implementation classes.
-// call cb(er, data) where data is <= n in length.
-// for virtual (non-string, non-buffer) streams, "length" is somewhat
-// arbitrary, and perhaps not very meaningful.
-Readable.prototype._read = function (n) {
-  this.emit('error', new Error('_read() is not implemented'));
-};
-
-Readable.prototype.pipe = function (dest, pipeOpts) {
-  var src = this;
-  var state = this._readableState;
-
-  switch (state.pipesCount) {
-    case 0:
-      state.pipes = dest;
-      break;
-    case 1:
-      state.pipes = [state.pipes, dest];
-      break;
-    default:
-      state.pipes.push(dest);
-      break;
-  }
-  state.pipesCount += 1;
-  debug('pipe count=%d opts=%j', state.pipesCount, pipeOpts);
-
-  var doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process.stdout && dest !== process.stderr;
-
-  var endFn = doEnd ? onend : unpipe;
-  if (state.endEmitted) pna.nextTick(endFn);else src.once('end', endFn);
-
-  dest.on('unpipe', onunpipe);
-  function onunpipe(readable, unpipeInfo) {
-    debug('onunpipe');
-    if (readable === src) {
-      if (unpipeInfo && unpipeInfo.hasUnpiped === false) {
-        unpipeInfo.hasUnpiped = true;
-        cleanup();
-      }
-    }
-  }
-
-  function onend() {
-    debug('onend');
-    dest.end();
-  }
-
-  // when the dest drains, it reduces the awaitDrain counter
-  // on the source.  This would be more elegant with a .once()
-  // handler in flow(), but adding and removing repeatedly is
-  // too slow.
-  var ondrain = pipeOnDrain(src);
-  dest.on('drain', ondrain);
-
-  var cleanedUp = false;
-  function cleanup() {
-    debug('cleanup');
-    // cleanup event handlers once the pipe is broken
-    dest.removeListener('close', onclose);
-    dest.removeListener('finish', onfinish);
-    dest.removeListener('drain', ondrain);
-    dest.removeListener('error', onerror);
-    dest.removeListener('unpipe', onunpipe);
-    src.removeListener('end', onend);
-    src.removeListener('end', unpipe);
-    src.removeListener('data', ondata);
-
-    cleanedUp = true;
-
-    // if the reader is waiting for a drain event from this
-    // specific writer, then it would cause it to never start
-    // flowing again.
-    // So, if this is awaiting a drain, then we just call it now.
-    // If we don't know, then assume that we are waiting for one.
-    if (state.awaitDrain && (!dest._writableState || dest._writableState.needDrain)) ondrain();
-  }
-
-  // If the user pushes more data while we're writing to dest then we'll end up
-  // in ondata again. However, we only want to increase awaitDrain once because
-  // dest will only emit one 'drain' event for the multiple writes.
-  // => Introduce a guard on increasing awaitDrain.
-  var increasedAwaitDrain = false;
-  src.on('data', ondata);
-  function ondata(chunk) {
-    debug('ondata');
-    increasedAwaitDrain = false;
-    var ret = dest.write(chunk);
-    if (false === ret && !increasedAwaitDrain) {
-      // If the user unpiped during `dest.write()`, it is possible
-      // to get stuck in a permanently paused state if that write
-      // also returned false.
-      // => Check whether `dest` is still a piping destination.
-      if ((state.pipesCount === 1 && state.pipes === dest || state.pipesCount > 1 && indexOf(state.pipes, dest) !== -1) && !cleanedUp) {
-        debug('false write response, pause', src._readableState.awaitDrain);
-        src._readableState.awaitDrain++;
-        increasedAwaitDrain = true;
-      }
-      src.pause();
-    }
-  }
-
-  // if the dest has an error, then stop piping into it.
-  // however, don't suppress the throwing behavior for this.
-  function onerror(er) {
-    debug('onerror', er);
-    unpipe();
-    dest.removeListener('error', onerror);
-    if (EElistenerCount(dest, 'error') === 0) dest.emit('error', er);
-  }
-
-  // Make sure our error handler is attached before userland ones.
-  prependListener(dest, 'error', onerror);
-
-  // Both close and finish should trigger unpipe, but only once.
-  function onclose() {
-    dest.removeListener('finish', onfinish);
-    unpipe();
-  }
-  dest.once('close', onclose);
-  function onfinish() {
-    debug('onfinish');
-    dest.removeListener('close', onclose);
-    unpipe();
-  }
-  dest.once('finish', onfinish);
-
-  function unpipe() {
-    debug('unpipe');
-    src.unpipe(dest);
-  }
-
-  // tell the dest that it's being piped to
-  dest.emit('pipe', src);
-
-  // start the flow if it hasn't been started already.
-  if (!state.flowing) {
-    debug('pipe resume');
-    src.resume();
-  }
-
-  return dest;
-};
-
-function pipeOnDrain(src) {
-  return function () {
-    var state = src._readableState;
-    debug('pipeOnDrain', state.awaitDrain);
-    if (state.awaitDrain) state.awaitDrain--;
-    if (state.awaitDrain === 0 && EElistenerCount(src, 'data')) {
-      state.flowing = true;
-      flow(src);
-    }
-  };
-}
-
-Readable.prototype.unpipe = function (dest) {
-  var state = this._readableState;
-  var unpipeInfo = { hasUnpiped: false };
-
-  // if we're not piping anywhere, then do nothing.
-  if (state.pipesCount === 0) return this;
-
-  // just one destination.  most common case.
-  if (state.pipesCount === 1) {
-    // passed in one, but it's not the right one.
-    if (dest && dest !== state.pipes) return this;
-
-    if (!dest) dest = state.pipes;
-
-    // got a match.
-    state.pipes = null;
-    state.pipesCount = 0;
-    state.flowing = false;
-    if (dest) dest.emit('unpipe', this, unpipeInfo);
-    return this;
-  }
-
-  // slow case. multiple pipe destinations.
-
-  if (!dest) {
-    // remove all.
-    var dests = state.pipes;
-    var len = state.pipesCount;
-    state.pipes = null;
-    state.pipesCount = 0;
-    state.flowing = false;
-
-    for (var i = 0; i < len; i++) {
-      dests[i].emit('unpipe', this, unpipeInfo);
-    }return this;
-  }
-
-  // try to find the right one.
-  var index = indexOf(state.pipes, dest);
-  if (index === -1) return this;
-
-  state.pipes.splice(index, 1);
-  state.pipesCount -= 1;
-  if (state.pipesCount === 1) state.pipes = state.pipes[0];
-
-  dest.emit('unpipe', this, unpipeInfo);
-
-  return this;
-};
-
-// set up data events if they are asked for
-// Ensure readable listeners eventually get something
-Readable.prototype.on = function (ev, fn) {
-  var res = Stream.prototype.on.call(this, ev, fn);
-
-  if (ev === 'data') {
-    // Start flowing on next tick if stream isn't explicitly paused
-    if (this._readableState.flowing !== false) this.resume();
-  } else if (ev === 'readable') {
-    var state = this._readableState;
-    if (!state.endEmitted && !state.readableListening) {
-      state.readableListening = state.needReadable = true;
-      state.emittedReadable = false;
-      if (!state.reading) {
-        pna.nextTick(nReadingNextTick, this);
-      } else if (state.length) {
-        emitReadable(this);
-      }
-    }
-  }
-
-  return res;
-};
-Readable.prototype.addListener = Readable.prototype.on;
-
-function nReadingNextTick(self) {
-  debug('readable nexttick read 0');
-  self.read(0);
-}
-
-// pause() and resume() are remnants of the legacy readable stream API
-// If the user uses them, then switch into old mode.
-Readable.prototype.resume = function () {
-  var state = this._readableState;
-  if (!state.flowing) {
-    debug('resume');
-    state.flowing = true;
-    resume(this, state);
-  }
-  return this;
-};
-
-function resume(stream, state) {
-  if (!state.resumeScheduled) {
-    state.resumeScheduled = true;
-    pna.nextTick(resume_, stream, state);
-  }
-}
-
-function resume_(stream, state) {
-  if (!state.reading) {
-    debug('resume read 0');
-    stream.read(0);
-  }
-
-  state.resumeScheduled = false;
-  state.awaitDrain = 0;
-  stream.emit('resume');
-  flow(stream);
-  if (state.flowing && !state.reading) stream.read(0);
-}
-
-Readable.prototype.pause = function () {
-  debug('call pause flowing=%j', this._readableState.flowing);
-  if (false !== this._readableState.flowing) {
-    debug('pause');
-    this._readableState.flowing = false;
-    this.emit('pause');
-  }
-  return this;
-};
-
-function flow(stream) {
-  var state = stream._readableState;
-  debug('flow', state.flowing);
-  while (state.flowing && stream.read() !== null) {}
-}
-
-// wrap an old-style stream as the async data source.
-// This is *not* part of the readable stream interface.
-// It is an ugly unfortunate mess of history.
-Readable.prototype.wrap = function (stream) {
-  var _this = this;
-
-  var state = this._readableState;
-  var paused = false;
-
-  stream.on('end', function () {
-    debug('wrapped end');
-    if (state.decoder && !state.ended) {
-      var chunk = state.decoder.end();
-      if (chunk && chunk.length) _this.push(chunk);
-    }
-
-    _this.push(null);
-  });
-
-  stream.on('data', function (chunk) {
-    debug('wrapped data');
-    if (state.decoder) chunk = state.decoder.write(chunk);
-
-    // don't skip over falsy values in objectMode
-    if (state.objectMode && (chunk === null || chunk === undefined)) return;else if (!state.objectMode && (!chunk || !chunk.length)) return;
-
-    var ret = _this.push(chunk);
-    if (!ret) {
-      paused = true;
-      stream.pause();
-    }
-  });
-
-  // proxy all the other methods.
-  // important when wrapping filters and duplexes.
-  for (var i in stream) {
-    if (this[i] === undefined && typeof stream[i] === 'function') {
-      this[i] = function (method) {
-        return function () {
-          return stream[method].apply(stream, arguments);
-        };
-      }(i);
-    }
-  }
-
-  // proxy certain important events.
-  for (var n = 0; n < kProxyEvents.length; n++) {
-    stream.on(kProxyEvents[n], this.emit.bind(this, kProxyEvents[n]));
-  }
-
-  // when we try to consume some more bytes, simply unpause the
-  // underlying stream.
-  this._read = function (n) {
-    debug('wrapped _read', n);
-    if (paused) {
-      paused = false;
-      stream.resume();
-    }
-  };
-
-  return this;
-};
-
-Object.defineProperty(Readable.prototype, 'readableHighWaterMark', {
-  // making it explicit this property is not enumerable
-  // because otherwise some prototype manipulation in
-  // userland will fail
-  enumerable: false,
-  get: function () {
-    return this._readableState.highWaterMark;
-  }
-});
-
-// exposed for testing purposes only.
-Readable._fromList = fromList;
-
-// Pluck off n bytes from an array of buffers.
-// Length is the combined lengths of all the buffers in the list.
-// This function is designed to be inlinable, so please take care when making
-// changes to the function body.
-function fromList(n, state) {
-  // nothing buffered
-  if (state.length === 0) return null;
-
-  var ret;
-  if (state.objectMode) ret = state.buffer.shift();else if (!n || n >= state.length) {
-    // read it all, truncate the list
-    if (state.decoder) ret = state.buffer.join('');else if (state.buffer.length === 1) ret = state.buffer.head.data;else ret = state.buffer.concat(state.length);
-    state.buffer.clear();
-  } else {
-    // read part of list
-    ret = fromListPartial(n, state.buffer, state.decoder);
-  }
-
-  return ret;
-}
-
-// Extracts only enough buffered data to satisfy the amount requested.
-// This function is designed to be inlinable, so please take care when making
-// changes to the function body.
-function fromListPartial(n, list, hasStrings) {
-  var ret;
-  if (n < list.head.data.length) {
-    // slice is the same for buffers and strings
-    ret = list.head.data.slice(0, n);
-    list.head.data = list.head.data.slice(n);
-  } else if (n === list.head.data.length) {
-    // first chunk is a perfect match
-    ret = list.shift();
-  } else {
-    // result spans more than one buffer
-    ret = hasStrings ? copyFromBufferString(n, list) : copyFromBuffer(n, list);
-  }
-  return ret;
-}
-
-// Copies a specified amount of characters from the list of buffered data
-// chunks.
-// This function is designed to be inlinable, so please take care when making
-// changes to the function body.
-function copyFromBufferString(n, list) {
-  var p = list.head;
-  var c = 1;
-  var ret = p.data;
-  n -= ret.length;
-  while (p = p.next) {
-    var str = p.data;
-    var nb = n > str.length ? str.length : n;
-    if (nb === str.length) ret += str;else ret += str.slice(0, n);
-    n -= nb;
-    if (n === 0) {
-      if (nb === str.length) {
-        ++c;
-        if (p.next) list.head = p.next;else list.head = list.tail = null;
-      } else {
-        list.head = p;
-        p.data = str.slice(nb);
-      }
-      break;
-    }
-    ++c;
-  }
-  list.length -= c;
-  return ret;
-}
-
-// Copies a specified amount of bytes from the list of buffered data chunks.
-// This function is designed to be inlinable, so please take care when making
-// changes to the function body.
-function copyFromBuffer(n, list) {
-  var ret = Buffer.allocUnsafe(n);
-  var p = list.head;
-  var c = 1;
-  p.data.copy(ret);
-  n -= p.data.length;
-  while (p = p.next) {
-    var buf = p.data;
-    var nb = n > buf.length ? buf.length : n;
-    buf.copy(ret, ret.length - n, 0, nb);
-    n -= nb;
-    if (n === 0) {
-      if (nb === buf.length) {
-        ++c;
-        if (p.next) list.head = p.next;else list.head = list.tail = null;
-      } else {
-        list.head = p;
-        p.data = buf.slice(nb);
-      }
-      break;
-    }
-    ++c;
-  }
-  list.length -= c;
-  return ret;
-}
-
-function endReadable(stream) {
-  var state = stream._readableState;
-
-  // If we get here before consuming all the bytes, then that is a
-  // bug in node.  Should never happen.
-  if (state.length > 0) throw new Error('"endReadable()" called on non-empty stream');
-
-  if (!state.endEmitted) {
-    state.ended = true;
-    pna.nextTick(endReadableNT, state, stream);
-  }
-}
-
-function endReadableNT(state, stream) {
-  // Check that we didn't get one last unshift.
-  if (!state.endEmitted && state.length === 0) {
-    state.endEmitted = true;
-    stream.readable = false;
-    stream.emit('end');
-  }
-}
-
-function indexOf(xs, x) {
-  for (var i = 0, l = xs.length; i < l; i++) {
-    if (xs[i] === x) return i;
-  }
-  return -1;
-}
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":117,"./internal/streams/BufferList":122,"./internal/streams/destroy":123,"./internal/streams/stream":124,"_process":112,"core-util-is":101,"events":102,"inherits":106,"isarray":108,"process-nextick-args":111,"safe-buffer":144,"string_decoder/":125,"util":2}],120:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// a transform stream is a readable/writable stream where you do
-// something with the data.  Sometimes it's called a "filter",
-// but that's not a great name for it, since that implies a thing where
-// some bits pass through, and others are simply ignored.  (That would
-// be a valid example of a transform, of course.)
-//
-// While the output is causally related to the input, it's not a
-// necessarily symmetric or synchronous transformation.  For example,
-// a zlib stream might take multiple plain-text writes(), and then
-// emit a single compressed chunk some time in the future.
-//
-// Here's how this works:
-//
-// The Transform stream has all the aspects of the readable and writable
-// stream classes.  When you write(chunk), that calls _write(chunk,cb)
-// internally, and returns false if there's a lot of pending writes
-// buffered up.  When you call read(), that calls _read(n) until
-// there's enough pending readable data buffered up.
-//
-// In a transform stream, the written data is placed in a buffer.  When
-// _read(n) is called, it transforms the queued up data, calling the
-// buffered _write cb's as it consumes chunks.  If consuming a single
-// written chunk would result in multiple output chunks, then the first
-// outputted bit calls the readcb, and subsequent chunks just go into
-// the read buffer, and will cause it to emit 'readable' if necessary.
-//
-// This way, back-pressure is actually determined by the reading side,
-// since _read has to be called to start processing a new chunk.  However,
-// a pathological inflate type of transform can cause excessive buffering
-// here.  For example, imagine a stream where every byte of input is
-// interpreted as an integer from 0-255, and then results in that many
-// bytes of output.  Writing the 4 bytes {ff,ff,ff,ff} would result in
-// 1kb of data being output.  In this case, you could write a very small
-// amount of input, and end up with a very large amount of output.  In
-// such a pathological inflating mechanism, there'd be no way to tell
-// the system to stop doing the transform.  A single 4MB write could
-// cause the system to run out of memory.
-//
-// However, even in such a pathological case, only a single written chunk
-// would be consumed, and then the rest would wait (un-transformed) until
-// the results of the previous transformed chunk were consumed.
-
-'use strict';
-
-module.exports = Transform;
-
-var Duplex = require('./_stream_duplex');
-
-/*<replacement>*/
-var util = require('core-util-is');
-util.inherits = require('inherits');
-/*</replacement>*/
-
-util.inherits(Transform, Duplex);
-
-function afterTransform(er, data) {
-  var ts = this._transformState;
-  ts.transforming = false;
-
-  var cb = ts.writecb;
-
-  if (!cb) {
-    return this.emit('error', new Error('write callback called multiple times'));
-  }
-
-  ts.writechunk = null;
-  ts.writecb = null;
-
-  if (data != null) // single equals check for both `null` and `undefined`
-    this.push(data);
-
-  cb(er);
-
-  var rs = this._readableState;
-  rs.reading = false;
-  if (rs.needReadable || rs.length < rs.highWaterMark) {
-    this._read(rs.highWaterMark);
-  }
-}
-
-function Transform(options) {
-  if (!(this instanceof Transform)) return new Transform(options);
-
-  Duplex.call(this, options);
-
-  this._transformState = {
-    afterTransform: afterTransform.bind(this),
-    needTransform: false,
-    transforming: false,
-    writecb: null,
-    writechunk: null,
-    writeencoding: null
-  };
-
-  // start out asking for a readable event once data is transformed.
-  this._readableState.needReadable = true;
-
-  // we have implemented the _read method, and done the other things
-  // that Readable wants before the first _read call, so unset the
-  // sync guard flag.
-  this._readableState.sync = false;
-
-  if (options) {
-    if (typeof options.transform === 'function') this._transform = options.transform;
-
-    if (typeof options.flush === 'function') this._flush = options.flush;
-  }
-
-  // When the writable side finishes, then flush out anything remaining.
-  this.on('prefinish', prefinish);
-}
-
-function prefinish() {
-  var _this = this;
-
-  if (typeof this._flush === 'function') {
-    this._flush(function (er, data) {
-      done(_this, er, data);
-    });
-  } else {
-    done(this, null, null);
-  }
-}
-
-Transform.prototype.push = function (chunk, encoding) {
-  this._transformState.needTransform = false;
-  return Duplex.prototype.push.call(this, chunk, encoding);
-};
-
-// This is the part where you do stuff!
-// override this function in implementation classes.
-// 'chunk' is an input chunk.
-//
-// Call `push(newChunk)` to pass along transformed output
-// to the readable side.  You may call 'push' zero or more times.
-//
-// Call `cb(err)` when you are done with this chunk.  If you pass
-// an error, then that'll put the hurt on the whole operation.  If you
-// never call cb(), then you'll never get another chunk.
-Transform.prototype._transform = function (chunk, encoding, cb) {
-  throw new Error('_transform() is not implemented');
-};
-
-Transform.prototype._write = function (chunk, encoding, cb) {
-  var ts = this._transformState;
-  ts.writecb = cb;
-  ts.writechunk = chunk;
-  ts.writeencoding = encoding;
-  if (!ts.transforming) {
-    var rs = this._readableState;
-    if (ts.needTransform || rs.needReadable || rs.length < rs.highWaterMark) this._read(rs.highWaterMark);
-  }
-};
-
-// Doesn't matter what the args are here.
-// _transform does all the work.
-// That we got here means that the readable side wants more data.
-Transform.prototype._read = function (n) {
-  var ts = this._transformState;
-
-  if (ts.writechunk !== null && ts.writecb && !ts.transforming) {
-    ts.transforming = true;
-    this._transform(ts.writechunk, ts.writeencoding, ts.afterTransform);
-  } else {
-    // mark that we need a transform, so that any data that comes in
-    // will get processed, now that we've asked for it.
-    ts.needTransform = true;
-  }
-};
-
-Transform.prototype._destroy = function (err, cb) {
-  var _this2 = this;
-
-  Duplex.prototype._destroy.call(this, err, function (err2) {
-    cb(err2);
-    _this2.emit('close');
-  });
-};
-
-function done(stream, er, data) {
-  if (er) return stream.emit('error', er);
-
-  if (data != null) // single equals check for both `null` and `undefined`
-    stream.push(data);
-
-  // if there's nothing in the write buffer, then that means
-  // that nothing more will ever be provided
-  if (stream._writableState.length) throw new Error('Calling transform done when ws.length != 0');
-
-  if (stream._transformState.transforming) throw new Error('Calling transform done when still transforming');
-
-  return stream.push(null);
-}
-},{"./_stream_duplex":117,"core-util-is":101,"inherits":106}],121:[function(require,module,exports){
-(function (process,global,setImmediate){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-// A bit simpler than readable streams.
-// Implement an async ._write(chunk, encoding, cb), and it'll handle all
-// the drain event emission and buffering.
-
-'use strict';
-
-/*<replacement>*/
-
-var pna = require('process-nextick-args');
-/*</replacement>*/
-
-module.exports = Writable;
-
-/* <replacement> */
-function WriteReq(chunk, encoding, cb) {
-  this.chunk = chunk;
-  this.encoding = encoding;
-  this.callback = cb;
-  this.next = null;
-}
-
-// It seems a linked list but it is not
-// there will be only 2 of these for each stream
-function CorkedRequest(state) {
-  var _this = this;
-
-  this.next = null;
-  this.entry = null;
-  this.finish = function () {
-    onCorkedFinish(_this, state);
-  };
-}
-/* </replacement> */
-
-/*<replacement>*/
-var asyncWrite = !process.browser && ['v0.10', 'v0.9.'].indexOf(process.version.slice(0, 5)) > -1 ? setImmediate : pna.nextTick;
-/*</replacement>*/
-
-/*<replacement>*/
-var Duplex;
-/*</replacement>*/
-
-Writable.WritableState = WritableState;
-
-/*<replacement>*/
-var util = require('core-util-is');
-util.inherits = require('inherits');
-/*</replacement>*/
-
-/*<replacement>*/
-var internalUtil = {
-  deprecate: require('util-deprecate')
-};
-/*</replacement>*/
-
-/*<replacement>*/
-var Stream = require('./internal/streams/stream');
-/*</replacement>*/
-
-/*<replacement>*/
-
-var Buffer = require('safe-buffer').Buffer;
-var OurUint8Array = global.Uint8Array || function () {};
-function _uint8ArrayToBuffer(chunk) {
-  return Buffer.from(chunk);
-}
-function _isUint8Array(obj) {
-  return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
-}
-
-/*</replacement>*/
-
-var destroyImpl = require('./internal/streams/destroy');
-
-util.inherits(Writable, Stream);
-
-function nop() {}
-
-function WritableState(options, stream) {
-  Duplex = Duplex || require('./_stream_duplex');
-
-  options = options || {};
-
-  // Duplex streams are both readable and writable, but share
-  // the same options object.
-  // However, some cases require setting options to different
-  // values for the readable and the writable sides of the duplex stream.
-  // These options can be provided separately as readableXXX and writableXXX.
-  var isDuplex = stream instanceof Duplex;
-
-  // object stream flag to indicate whether or not this stream
-  // contains buffers or objects.
-  this.objectMode = !!options.objectMode;
-
-  if (isDuplex) this.objectMode = this.objectMode || !!options.writableObjectMode;
-
-  // the point at which write() starts returning false
-  // Note: 0 is a valid value, means that we always return false if
-  // the entire buffer is not flushed immediately on write()
-  var hwm = options.highWaterMark;
-  var writableHwm = options.writableHighWaterMark;
-  var defaultHwm = this.objectMode ? 16 : 16 * 1024;
-
-  if (hwm || hwm === 0) this.highWaterMark = hwm;else if (isDuplex && (writableHwm || writableHwm === 0)) this.highWaterMark = writableHwm;else this.highWaterMark = defaultHwm;
-
-  // cast to ints.
-  this.highWaterMark = Math.floor(this.highWaterMark);
-
-  // if _final has been called
-  this.finalCalled = false;
-
-  // drain event flag.
-  this.needDrain = false;
-  // at the start of calling end()
-  this.ending = false;
-  // when end() has been called, and returned
-  this.ended = false;
-  // when 'finish' is emitted
-  this.finished = false;
-
-  // has it been destroyed
-  this.destroyed = false;
-
-  // should we decode strings into buffers before passing to _write?
-  // this is here so that some node-core streams can optimize string
-  // handling at a lower level.
-  var noDecode = options.decodeStrings === false;
-  this.decodeStrings = !noDecode;
-
-  // Crypto is kind of old and crusty.  Historically, its default string
-  // encoding is 'binary' so we have to make this configurable.
-  // Everything else in the universe uses 'utf8', though.
-  this.defaultEncoding = options.defaultEncoding || 'utf8';
-
-  // not an actual buffer we keep track of, but a measurement
-  // of how much we're waiting to get pushed to some underlying
-  // socket or file.
-  this.length = 0;
-
-  // a flag to see when we're in the middle of a write.
-  this.writing = false;
-
-  // when true all writes will be buffered until .uncork() call
-  this.corked = 0;
-
-  // a flag to be able to tell if the onwrite cb is called immediately,
-  // or on a later tick.  We set this to true at first, because any
-  // actions that shouldn't happen until "later" should generally also
-  // not happen before the first write call.
-  this.sync = true;
-
-  // a flag to know if we're processing previously buffered items, which
-  // may call the _write() callback in the same tick, so that we don't
-  // end up in an overlapped onwrite situation.
-  this.bufferProcessing = false;
-
-  // the callback that's passed to _write(chunk,cb)
-  this.onwrite = function (er) {
-    onwrite(stream, er);
-  };
-
-  // the callback that the user supplies to write(chunk,encoding,cb)
-  this.writecb = null;
-
-  // the amount that is being written when _write is called.
-  this.writelen = 0;
-
-  this.bufferedRequest = null;
-  this.lastBufferedRequest = null;
-
-  // number of pending user-supplied write callbacks
-  // this must be 0 before 'finish' can be emitted
-  this.pendingcb = 0;
-
-  // emit prefinish if the only thing we're waiting for is _write cbs
-  // This is relevant for synchronous Transform streams
-  this.prefinished = false;
-
-  // True if the error was already emitted and should not be thrown again
-  this.errorEmitted = false;
-
-  // count buffered requests
-  this.bufferedRequestCount = 0;
-
-  // allocate the first CorkedRequest, there is always
-  // one allocated and free to use, and we maintain at most two
-  this.corkedRequestsFree = new CorkedRequest(this);
-}
-
-WritableState.prototype.getBuffer = function getBuffer() {
-  var current = this.bufferedRequest;
-  var out = [];
-  while (current) {
-    out.push(current);
-    current = current.next;
-  }
-  return out;
-};
-
-(function () {
-  try {
-    Object.defineProperty(WritableState.prototype, 'buffer', {
-      get: internalUtil.deprecate(function () {
-        return this.getBuffer();
-      }, '_writableState.buffer is deprecated. Use _writableState.getBuffer ' + 'instead.', 'DEP0003')
-    });
-  } catch (_) {}
-})();
-
-// Test _writableState for inheritance to account for Duplex streams,
-// whose prototype chain only points to Readable.
-var realHasInstance;
-if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.prototype[Symbol.hasInstance] === 'function') {
-  realHasInstance = Function.prototype[Symbol.hasInstance];
-  Object.defineProperty(Writable, Symbol.hasInstance, {
-    value: function (object) {
-      if (realHasInstance.call(this, object)) return true;
-      if (this !== Writable) return false;
-
-      return object && object._writableState instanceof WritableState;
-    }
-  });
-} else {
-  realHasInstance = function (object) {
-    return object instanceof this;
-  };
-}
-
-function Writable(options) {
-  Duplex = Duplex || require('./_stream_duplex');
-
-  // Writable ctor is applied to Duplexes, too.
-  // `realHasInstance` is necessary because using plain `instanceof`
-  // would return false, as no `_writableState` property is attached.
-
-  // Trying to use the custom `instanceof` for Writable here will also break the
-  // Node.js LazyTransform implementation, which has a non-trivial getter for
-  // `_writableState` that would lead to infinite recursion.
-  if (!realHasInstance.call(Writable, this) && !(this instanceof Duplex)) {
-    return new Writable(options);
-  }
-
-  this._writableState = new WritableState(options, this);
-
-  // legacy.
-  this.writable = true;
-
-  if (options) {
-    if (typeof options.write === 'function') this._write = options.write;
-
-    if (typeof options.writev === 'function') this._writev = options.writev;
-
-    if (typeof options.destroy === 'function') this._destroy = options.destroy;
-
-    if (typeof options.final === 'function') this._final = options.final;
-  }
-
-  Stream.call(this);
-}
-
-// Otherwise people can pipe Writable streams, which is just wrong.
-Writable.prototype.pipe = function () {
-  this.emit('error', new Error('Cannot pipe, not readable'));
-};
-
-function writeAfterEnd(stream, cb) {
-  var er = new Error('write after end');
-  // TODO: defer error events consistently everywhere, not just the cb
-  stream.emit('error', er);
-  pna.nextTick(cb, er);
-}
-
-// Checks that a user-supplied chunk is valid, especially for the particular
-// mode the stream is in. Currently this means that `null` is never accepted
-// and undefined/non-string values are only allowed in object mode.
-function validChunk(stream, state, chunk, cb) {
-  var valid = true;
-  var er = false;
-
-  if (chunk === null) {
-    er = new TypeError('May not write null values to stream');
-  } else if (typeof chunk !== 'string' && chunk !== undefined && !state.objectMode) {
-    er = new TypeError('Invalid non-string/buffer chunk');
-  }
-  if (er) {
-    stream.emit('error', er);
-    pna.nextTick(cb, er);
-    valid = false;
-  }
-  return valid;
-}
-
-Writable.prototype.write = function (chunk, encoding, cb) {
-  var state = this._writableState;
-  var ret = false;
-  var isBuf = !state.objectMode && _isUint8Array(chunk);
-
-  if (isBuf && !Buffer.isBuffer(chunk)) {
-    chunk = _uint8ArrayToBuffer(chunk);
-  }
-
-  if (typeof encoding === 'function') {
-    cb = encoding;
-    encoding = null;
-  }
-
-  if (isBuf) encoding = 'buffer';else if (!encoding) encoding = state.defaultEncoding;
-
-  if (typeof cb !== 'function') cb = nop;
-
-  if (state.ended) writeAfterEnd(this, cb);else if (isBuf || validChunk(this, state, chunk, cb)) {
-    state.pendingcb++;
-    ret = writeOrBuffer(this, state, isBuf, chunk, encoding, cb);
-  }
-
-  return ret;
-};
-
-Writable.prototype.cork = function () {
-  var state = this._writableState;
-
-  state.corked++;
-};
-
-Writable.prototype.uncork = function () {
-  var state = this._writableState;
-
-  if (state.corked) {
-    state.corked--;
-
-    if (!state.writing && !state.corked && !state.finished && !state.bufferProcessing && state.bufferedRequest) clearBuffer(this, state);
-  }
-};
-
-Writable.prototype.setDefaultEncoding = function setDefaultEncoding(encoding) {
-  // node::ParseEncoding() requires lower case.
-  if (typeof encoding === 'string') encoding = encoding.toLowerCase();
-  if (!(['hex', 'utf8', 'utf-8', 'ascii', 'binary', 'base64', 'ucs2', 'ucs-2', 'utf16le', 'utf-16le', 'raw'].indexOf((encoding + '').toLowerCase()) > -1)) throw new TypeError('Unknown encoding: ' + encoding);
-  this._writableState.defaultEncoding = encoding;
-  return this;
-};
-
-function decodeChunk(state, chunk, encoding) {
-  if (!state.objectMode && state.decodeStrings !== false && typeof chunk === 'string') {
-    chunk = Buffer.from(chunk, encoding);
-  }
-  return chunk;
-}
-
-Object.defineProperty(Writable.prototype, 'writableHighWaterMark', {
-  // making it explicit this property is not enumerable
-  // because otherwise some prototype manipulation in
-  // userland will fail
-  enumerable: false,
-  get: function () {
-    return this._writableState.highWaterMark;
-  }
-});
-
-// if we're already writing something, then just put this
-// in the queue, and wait our turn.  Otherwise, call _write
-// If we return false, then we need a drain event, so set that flag.
-function writeOrBuffer(stream, state, isBuf, chunk, encoding, cb) {
-  if (!isBuf) {
-    var newChunk = decodeChunk(state, chunk, encoding);
-    if (chunk !== newChunk) {
-      isBuf = true;
-      encoding = 'buffer';
-      chunk = newChunk;
-    }
-  }
-  var len = state.objectMode ? 1 : chunk.length;
-
-  state.length += len;
-
-  var ret = state.length < state.highWaterMark;
-  // we must ensure that previous needDrain will not be reset to false.
-  if (!ret) state.needDrain = true;
-
-  if (state.writing || state.corked) {
-    var last = state.lastBufferedRequest;
-    state.lastBufferedRequest = {
-      chunk: chunk,
-      encoding: encoding,
-      isBuf: isBuf,
-      callback: cb,
-      next: null
-    };
-    if (last) {
-      last.next = state.lastBufferedRequest;
-    } else {
-      state.bufferedRequest = state.lastBufferedRequest;
-    }
-    state.bufferedRequestCount += 1;
-  } else {
-    doWrite(stream, state, false, len, chunk, encoding, cb);
-  }
-
-  return ret;
-}
-
-function doWrite(stream, state, writev, len, chunk, encoding, cb) {
-  state.writelen = len;
-  state.writecb = cb;
-  state.writing = true;
-  state.sync = true;
-  if (writev) stream._writev(chunk, state.onwrite);else stream._write(chunk, encoding, state.onwrite);
-  state.sync = false;
-}
-
-function onwriteError(stream, state, sync, er, cb) {
-  --state.pendingcb;
-
-  if (sync) {
-    // defer the callback if we are being called synchronously
-    // to avoid piling up things on the stack
-    pna.nextTick(cb, er);
-    // this can emit finish, and it will always happen
-    // after error
-    pna.nextTick(finishMaybe, stream, state);
-    stream._writableState.errorEmitted = true;
-    stream.emit('error', er);
-  } else {
-    // the caller expect this to happen before if
-    // it is async
-    cb(er);
-    stream._writableState.errorEmitted = true;
-    stream.emit('error', er);
-    // this can emit finish, but finish must
-    // always follow error
-    finishMaybe(stream, state);
-  }
-}
-
-function onwriteStateUpdate(state) {
-  state.writing = false;
-  state.writecb = null;
-  state.length -= state.writelen;
-  state.writelen = 0;
-}
-
-function onwrite(stream, er) {
-  var state = stream._writableState;
-  var sync = state.sync;
-  var cb = state.writecb;
-
-  onwriteStateUpdate(state);
-
-  if (er) onwriteError(stream, state, sync, er, cb);else {
-    // Check if we're actually ready to finish, but don't emit yet
-    var finished = needFinish(state);
-
-    if (!finished && !state.corked && !state.bufferProcessing && state.bufferedRequest) {
-      clearBuffer(stream, state);
-    }
-
-    if (sync) {
-      /*<replacement>*/
-      asyncWrite(afterWrite, stream, state, finished, cb);
-      /*</replacement>*/
-    } else {
-      afterWrite(stream, state, finished, cb);
-    }
-  }
-}
-
-function afterWrite(stream, state, finished, cb) {
-  if (!finished) onwriteDrain(stream, state);
-  state.pendingcb--;
-  cb();
-  finishMaybe(stream, state);
-}
-
-// Must force callback to be called on nextTick, so that we don't
-// emit 'drain' before the write() consumer gets the 'false' return
-// value, and has a chance to attach a 'drain' listener.
-function onwriteDrain(stream, state) {
-  if (state.length === 0 && state.needDrain) {
-    state.needDrain = false;
-    stream.emit('drain');
-  }
-}
-
-// if there's something in the buffer waiting, then process it
-function clearBuffer(stream, state) {
-  state.bufferProcessing = true;
-  var entry = state.bufferedRequest;
-
-  if (stream._writev && entry && entry.next) {
-    // Fast case, write everything using _writev()
-    var l = state.bufferedRequestCount;
-    var buffer = new Array(l);
-    var holder = state.corkedRequestsFree;
-    holder.entry = entry;
-
-    var count = 0;
-    var allBuffers = true;
-    while (entry) {
-      buffer[count] = entry;
-      if (!entry.isBuf) allBuffers = false;
-      entry = entry.next;
-      count += 1;
-    }
-    buffer.allBuffers = allBuffers;
-
-    doWrite(stream, state, true, state.length, buffer, '', holder.finish);
-
-    // doWrite is almost always async, defer these to save a bit of time
-    // as the hot path ends with doWrite
-    state.pendingcb++;
-    state.lastBufferedRequest = null;
-    if (holder.next) {
-      state.corkedRequestsFree = holder.next;
-      holder.next = null;
-    } else {
-      state.corkedRequestsFree = new CorkedRequest(state);
-    }
-    state.bufferedRequestCount = 0;
-  } else {
-    // Slow case, write chunks one-by-one
-    while (entry) {
-      var chunk = entry.chunk;
-      var encoding = entry.encoding;
-      var cb = entry.callback;
-      var len = state.objectMode ? 1 : chunk.length;
-
-      doWrite(stream, state, false, len, chunk, encoding, cb);
-      entry = entry.next;
-      state.bufferedRequestCount--;
-      // if we didn't call the onwrite immediately, then
-      // it means that we need to wait until it does.
-      // also, that means that the chunk and cb are currently
-      // being processed, so move the buffer counter past them.
-      if (state.writing) {
-        break;
-      }
-    }
-
-    if (entry === null) state.lastBufferedRequest = null;
-  }
-
-  state.bufferedRequest = entry;
-  state.bufferProcessing = false;
-}
-
-Writable.prototype._write = function (chunk, encoding, cb) {
-  cb(new Error('_write() is not implemented'));
-};
-
-Writable.prototype._writev = null;
-
-Writable.prototype.end = function (chunk, encoding, cb) {
-  var state = this._writableState;
-
-  if (typeof chunk === 'function') {
-    cb = chunk;
-    chunk = null;
-    encoding = null;
-  } else if (typeof encoding === 'function') {
-    cb = encoding;
-    encoding = null;
-  }
-
-  if (chunk !== null && chunk !== undefined) this.write(chunk, encoding);
-
-  // .end() fully uncorks
-  if (state.corked) {
-    state.corked = 1;
-    this.uncork();
-  }
-
-  // ignore unnecessary end() calls.
-  if (!state.ending && !state.finished) endWritable(this, state, cb);
-};
-
-function needFinish(state) {
-  return state.ending && state.length === 0 && state.bufferedRequest === null && !state.finished && !state.writing;
-}
-function callFinal(stream, state) {
-  stream._final(function (err) {
-    state.pendingcb--;
-    if (err) {
-      stream.emit('error', err);
-    }
-    state.prefinished = true;
-    stream.emit('prefinish');
-    finishMaybe(stream, state);
-  });
-}
-function prefinish(stream, state) {
-  if (!state.prefinished && !state.finalCalled) {
-    if (typeof stream._final === 'function') {
-      state.pendingcb++;
-      state.finalCalled = true;
-      pna.nextTick(callFinal, stream, state);
-    } else {
-      state.prefinished = true;
-      stream.emit('prefinish');
-    }
-  }
-}
-
-function finishMaybe(stream, state) {
-  var need = needFinish(state);
-  if (need) {
-    prefinish(stream, state);
-    if (state.pendingcb === 0) {
-      state.finished = true;
-      stream.emit('finish');
-    }
-  }
-  return need;
-}
-
-function endWritable(stream, state, cb) {
-  state.ending = true;
-  finishMaybe(stream, state);
-  if (cb) {
-    if (state.finished) pna.nextTick(cb);else stream.once('finish', cb);
-  }
-  state.ended = true;
-  stream.writable = false;
-}
-
-function onCorkedFinish(corkReq, state, err) {
-  var entry = corkReq.entry;
-  corkReq.entry = null;
-  while (entry) {
-    var cb = entry.callback;
-    state.pendingcb--;
-    cb(err);
-    entry = entry.next;
-  }
-  if (state.corkedRequestsFree) {
-    state.corkedRequestsFree.next = corkReq;
-  } else {
-    state.corkedRequestsFree = corkReq;
-  }
-}
-
-Object.defineProperty(Writable.prototype, 'destroyed', {
-  get: function () {
-    if (this._writableState === undefined) {
-      return false;
-    }
-    return this._writableState.destroyed;
-  },
-  set: function (value) {
-    // we ignore the value if the stream
-    // has not been initialized yet
-    if (!this._writableState) {
-      return;
-    }
-
-    // backward compatibility, the user is explicitly
-    // managing destroyed
-    this._writableState.destroyed = value;
-  }
-});
-
-Writable.prototype.destroy = destroyImpl.destroy;
-Writable.prototype._undestroy = destroyImpl.undestroy;
-Writable.prototype._destroy = function (err, cb) {
-  this.end();
-  cb(err);
-};
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"./_stream_duplex":117,"./internal/streams/destroy":123,"./internal/streams/stream":124,"_process":112,"core-util-is":101,"inherits":106,"process-nextick-args":111,"safe-buffer":144,"timers":160,"util-deprecate":164}],122:[function(require,module,exports){
-'use strict';
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Buffer = require('safe-buffer').Buffer;
-var util = require('util');
-
-function copyBuffer(src, target, offset) {
-  src.copy(target, offset);
-}
-
-module.exports = function () {
-  function BufferList() {
-    _classCallCheck(this, BufferList);
-
-    this.head = null;
-    this.tail = null;
-    this.length = 0;
-  }
-
-  BufferList.prototype.push = function push(v) {
-    var entry = { data: v, next: null };
-    if (this.length > 0) this.tail.next = entry;else this.head = entry;
-    this.tail = entry;
-    ++this.length;
-  };
-
-  BufferList.prototype.unshift = function unshift(v) {
-    var entry = { data: v, next: this.head };
-    if (this.length === 0) this.tail = entry;
-    this.head = entry;
-    ++this.length;
-  };
-
-  BufferList.prototype.shift = function shift() {
-    if (this.length === 0) return;
-    var ret = this.head.data;
-    if (this.length === 1) this.head = this.tail = null;else this.head = this.head.next;
-    --this.length;
-    return ret;
-  };
-
-  BufferList.prototype.clear = function clear() {
-    this.head = this.tail = null;
-    this.length = 0;
-  };
-
-  BufferList.prototype.join = function join(s) {
-    if (this.length === 0) return '';
-    var p = this.head;
-    var ret = '' + p.data;
-    while (p = p.next) {
-      ret += s + p.data;
-    }return ret;
-  };
-
-  BufferList.prototype.concat = function concat(n) {
-    if (this.length === 0) return Buffer.alloc(0);
-    if (this.length === 1) return this.head.data;
-    var ret = Buffer.allocUnsafe(n >>> 0);
-    var p = this.head;
-    var i = 0;
-    while (p) {
-      copyBuffer(p.data, ret, i);
-      i += p.data.length;
-      p = p.next;
-    }
-    return ret;
-  };
-
-  return BufferList;
-}();
-
-if (util && util.inspect && util.inspect.custom) {
-  module.exports.prototype[util.inspect.custom] = function () {
-    var obj = util.inspect({ length: this.length });
-    return this.constructor.name + ' ' + obj;
-  };
-}
-},{"safe-buffer":144,"util":2}],123:[function(require,module,exports){
-'use strict';
-
-/*<replacement>*/
-
-var pna = require('process-nextick-args');
-/*</replacement>*/
-
-// undocumented cb() API, needed for core, not for public API
-function destroy(err, cb) {
-  var _this = this;
-
-  var readableDestroyed = this._readableState && this._readableState.destroyed;
-  var writableDestroyed = this._writableState && this._writableState.destroyed;
-
-  if (readableDestroyed || writableDestroyed) {
-    if (cb) {
-      cb(err);
-    } else if (err && (!this._writableState || !this._writableState.errorEmitted)) {
-      pna.nextTick(emitErrorNT, this, err);
-    }
-    return this;
-  }
-
-  // we set destroyed to true before firing error callbacks in order
-  // to make it re-entrance safe in case destroy() is called within callbacks
-
-  if (this._readableState) {
-    this._readableState.destroyed = true;
-  }
-
-  // if this is a duplex stream mark the writable part as destroyed as well
-  if (this._writableState) {
-    this._writableState.destroyed = true;
-  }
-
-  this._destroy(err || null, function (err) {
-    if (!cb && err) {
-      pna.nextTick(emitErrorNT, _this, err);
-      if (_this._writableState) {
-        _this._writableState.errorEmitted = true;
-      }
-    } else if (cb) {
-      cb(err);
-    }
-  });
-
-  return this;
-}
-
-function undestroy() {
-  if (this._readableState) {
-    this._readableState.destroyed = false;
-    this._readableState.reading = false;
-    this._readableState.ended = false;
-    this._readableState.endEmitted = false;
-  }
-
-  if (this._writableState) {
-    this._writableState.destroyed = false;
-    this._writableState.ended = false;
-    this._writableState.ending = false;
-    this._writableState.finished = false;
-    this._writableState.errorEmitted = false;
-  }
-}
-
-function emitErrorNT(self, err) {
-  self.emit('error', err);
-}
-
-module.exports = {
-  destroy: destroy,
-  undestroy: undestroy
-};
-},{"process-nextick-args":111}],124:[function(require,module,exports){
-module.exports = require('events').EventEmitter;
-
-},{"events":102}],125:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-'use strict';
-
-/*<replacement>*/
-
-var Buffer = require('safe-buffer').Buffer;
-/*</replacement>*/
-
-var isEncoding = Buffer.isEncoding || function (encoding) {
-  encoding = '' + encoding;
-  switch (encoding && encoding.toLowerCase()) {
-    case 'hex':case 'utf8':case 'utf-8':case 'ascii':case 'binary':case 'base64':case 'ucs2':case 'ucs-2':case 'utf16le':case 'utf-16le':case 'raw':
-      return true;
-    default:
-      return false;
-  }
-};
-
-function _normalizeEncoding(enc) {
-  if (!enc) return 'utf8';
-  var retried;
-  while (true) {
-    switch (enc) {
-      case 'utf8':
-      case 'utf-8':
-        return 'utf8';
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return 'utf16le';
-      case 'latin1':
-      case 'binary':
-        return 'latin1';
-      case 'base64':
-      case 'ascii':
-      case 'hex':
-        return enc;
-      default:
-        if (retried) return; // undefined
-        enc = ('' + enc).toLowerCase();
-        retried = true;
-    }
-  }
-};
-
-// Do not cache `Buffer.isEncoding` when checking encoding names as some
-// modules monkey-patch it to support additional encodings
-function normalizeEncoding(enc) {
-  var nenc = _normalizeEncoding(enc);
-  if (typeof nenc !== 'string' && (Buffer.isEncoding === isEncoding || !isEncoding(enc))) throw new Error('Unknown encoding: ' + enc);
-  return nenc || enc;
-}
-
-// StringDecoder provides an interface for efficiently splitting a series of
-// buffers into a series of JS strings without breaking apart multi-byte
-// characters.
-exports.StringDecoder = StringDecoder;
-function StringDecoder(encoding) {
-  this.encoding = normalizeEncoding(encoding);
-  var nb;
-  switch (this.encoding) {
-    case 'utf16le':
-      this.text = utf16Text;
-      this.end = utf16End;
-      nb = 4;
-      break;
-    case 'utf8':
-      this.fillLast = utf8FillLast;
-      nb = 4;
-      break;
-    case 'base64':
-      this.text = base64Text;
-      this.end = base64End;
-      nb = 3;
-      break;
-    default:
-      this.write = simpleWrite;
-      this.end = simpleEnd;
-      return;
-  }
-  this.lastNeed = 0;
-  this.lastTotal = 0;
-  this.lastChar = Buffer.allocUnsafe(nb);
-}
-
-StringDecoder.prototype.write = function (buf) {
-  if (buf.length === 0) return '';
-  var r;
-  var i;
-  if (this.lastNeed) {
-    r = this.fillLast(buf);
-    if (r === undefined) return '';
-    i = this.lastNeed;
-    this.lastNeed = 0;
-  } else {
-    i = 0;
-  }
-  if (i < buf.length) return r ? r + this.text(buf, i) : this.text(buf, i);
-  return r || '';
-};
-
-StringDecoder.prototype.end = utf8End;
-
-// Returns only complete characters in a Buffer
-StringDecoder.prototype.text = utf8Text;
-
-// Attempts to complete a partial non-UTF-8 character using bytes from a Buffer
-StringDecoder.prototype.fillLast = function (buf) {
-  if (this.lastNeed <= buf.length) {
-    buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, this.lastNeed);
-    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
-  }
-  buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, buf.length);
-  this.lastNeed -= buf.length;
-};
-
-// Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
-// continuation byte. If an invalid byte is detected, -2 is returned.
-function utf8CheckByte(byte) {
-  if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
-  return byte >> 6 === 0x02 ? -1 : -2;
-}
-
-// Checks at most 3 bytes at the end of a Buffer in order to detect an
-// incomplete multi-byte UTF-8 character. The total number of bytes (2, 3, or 4)
-// needed to complete the UTF-8 character (if applicable) are returned.
-function utf8CheckIncomplete(self, buf, i) {
-  var j = buf.length - 1;
-  if (j < i) return 0;
-  var nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) self.lastNeed = nb - 1;
-    return nb;
-  }
-  if (--j < i || nb === -2) return 0;
-  nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) self.lastNeed = nb - 2;
-    return nb;
-  }
-  if (--j < i || nb === -2) return 0;
-  nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) {
-      if (nb === 2) nb = 0;else self.lastNeed = nb - 3;
-    }
-    return nb;
-  }
-  return 0;
-}
-
-// Validates as many continuation bytes for a multi-byte UTF-8 character as
-// needed or are available. If we see a non-continuation byte where we expect
-// one, we "replace" the validated continuation bytes we've seen so far with
-// a single UTF-8 replacement character ('\ufffd'), to match v8's UTF-8 decoding
-// behavior. The continuation byte check is included three times in the case
-// where all of the continuation bytes for a character exist in the same buffer.
-// It is also done this way as a slight performance increase instead of using a
-// loop.
-function utf8CheckExtraBytes(self, buf, p) {
-  if ((buf[0] & 0xC0) !== 0x80) {
-    self.lastNeed = 0;
-    return '\ufffd';
-  }
-  if (self.lastNeed > 1 && buf.length > 1) {
-    if ((buf[1] & 0xC0) !== 0x80) {
-      self.lastNeed = 1;
-      return '\ufffd';
-    }
-    if (self.lastNeed > 2 && buf.length > 2) {
-      if ((buf[2] & 0xC0) !== 0x80) {
-        self.lastNeed = 2;
-        return '\ufffd';
-      }
-    }
-  }
-}
-
-// Attempts to complete a multi-byte UTF-8 character using bytes from a Buffer.
-function utf8FillLast(buf) {
-  var p = this.lastTotal - this.lastNeed;
-  var r = utf8CheckExtraBytes(this, buf, p);
-  if (r !== undefined) return r;
-  if (this.lastNeed <= buf.length) {
-    buf.copy(this.lastChar, p, 0, this.lastNeed);
-    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
-  }
-  buf.copy(this.lastChar, p, 0, buf.length);
-  this.lastNeed -= buf.length;
-}
-
-// Returns all complete UTF-8 characters in a Buffer. If the Buffer ended on a
-// partial character, the character's bytes are buffered until the required
-// number of bytes are available.
-function utf8Text(buf, i) {
-  var total = utf8CheckIncomplete(this, buf, i);
-  if (!this.lastNeed) return buf.toString('utf8', i);
-  this.lastTotal = total;
-  var end = buf.length - (total - this.lastNeed);
-  buf.copy(this.lastChar, 0, end);
-  return buf.toString('utf8', i, end);
-}
-
-// For UTF-8, a replacement character is added when ending on a partial
-// character.
-function utf8End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) return r + '\ufffd';
-  return r;
-}
-
-// UTF-16LE typically needs two bytes per character, but even if we have an even
-// number of bytes available, we need to check if we end on a leading/high
-// surrogate. In that case, we need to wait for the next two bytes in order to
-// decode the last character properly.
-function utf16Text(buf, i) {
-  if ((buf.length - i) % 2 === 0) {
-    var r = buf.toString('utf16le', i);
-    if (r) {
-      var c = r.charCodeAt(r.length - 1);
-      if (c >= 0xD800 && c <= 0xDBFF) {
-        this.lastNeed = 2;
-        this.lastTotal = 4;
-        this.lastChar[0] = buf[buf.length - 2];
-        this.lastChar[1] = buf[buf.length - 1];
-        return r.slice(0, -1);
-      }
-    }
-    return r;
-  }
-  this.lastNeed = 1;
-  this.lastTotal = 2;
-  this.lastChar[0] = buf[buf.length - 1];
-  return buf.toString('utf16le', i, buf.length - 1);
-}
-
-// For UTF-16LE we do not explicitly append special replacement characters if we
-// end on a partial character, we simply let v8 handle that.
-function utf16End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) {
-    var end = this.lastTotal - this.lastNeed;
-    return r + this.lastChar.toString('utf16le', 0, end);
-  }
-  return r;
-}
-
-function base64Text(buf, i) {
-  var n = (buf.length - i) % 3;
-  if (n === 0) return buf.toString('base64', i);
-  this.lastNeed = 3 - n;
-  this.lastTotal = 3;
-  if (n === 1) {
-    this.lastChar[0] = buf[buf.length - 1];
-  } else {
-    this.lastChar[0] = buf[buf.length - 2];
-    this.lastChar[1] = buf[buf.length - 1];
-  }
-  return buf.toString('base64', i, buf.length - n);
-}
-
-function base64End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) return r + this.lastChar.toString('base64', 0, 3 - this.lastNeed);
-  return r;
-}
-
-// Pass bytes on through for single-byte encodings (e.g. ascii, latin1, hex)
-function simpleWrite(buf) {
-  return buf.toString(this.encoding);
-}
-
-function simpleEnd(buf) {
-  return buf && buf.length ? this.write(buf) : '';
-}
-},{"safe-buffer":144}],126:[function(require,module,exports){
-exports = module.exports = require('./lib/_stream_readable.js');
-exports.Stream = exports;
-exports.Readable = exports;
-exports.Writable = require('./lib/_stream_writable.js');
-exports.Duplex = require('./lib/_stream_duplex.js');
-exports.Transform = require('./lib/_stream_transform.js');
-exports.PassThrough = require('./lib/_stream_passthrough.js');
-
-},{"./lib/_stream_duplex.js":117,"./lib/_stream_passthrough.js":118,"./lib/_stream_readable.js":119,"./lib/_stream_transform.js":120,"./lib/_stream_writable.js":121}],127:[function(require,module,exports){
+},{"./decode":111,"./encode":112}],114:[function(require,module,exports){
 "use strict";
 
 module.exports =
@@ -18160,7 +15450,7 @@ module.exports =
 	SHORTEST:      "shortest"
 };
 
-},{}],128:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 "use strict";
 
 var constants = require("./constants");
@@ -18336,7 +15626,7 @@ function showResource(urlObj, options)
 
 module.exports = formatUrl;
 
-},{"./constants":127}],129:[function(require,module,exports){
+},{"./constants":114}],116:[function(require,module,exports){
 "use strict";
 
 var constants  = require("./constants");
@@ -18432,7 +15722,7 @@ objUtils.shallowMerge(RelateUrl, constants);
 
 module.exports = RelateUrl;
 
-},{"./constants":127,"./format":128,"./options":130,"./parse":133,"./relate":140,"./util/object":142}],130:[function(require,module,exports){
+},{"./constants":114,"./format":115,"./options":117,"./parse":120,"./relate":127,"./util/object":129}],117:[function(require,module,exports){
 "use strict";
 
 var objUtils = require("./util/object");
@@ -18491,7 +15781,7 @@ function mergeOption(newValues, defaultValues)
 
 module.exports = getOptions;
 
-},{"./util/object":142}],131:[function(require,module,exports){
+},{"./util/object":129}],118:[function(require,module,exports){
 "use strict";
 
 function parseHost(urlObj, options)
@@ -18519,7 +15809,7 @@ function parseHost(urlObj, options)
 
 module.exports = parseHost;
 
-},{}],132:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 "use strict";
 
 function hrefInfo(urlObj)
@@ -18541,7 +15831,7 @@ function hrefInfo(urlObj)
 
 module.exports = hrefInfo;
 
-},{}],133:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 "use strict";
 
 var hrefInfo   = require("./hrefInfo");
@@ -18601,7 +15891,7 @@ module.exports =
 	to:   parseUrl
 };
 
-},{"../util/path":143,"./host":131,"./hrefInfo":132,"./path":134,"./port":135,"./query":136,"./urlstring":137}],134:[function(require,module,exports){
+},{"../util/path":130,"./host":118,"./hrefInfo":119,"./path":121,"./port":122,"./query":123,"./urlstring":124}],121:[function(require,module,exports){
 "use strict";
 
 function isDirectoryIndex(resource, options)
@@ -18703,7 +15993,7 @@ function splitPath(path)
 
 module.exports = parsePath;
 
-},{}],135:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 "use strict";
 
 function parsePort(urlObj, options)
@@ -18737,7 +16027,7 @@ function parsePort(urlObj, options)
 
 module.exports = parsePort;
 
-},{}],136:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 "use strict";
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -18792,7 +16082,7 @@ function stringify(queryObj, removeEmptyQueries)
 
 module.exports = parseQuery;
 
-},{}],137:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 "use strict";
 
 var _parseUrl = require("url").parse;
@@ -18940,7 +16230,7 @@ function parseUrlString(url, options)
 
 module.exports = parseUrlString;
 
-},{"url":162}],138:[function(require,module,exports){
+},{"url":163}],125:[function(require,module,exports){
 "use strict";
 
 var findRelation = require("./findRelation");
@@ -19031,7 +16321,7 @@ function copyResource(urlObj, siteUrlObj)
 
 module.exports = absolutize;
 
-},{"../util/object":142,"../util/path":143,"./findRelation":139}],139:[function(require,module,exports){
+},{"../util/object":129,"../util/path":130,"./findRelation":126}],126:[function(require,module,exports){
 "use strict";
 
 function findRelation_upToPath(urlObj, siteUrlObj, options)
@@ -19112,7 +16402,7 @@ module.exports =
 	upToPath: findRelation_upToPath
 };
 
-},{}],140:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 "use strict";
 
 var absolutize = require("./absolutize");
@@ -19132,7 +16422,7 @@ function relateUrl(siteUrlObj, urlObj, options)
 
 module.exports = relateUrl;
 
-},{"./absolutize":138,"./relativize":141}],141:[function(require,module,exports){
+},{"./absolutize":125,"./relativize":128}],128:[function(require,module,exports){
 "use strict";
 
 var pathUtils = require("../util/path");
@@ -19201,7 +16491,7 @@ function relativize(urlObj, siteUrlObj, options)
 
 module.exports = relativize;
 
-},{"../util/path":143}],142:[function(require,module,exports){
+},{"../util/path":130}],129:[function(require,module,exports){
 "use strict";
 
 /*
@@ -19267,7 +16557,7 @@ module.exports =
 	shallowMerge: shallowMerge
 };
 
-},{}],143:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 "use strict";
 
 function joinPath(pathArray)
@@ -19318,7 +16608,7 @@ module.exports =
 	resolveDotSegments: resolveDotSegments
 };
 
-},{}],144:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -19340,6 +16630,8 @@ if (Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow)
 function SafeBuffer (arg, encodingOrOffset, length) {
   return Buffer(arg, encodingOrOffset, length)
 }
+
+SafeBuffer.prototype = Object.create(Buffer.prototype)
 
 // Copy static methods from Buffer
 copyProps(Buffer, SafeBuffer)
@@ -19382,7 +16674,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":4}],145:[function(require,module,exports){
+},{"buffer":4}],132:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19505,7 +16797,7 @@ ArraySet.prototype.toArray = function ArraySet_toArray() {
 
 exports.ArraySet = ArraySet;
 
-},{"./util":154}],146:[function(require,module,exports){
+},{"./util":141}],133:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19647,7 +16939,7 @@ exports.decode = function base64VLQ_decode(aStr, aIndex, aOutParam) {
   aOutParam.rest = aIndex;
 };
 
-},{"./base64":147}],147:[function(require,module,exports){
+},{"./base64":134}],134:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19716,7 +17008,7 @@ exports.decode = function (charCode) {
   return -1;
 };
 
-},{}],148:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19829,7 +17121,7 @@ exports.search = function search(aNeedle, aHaystack, aCompare, aBias) {
   return index;
 };
 
-},{}],149:[function(require,module,exports){
+},{}],136:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2014 Mozilla Foundation and contributors
@@ -19910,7 +17202,7 @@ MappingList.prototype.toArray = function MappingList_toArray() {
 
 exports.MappingList = MappingList;
 
-},{"./util":154}],150:[function(require,module,exports){
+},{"./util":141}],137:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -20026,7 +17318,7 @@ exports.quickSort = function (ary, comparator) {
   doQuickSort(ary, comparator, 0, ary.length - 1);
 };
 
-},{}],151:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -21173,7 +18465,7 @@ IndexedSourceMapConsumer.prototype._parseMappings =
 
 exports.IndexedSourceMapConsumer = IndexedSourceMapConsumer;
 
-},{"./array-set":145,"./base64-vlq":146,"./binary-search":148,"./quick-sort":150,"./util":154}],152:[function(require,module,exports){
+},{"./array-set":132,"./base64-vlq":133,"./binary-search":135,"./quick-sort":137,"./util":141}],139:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -21600,7 +18892,7 @@ SourceMapGenerator.prototype.toString =
 
 exports.SourceMapGenerator = SourceMapGenerator;
 
-},{"./array-set":145,"./base64-vlq":146,"./mapping-list":149,"./util":154}],153:[function(require,module,exports){
+},{"./array-set":132,"./base64-vlq":133,"./mapping-list":136,"./util":141}],140:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -22015,7 +19307,7 @@ SourceNode.prototype.toStringWithSourceMap = function SourceNode_toStringWithSou
 
 exports.SourceNode = SourceNode;
 
-},{"./source-map-generator":152,"./util":154}],154:[function(require,module,exports){
+},{"./source-map-generator":139,"./util":141}],141:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -22505,7 +19797,7 @@ function computeSourceURL(sourceRoot, sourceURL, sourceMapURL) {
 }
 exports.computeSourceURL = computeSourceURL;
 
-},{}],155:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
@@ -22515,7 +19807,7 @@ exports.SourceMapGenerator = require('./lib/source-map-generator').SourceMapGene
 exports.SourceMapConsumer = require('./lib/source-map-consumer').SourceMapConsumer;
 exports.SourceNode = require('./lib/source-node').SourceNode;
 
-},{"./lib/source-map-consumer":151,"./lib/source-map-generator":152,"./lib/source-node":153}],156:[function(require,module,exports){
+},{"./lib/source-map-consumer":138,"./lib/source-map-generator":139,"./lib/source-node":140}],143:[function(require,module,exports){
 (function (global){
 var ClientRequest = require('./lib/request')
 var response = require('./lib/response')
@@ -22603,19 +19895,13 @@ http.METHODS = [
 	'UNSUBSCRIBE'
 ]
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./lib/request":158,"./lib/response":159,"builtin-status-codes":5,"url":162,"xtend":165}],157:[function(require,module,exports){
+},{"./lib/request":145,"./lib/response":146,"builtin-status-codes":5,"url":163,"xtend":166}],144:[function(require,module,exports){
 (function (global){
 exports.fetch = isFunction(global.fetch) && isFunction(global.ReadableStream)
 
 exports.writableStream = isFunction(global.WritableStream)
 
 exports.abortController = isFunction(global.AbortController)
-
-exports.blobConstructor = false
-try {
-	new Blob([new ArrayBuffer(1)])
-	exports.blobConstructor = true
-} catch (e) {}
 
 // The xhr request to example.com may violate some restrictive CSP configurations,
 // so if we're running in a browser that supports `fetch`, avoid calling getXHR()
@@ -22652,26 +19938,18 @@ function checkTypeSupport (type) {
 	return false
 }
 
-// For some strange reason, Safari 7.0 reports typeof global.ArrayBuffer === 'object'.
-// Safari 7.1 appears to have fixed this bug.
-var haveArrayBuffer = typeof global.ArrayBuffer !== 'undefined'
-var haveSlice = haveArrayBuffer && isFunction(global.ArrayBuffer.prototype.slice)
-
 // If fetch is supported, then arraybuffer will be supported too. Skip calling
 // checkTypeSupport(), since that calls getXHR().
-exports.arraybuffer = exports.fetch || (haveArrayBuffer && checkTypeSupport('arraybuffer'))
+exports.arraybuffer = exports.fetch || checkTypeSupport('arraybuffer')
 
 // These next two tests unavoidably show warnings in Chrome. Since fetch will always
 // be used if it's available, just return false for these to avoid the warnings.
-exports.msstream = !exports.fetch && haveSlice && checkTypeSupport('ms-stream')
-exports.mozchunkedarraybuffer = !exports.fetch && haveArrayBuffer &&
-	checkTypeSupport('moz-chunked-arraybuffer')
+exports.msstream = !exports.fetch && checkTypeSupport('ms-stream')
+exports.mozchunkedarraybuffer = !exports.fetch && checkTypeSupport('moz-chunked-arraybuffer')
 
 // If fetch is supported, then overrideMimeType will be supported too. Skip calling
 // getXHR().
 exports.overrideMimeType = exports.fetch || (getXHR() ? isFunction(getXHR().overrideMimeType) : false)
-
-exports.vbArray = isFunction(global.VBArray)
 
 function isFunction (value) {
 	return typeof value === 'function'
@@ -22680,13 +19958,12 @@ function isFunction (value) {
 xhr = null // Help gc
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],158:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
 var response = require('./response')
 var stream = require('readable-stream')
-var toArrayBuffer = require('to-arraybuffer')
 
 var IncomingMessage = response.IncomingMessage
 var rStates = response.readyStates
@@ -22700,8 +19977,6 @@ function decideMode (preferBinary, useFetch) {
 		return 'ms-stream'
 	} else if (capability.arraybuffer && preferBinary) {
 		return 'arraybuffer'
-	} else if (capability.vbArray && preferBinary) {
-		return 'text:vbarray'
 	} else {
 		return 'text'
 	}
@@ -22715,7 +19990,7 @@ var ClientRequest = module.exports = function (opts) {
 	self._body = []
 	self._headers = {}
 	if (opts.auth)
-		self.setHeader('Authorization', 'Basic ' + new Buffer(opts.auth).toString('base64'))
+		self.setHeader('Authorization', 'Basic ' + Buffer.from(opts.auth).toString('base64'))
 	Object.keys(opts.headers).forEach(function (name) {
 		self.setHeader(name, opts.headers[name])
 	})
@@ -22786,19 +20061,10 @@ ClientRequest.prototype._onFinish = function () {
 	var headersObj = self._headers
 	var body = null
 	if (opts.method !== 'GET' && opts.method !== 'HEAD') {
-		if (capability.arraybuffer) {
-			body = toArrayBuffer(Buffer.concat(self._body))
-		} else if (capability.blobConstructor) {
-			body = new global.Blob(self._body.map(function (buffer) {
-				return toArrayBuffer(buffer)
-			}), {
-				type: (headersObj['content-type'] || {}).value || ''
-			})
-		} else {
-			// get utf8 string
-			body = Buffer.concat(self._body).toString()
-		}
-	}
+        body = new Blob(self._body, {
+            type: (headersObj['content-type'] || {}).value || ''
+        });
+    }
 
 	// create flattened list of headers
 	var headersList = []
@@ -22859,7 +20125,7 @@ ClientRequest.prototype._onFinish = function () {
 
 		// Can't set responseType on really old browsers
 		if ('responseType' in xhr)
-			xhr.responseType = self._mode.split(':')[0]
+			xhr.responseType = self._mode
 
 		if ('withCredentials' in xhr)
 			xhr.withCredentials = !!opts.withCredentials
@@ -23011,7 +20277,7 @@ var unsafeHeaders = [
 ]
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":157,"./response":159,"_process":112,"buffer":4,"inherits":106,"readable-stream":126,"to-arraybuffer":161}],159:[function(require,module,exports){
+},{"./capability":144,"./response":146,"_process":109,"buffer":4,"inherits":105,"readable-stream":161}],146:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
@@ -23061,7 +20327,7 @@ var IncomingMessage = exports.IncomingMessage = function (xhr, response, mode, f
 					return new Promise(function (resolve, reject) {
 						if (self._destroyed) {
 							reject()
-						} else if(self.push(new Buffer(chunk))) {
+						} else if(self.push(Buffer.from(chunk))) {
 							resolve()
 						} else {
 							self._resumeFetch = resolve
@@ -23099,7 +20365,7 @@ var IncomingMessage = exports.IncomingMessage = function (xhr, response, mode, f
 					self.push(null)
 					return
 				}
-				self.push(new Buffer(result.value))
+				self.push(Buffer.from(result.value))
 				read()
 			}).catch(function (err) {
 				global.clearTimeout(fetchTimer)
@@ -23168,29 +20434,12 @@ IncomingMessage.prototype._onXHRProgress = function () {
 
 	var response = null
 	switch (self._mode) {
-		case 'text:vbarray': // For IE9
-			if (xhr.readyState !== rStates.DONE)
-				break
-			try {
-				// This fails in IE8
-				response = new global.VBArray(xhr.responseBody).toArray()
-			} catch (e) {}
-			if (response !== null) {
-				self.push(new Buffer(response))
-				break
-			}
-			// Falls through in IE8	
 		case 'text':
-			try { // This will fail when readyState = 3 in IE9. Switch mode and wait for readyState = 4
-				response = xhr.responseText
-			} catch (e) {
-				self._mode = 'text:vbarray'
-				break
-			}
+			response = xhr.responseText
 			if (response.length > self._pos) {
 				var newData = response.substr(self._pos)
 				if (self._charset === 'x-user-defined') {
-					var buffer = new Buffer(newData.length)
+					var buffer = Buffer.alloc(newData.length)
 					for (var i = 0; i < newData.length; i++)
 						buffer[i] = newData.charCodeAt(i) & 0xff
 
@@ -23205,13 +20454,13 @@ IncomingMessage.prototype._onXHRProgress = function () {
 			if (xhr.readyState !== rStates.DONE || !xhr.response)
 				break
 			response = xhr.response
-			self.push(new Buffer(new Uint8Array(response)))
+			self.push(Buffer.from(new Uint8Array(response)))
 			break
 		case 'moz-chunked-arraybuffer': // take whole
 			response = xhr.response
 			if (xhr.readyState !== rStates.LOADING || !response)
 				break
-			self.push(new Buffer(new Uint8Array(response)))
+			self.push(Buffer.from(new Uint8Array(response)))
 			break
 		case 'ms-stream':
 			response = xhr.response
@@ -23220,7 +20469,7 @@ IncomingMessage.prototype._onXHRProgress = function () {
 			var reader = new global.MSStreamReader()
 			reader.onprogress = function () {
 				if (reader.result.byteLength > self._pos) {
-					self.push(new Buffer(new Uint8Array(reader.result.slice(self._pos))))
+					self.push(Buffer.from(new Uint8Array(reader.result.slice(self._pos))))
 					self._pos = reader.result.byteLength
 				}
 			}
@@ -23239,115 +20488,3347 @@ IncomingMessage.prototype._onXHRProgress = function () {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":157,"_process":112,"buffer":4,"inherits":106,"readable-stream":126}],160:[function(require,module,exports){
-(function (setImmediate,clearImmediate){
-var nextTick = require('process/browser.js').nextTick;
-var apply = Function.prototype.apply;
-var slice = Array.prototype.slice;
-var immediateIds = {};
-var nextImmediateId = 0;
+},{"./capability":144,"_process":109,"buffer":4,"inherits":105,"readable-stream":161}],147:[function(require,module,exports){
+'use strict';
 
-// DOM APIs, for completeness
+function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
 
-exports.setTimeout = function() {
-  return new Timeout(apply.call(setTimeout, window, arguments), clearTimeout);
-};
-exports.setInterval = function() {
-  return new Timeout(apply.call(setInterval, window, arguments), clearInterval);
-};
-exports.clearTimeout =
-exports.clearInterval = function(timeout) { timeout.close(); };
+var codes = {};
 
-function Timeout(id, clearFn) {
-  this._id = id;
-  this._clearFn = clearFn;
+function createErrorType(code, message, Base) {
+  if (!Base) {
+    Base = Error;
+  }
+
+  function getMessage(arg1, arg2, arg3) {
+    if (typeof message === 'string') {
+      return message;
+    } else {
+      return message(arg1, arg2, arg3);
+    }
+  }
+
+  var NodeError =
+  /*#__PURE__*/
+  function (_Base) {
+    _inheritsLoose(NodeError, _Base);
+
+    function NodeError(arg1, arg2, arg3) {
+      return _Base.call(this, getMessage(arg1, arg2, arg3)) || this;
+    }
+
+    return NodeError;
+  }(Base);
+
+  NodeError.prototype.name = Base.name;
+  NodeError.prototype.code = code;
+  codes[code] = NodeError;
+} // https://github.com/nodejs/node/blob/v10.8.0/lib/internal/errors.js
+
+
+function oneOf(expected, thing) {
+  if (Array.isArray(expected)) {
+    var len = expected.length;
+    expected = expected.map(function (i) {
+      return String(i);
+    });
+
+    if (len > 2) {
+      return "one of ".concat(thing, " ").concat(expected.slice(0, len - 1).join(', '), ", or ") + expected[len - 1];
+    } else if (len === 2) {
+      return "one of ".concat(thing, " ").concat(expected[0], " or ").concat(expected[1]);
+    } else {
+      return "of ".concat(thing, " ").concat(expected[0]);
+    }
+  } else {
+    return "of ".concat(thing, " ").concat(String(expected));
+  }
+} // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith
+
+
+function startsWith(str, search, pos) {
+  return str.substr(!pos || pos < 0 ? 0 : +pos, search.length) === search;
+} // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith
+
+
+function endsWith(str, search, this_len) {
+  if (this_len === undefined || this_len > str.length) {
+    this_len = str.length;
+  }
+
+  return str.substring(this_len - search.length, this_len) === search;
+} // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes
+
+
+function includes(str, search, start) {
+  if (typeof start !== 'number') {
+    start = 0;
+  }
+
+  if (start + search.length > str.length) {
+    return false;
+  } else {
+    return str.indexOf(search, start) !== -1;
+  }
 }
-Timeout.prototype.unref = Timeout.prototype.ref = function() {};
-Timeout.prototype.close = function() {
-  this._clearFn.call(window, this._id);
+
+createErrorType('ERR_INVALID_OPT_VALUE', function (name, value) {
+  return 'The value "' + value + '" is invalid for option "' + name + '"';
+}, TypeError);
+createErrorType('ERR_INVALID_ARG_TYPE', function (name, expected, actual) {
+  // determiner: 'must be' or 'must not be'
+  var determiner;
+
+  if (typeof expected === 'string' && startsWith(expected, 'not ')) {
+    determiner = 'must not be';
+    expected = expected.replace(/^not /, '');
+  } else {
+    determiner = 'must be';
+  }
+
+  var msg;
+
+  if (endsWith(name, ' argument')) {
+    // For cases like 'first argument'
+    msg = "The ".concat(name, " ").concat(determiner, " ").concat(oneOf(expected, 'type'));
+  } else {
+    var type = includes(name, '.') ? 'property' : 'argument';
+    msg = "The \"".concat(name, "\" ").concat(type, " ").concat(determiner, " ").concat(oneOf(expected, 'type'));
+  }
+
+  msg += ". Received type ".concat(typeof actual);
+  return msg;
+}, TypeError);
+createErrorType('ERR_STREAM_PUSH_AFTER_EOF', 'stream.push() after EOF');
+createErrorType('ERR_METHOD_NOT_IMPLEMENTED', function (name) {
+  return 'The ' + name + ' method is not implemented';
+});
+createErrorType('ERR_STREAM_PREMATURE_CLOSE', 'Premature close');
+createErrorType('ERR_STREAM_DESTROYED', function (name) {
+  return 'Cannot call ' + name + ' after a stream was destroyed';
+});
+createErrorType('ERR_MULTIPLE_CALLBACK', 'Callback called multiple times');
+createErrorType('ERR_STREAM_CANNOT_PIPE', 'Cannot pipe, not readable');
+createErrorType('ERR_STREAM_WRITE_AFTER_END', 'write after end');
+createErrorType('ERR_STREAM_NULL_VALUES', 'May not write null values to stream', TypeError);
+createErrorType('ERR_UNKNOWN_ENCODING', function (arg) {
+  return 'Unknown encoding: ' + arg;
+}, TypeError);
+createErrorType('ERR_STREAM_UNSHIFT_AFTER_END_EVENT', 'stream.unshift() after end event');
+module.exports.codes = codes;
+
+},{}],148:[function(require,module,exports){
+(function (process){
+'use strict'
+
+var experimentalWarnings = new Set();
+
+function emitExperimentalWarning(feature) {
+  if (experimentalWarnings.has(feature)) return;
+  var msg = feature + ' is an experimental feature. This feature could ' +
+       'change at any time';
+  experimentalWarnings.add(feature);
+  process.emitWarning(msg, 'ExperimentalWarning');
+}
+
+function noop() {}
+
+module.exports.emitExperimentalWarning = process.emitWarning
+  ? emitExperimentalWarning
+  : noop;
+
+}).call(this,require('_process'))
+},{"_process":109}],149:[function(require,module,exports){
+(function (process){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+// a duplex stream is just a stream that is both readable and writable.
+// Since JS doesn't have multiple prototypal inheritance, this class
+// prototypally inherits from Readable, and then parasitically from
+// Writable.
+'use strict';
+/*<replacement>*/
+
+var objectKeys = Object.keys || function (obj) {
+  var keys = [];
+
+  for (var key in obj) {
+    keys.push(key);
+  }
+
+  return keys;
+};
+/*</replacement>*/
+
+
+module.exports = Duplex;
+
+var Readable = require('./_stream_readable');
+
+var Writable = require('./_stream_writable');
+
+require('inherits')(Duplex, Readable);
+
+{
+  // Allow the keys array to be GC'ed.
+  var keys = objectKeys(Writable.prototype);
+
+  for (var v = 0; v < keys.length; v++) {
+    var method = keys[v];
+    if (!Duplex.prototype[method]) Duplex.prototype[method] = Writable.prototype[method];
+  }
+}
+
+function Duplex(options) {
+  if (!(this instanceof Duplex)) return new Duplex(options);
+  Readable.call(this, options);
+  Writable.call(this, options);
+  this.allowHalfOpen = true;
+
+  if (options) {
+    if (options.readable === false) this.readable = false;
+    if (options.writable === false) this.writable = false;
+
+    if (options.allowHalfOpen === false) {
+      this.allowHalfOpen = false;
+      this.once('end', onend);
+    }
+  }
+}
+
+Object.defineProperty(Duplex.prototype, 'writableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState.highWaterMark;
+  }
+});
+Object.defineProperty(Duplex.prototype, 'writableBuffer', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState && this._writableState.getBuffer();
+  }
+});
+Object.defineProperty(Duplex.prototype, 'writableLength', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState.length;
+  }
+}); // the no-half-open enforcer
+
+function onend() {
+  // If the writable side ended, then we're ok.
+  if (this._writableState.ended) return; // no more data can be written.
+  // But allow more writes to happen in this tick.
+
+  process.nextTick(onEndNT, this);
+}
+
+function onEndNT(self) {
+  self.end();
+}
+
+Object.defineProperty(Duplex.prototype, 'destroyed', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    if (this._readableState === undefined || this._writableState === undefined) {
+      return false;
+    }
+
+    return this._readableState.destroyed && this._writableState.destroyed;
+  },
+  set: function set(value) {
+    // we ignore the value if the stream
+    // has not been initialized yet
+    if (this._readableState === undefined || this._writableState === undefined) {
+      return;
+    } // backward compatibility, the user is explicitly
+    // managing destroyed
+
+
+    this._readableState.destroyed = value;
+    this._writableState.destroyed = value;
+  }
+});
+}).call(this,require('_process'))
+},{"./_stream_readable":151,"./_stream_writable":153,"_process":109,"inherits":105}],150:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+// a passthrough stream.
+// basically just the most minimal sort of Transform stream.
+// Every written chunk gets output as-is.
+'use strict';
+
+module.exports = PassThrough;
+
+var Transform = require('./_stream_transform');
+
+require('inherits')(PassThrough, Transform);
+
+function PassThrough(options) {
+  if (!(this instanceof PassThrough)) return new PassThrough(options);
+  Transform.call(this, options);
+}
+
+PassThrough.prototype._transform = function (chunk, encoding, cb) {
+  cb(null, chunk);
+};
+},{"./_stream_transform":152,"inherits":105}],151:[function(require,module,exports){
+(function (process,global){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+'use strict';
+
+module.exports = Readable;
+/*<replacement>*/
+
+var Duplex;
+/*</replacement>*/
+
+Readable.ReadableState = ReadableState;
+/*<replacement>*/
+
+var EE = require('events').EventEmitter;
+
+var EElistenerCount = function EElistenerCount(emitter, type) {
+  return emitter.listeners(type).length;
+};
+/*</replacement>*/
+
+/*<replacement>*/
+
+
+var Stream = require('./internal/streams/stream');
+/*</replacement>*/
+
+
+var Buffer = require('buffer').Buffer;
+
+var OurUint8Array = global.Uint8Array || function () {};
+
+function _uint8ArrayToBuffer(chunk) {
+  return Buffer.from(chunk);
+}
+
+function _isUint8Array(obj) {
+  return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
+}
+/*<replacement>*/
+
+
+var debugUtil = require('util');
+
+var debug;
+
+if (debugUtil && debugUtil.debuglog) {
+  debug = debugUtil.debuglog('stream');
+} else {
+  debug = function debug() {};
+}
+/*</replacement>*/
+
+
+var BufferList = require('./internal/streams/buffer_list');
+
+var destroyImpl = require('./internal/streams/destroy');
+
+var _require = require('./internal/streams/state'),
+    getHighWaterMark = _require.getHighWaterMark;
+
+var _require$codes = require('../errors').codes,
+    ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
+    ERR_STREAM_PUSH_AFTER_EOF = _require$codes.ERR_STREAM_PUSH_AFTER_EOF,
+    ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
+    ERR_STREAM_UNSHIFT_AFTER_END_EVENT = _require$codes.ERR_STREAM_UNSHIFT_AFTER_END_EVENT;
+
+var _require2 = require('../experimentalWarning'),
+    emitExperimentalWarning = _require2.emitExperimentalWarning; // Lazy loaded to improve the startup performance.
+
+
+var StringDecoder;
+var createReadableStreamAsyncIterator;
+
+require('inherits')(Readable, Stream);
+
+var kProxyEvents = ['error', 'close', 'destroy', 'pause', 'resume'];
+
+function prependListener(emitter, event, fn) {
+  // Sadly this is not cacheable as some libraries bundle their own
+  // event emitter implementation with them.
+  if (typeof emitter.prependListener === 'function') return emitter.prependListener(event, fn); // This is a hack to make sure that our error handler is attached before any
+  // userland ones.  NEVER DO THIS. This is here only because this code needs
+  // to continue to work with older versions of Node.js that do not include
+  // the prependListener() method. The goal is to eventually remove this hack.
+
+  if (!emitter._events || !emitter._events[event]) emitter.on(event, fn);else if (Array.isArray(emitter._events[event])) emitter._events[event].unshift(fn);else emitter._events[event] = [fn, emitter._events[event]];
+}
+
+function ReadableState(options, stream, isDuplex) {
+  Duplex = Duplex || require('./_stream_duplex');
+  options = options || {}; // Duplex streams are both readable and writable, but share
+  // the same options object.
+  // However, some cases require setting options to different
+  // values for the readable and the writable sides of the duplex stream.
+  // These options can be provided separately as readableXXX and writableXXX.
+
+  if (typeof isDuplex !== 'boolean') isDuplex = stream instanceof Duplex; // object stream flag. Used to make read(n) ignore n and to
+  // make all the buffer merging and length checks go away
+
+  this.objectMode = !!options.objectMode;
+  if (isDuplex) this.objectMode = this.objectMode || !!options.readableObjectMode; // the point at which it stops calling _read() to fill the buffer
+  // Note: 0 is a valid value, means "don't call _read preemptively ever"
+
+  this.highWaterMark = getHighWaterMark(this, options, 'readableHighWaterMark', isDuplex); // A linked list is used to store data chunks instead of an array because the
+  // linked list can remove elements from the beginning faster than
+  // array.shift()
+
+  this.buffer = new BufferList();
+  this.length = 0;
+  this.pipes = null;
+  this.pipesCount = 0;
+  this.flowing = null;
+  this.ended = false;
+  this.endEmitted = false;
+  this.reading = false; // a flag to be able to tell if the event 'readable'/'data' is emitted
+  // immediately, or on a later tick.  We set this to true at first, because
+  // any actions that shouldn't happen until "later" should generally also
+  // not happen before the first read call.
+
+  this.sync = true; // whenever we return null, then we set a flag to say
+  // that we're awaiting a 'readable' event emission.
+
+  this.needReadable = false;
+  this.emittedReadable = false;
+  this.readableListening = false;
+  this.resumeScheduled = false;
+  this.paused = true; // Should close be emitted on destroy. Defaults to true.
+
+  this.emitClose = options.emitClose !== false; // has it been destroyed
+
+  this.destroyed = false; // Crypto is kind of old and crusty.  Historically, its default string
+  // encoding is 'binary' so we have to make this configurable.
+  // Everything else in the universe uses 'utf8', though.
+
+  this.defaultEncoding = options.defaultEncoding || 'utf8'; // the number of writers that are awaiting a drain event in .pipe()s
+
+  this.awaitDrain = 0; // if true, a maybeReadMore has been scheduled
+
+  this.readingMore = false;
+  this.decoder = null;
+  this.encoding = null;
+
+  if (options.encoding) {
+    if (!StringDecoder) StringDecoder = require('string_decoder/').StringDecoder;
+    this.decoder = new StringDecoder(options.encoding);
+    this.encoding = options.encoding;
+  }
+}
+
+function Readable(options) {
+  Duplex = Duplex || require('./_stream_duplex');
+  if (!(this instanceof Readable)) return new Readable(options); // Checking for a Stream.Duplex instance is faster here instead of inside
+  // the ReadableState constructor, at least with V8 6.5
+
+  var isDuplex = this instanceof Duplex;
+  this._readableState = new ReadableState(options, this, isDuplex); // legacy
+
+  this.readable = true;
+
+  if (options) {
+    if (typeof options.read === 'function') this._read = options.read;
+    if (typeof options.destroy === 'function') this._destroy = options.destroy;
+  }
+
+  Stream.call(this);
+}
+
+Object.defineProperty(Readable.prototype, 'destroyed', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    if (this._readableState === undefined) {
+      return false;
+    }
+
+    return this._readableState.destroyed;
+  },
+  set: function set(value) {
+    // we ignore the value if the stream
+    // has not been initialized yet
+    if (!this._readableState) {
+      return;
+    } // backward compatibility, the user is explicitly
+    // managing destroyed
+
+
+    this._readableState.destroyed = value;
+  }
+});
+Readable.prototype.destroy = destroyImpl.destroy;
+Readable.prototype._undestroy = destroyImpl.undestroy;
+
+Readable.prototype._destroy = function (err, cb) {
+  cb(err);
+}; // Manually shove something into the read() buffer.
+// This returns true if the highWaterMark has not been hit yet,
+// similar to how Writable.write() returns true if you should
+// write() some more.
+
+
+Readable.prototype.push = function (chunk, encoding) {
+  var state = this._readableState;
+  var skipChunkCheck;
+
+  if (!state.objectMode) {
+    if (typeof chunk === 'string') {
+      encoding = encoding || state.defaultEncoding;
+
+      if (encoding !== state.encoding) {
+        chunk = Buffer.from(chunk, encoding);
+        encoding = '';
+      }
+
+      skipChunkCheck = true;
+    }
+  } else {
+    skipChunkCheck = true;
+  }
+
+  return readableAddChunk(this, chunk, encoding, false, skipChunkCheck);
+}; // Unshift should *always* be something directly out of read()
+
+
+Readable.prototype.unshift = function (chunk) {
+  return readableAddChunk(this, chunk, null, true, false);
 };
 
-// Does not start the time, just sets up the members needed.
-exports.enroll = function(item, msecs) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = msecs;
+function readableAddChunk(stream, chunk, encoding, addToFront, skipChunkCheck) {
+  debug('readableAddChunk', chunk);
+  var state = stream._readableState;
+
+  if (chunk === null) {
+    state.reading = false;
+    onEofChunk(stream, state);
+  } else {
+    var er;
+    if (!skipChunkCheck) er = chunkInvalid(state, chunk);
+
+    if (er) {
+      stream.emit('error', er);
+    } else if (state.objectMode || chunk && chunk.length > 0) {
+      if (typeof chunk !== 'string' && !state.objectMode && Object.getPrototypeOf(chunk) !== Buffer.prototype) {
+        chunk = _uint8ArrayToBuffer(chunk);
+      }
+
+      if (addToFront) {
+        if (state.endEmitted) stream.emit('error', new ERR_STREAM_UNSHIFT_AFTER_END_EVENT());else addChunk(stream, state, chunk, true);
+      } else if (state.ended) {
+        stream.emit('error', new ERR_STREAM_PUSH_AFTER_EOF());
+      } else if (state.destroyed) {
+        return false;
+      } else {
+        state.reading = false;
+
+        if (state.decoder && !encoding) {
+          chunk = state.decoder.write(chunk);
+          if (state.objectMode || chunk.length !== 0) addChunk(stream, state, chunk, false);else maybeReadMore(stream, state);
+        } else {
+          addChunk(stream, state, chunk, false);
+        }
+      }
+    } else if (!addToFront) {
+      state.reading = false;
+      maybeReadMore(stream, state);
+    }
+  } // We can push more data if we are below the highWaterMark.
+  // Also, if we have no data yet, we can stand some more bytes.
+  // This is to work around cases where hwm=0, such as the repl.
+
+
+  return !state.ended && (state.length < state.highWaterMark || state.length === 0);
+}
+
+function addChunk(stream, state, chunk, addToFront) {
+  if (state.flowing && state.length === 0 && !state.sync) {
+    state.awaitDrain = 0;
+    stream.emit('data', chunk);
+  } else {
+    // update the buffer info.
+    state.length += state.objectMode ? 1 : chunk.length;
+    if (addToFront) state.buffer.unshift(chunk);else state.buffer.push(chunk);
+    if (state.needReadable) emitReadable(stream);
+  }
+
+  maybeReadMore(stream, state);
+}
+
+function chunkInvalid(state, chunk) {
+  var er;
+
+  if (!_isUint8Array(chunk) && typeof chunk !== 'string' && chunk !== undefined && !state.objectMode) {
+    er = new ERR_INVALID_ARG_TYPE('chunk', ['string', 'Buffer', 'Uint8Array'], chunk);
+  }
+
+  return er;
+}
+
+Readable.prototype.isPaused = function () {
+  return this._readableState.flowing === false;
+}; // backwards compatibility.
+
+
+Readable.prototype.setEncoding = function (enc) {
+  if (!StringDecoder) StringDecoder = require('string_decoder/').StringDecoder;
+  this._readableState.decoder = new StringDecoder(enc); // if setEncoding(null), decoder.encoding equals utf8
+
+  this._readableState.encoding = this._readableState.decoder.encoding;
+  return this;
+}; // Don't raise the hwm > 8MB
+
+
+var MAX_HWM = 0x800000;
+
+function computeNewHighWaterMark(n) {
+  if (n >= MAX_HWM) {
+    n = MAX_HWM;
+  } else {
+    // Get the next highest power of 2 to prevent increasing hwm excessively in
+    // tiny amounts
+    n--;
+    n |= n >>> 1;
+    n |= n >>> 2;
+    n |= n >>> 4;
+    n |= n >>> 8;
+    n |= n >>> 16;
+    n++;
+  }
+
+  return n;
+} // This function is designed to be inlinable, so please take care when making
+// changes to the function body.
+
+
+function howMuchToRead(n, state) {
+  if (n <= 0 || state.length === 0 && state.ended) return 0;
+  if (state.objectMode) return 1;
+
+  if (n !== n) {
+    // Only flow one buffer at a time
+    if (state.flowing && state.length) return state.buffer.head.data.length;else return state.length;
+  } // If we're asking for more than the current hwm, then raise the hwm.
+
+
+  if (n > state.highWaterMark) state.highWaterMark = computeNewHighWaterMark(n);
+  if (n <= state.length) return n; // Don't have enough
+
+  if (!state.ended) {
+    state.needReadable = true;
+    return 0;
+  }
+
+  return state.length;
+} // you can override either this method, or the async _read(n) below.
+
+
+Readable.prototype.read = function (n) {
+  debug('read', n);
+  n = parseInt(n, 10);
+  var state = this._readableState;
+  var nOrig = n;
+  if (n !== 0) state.emittedReadable = false; // if we're doing read(0) to trigger a readable event, but we
+  // already have a bunch of data in the buffer, then just trigger
+  // the 'readable' event and move on.
+
+  if (n === 0 && state.needReadable && ((state.highWaterMark !== 0 ? state.length >= state.highWaterMark : state.length > 0) || state.ended)) {
+    debug('read: emitReadable', state.length, state.ended);
+    if (state.length === 0 && state.ended) endReadable(this);else emitReadable(this);
+    return null;
+  }
+
+  n = howMuchToRead(n, state); // if we've ended, and we're now clear, then finish it up.
+
+  if (n === 0 && state.ended) {
+    if (state.length === 0) endReadable(this);
+    return null;
+  } // All the actual chunk generation logic needs to be
+  // *below* the call to _read.  The reason is that in certain
+  // synthetic stream cases, such as passthrough streams, _read
+  // may be a completely synchronous operation which may change
+  // the state of the read buffer, providing enough data when
+  // before there was *not* enough.
+  //
+  // So, the steps are:
+  // 1. Figure out what the state of things will be after we do
+  // a read from the buffer.
+  //
+  // 2. If that resulting state will trigger a _read, then call _read.
+  // Note that this may be asynchronous, or synchronous.  Yes, it is
+  // deeply ugly to write APIs this way, but that still doesn't mean
+  // that the Readable class should behave improperly, as streams are
+  // designed to be sync/async agnostic.
+  // Take note if the _read call is sync or async (ie, if the read call
+  // has returned yet), so that we know whether or not it's safe to emit
+  // 'readable' etc.
+  //
+  // 3. Actually pull the requested chunks out of the buffer and return.
+  // if we need a readable event, then we need to do some reading.
+
+
+  var doRead = state.needReadable;
+  debug('need readable', doRead); // if we currently have less than the highWaterMark, then also read some
+
+  if (state.length === 0 || state.length - n < state.highWaterMark) {
+    doRead = true;
+    debug('length less than watermark', doRead);
+  } // however, if we've ended, then there's no point, and if we're already
+  // reading, then it's unnecessary.
+
+
+  if (state.ended || state.reading) {
+    doRead = false;
+    debug('reading or ended', doRead);
+  } else if (doRead) {
+    debug('do read');
+    state.reading = true;
+    state.sync = true; // if the length is currently zero, then we *need* a readable event.
+
+    if (state.length === 0) state.needReadable = true; // call internal read method
+
+    this._read(state.highWaterMark);
+
+    state.sync = false; // If _read pushed data synchronously, then `reading` will be false,
+    // and we need to re-evaluate how much data we can return to the user.
+
+    if (!state.reading) n = howMuchToRead(nOrig, state);
+  }
+
+  var ret;
+  if (n > 0) ret = fromList(n, state);else ret = null;
+
+  if (ret === null) {
+    state.needReadable = true;
+    n = 0;
+  } else {
+    state.length -= n;
+    state.awaitDrain = 0;
+  }
+
+  if (state.length === 0) {
+    // If we have nothing in the buffer, then we want to know
+    // as soon as we *do* get something into the buffer.
+    if (!state.ended) state.needReadable = true; // If we tried to read() past the EOF, then emit end on the next tick.
+
+    if (nOrig !== n && state.ended) endReadable(this);
+  }
+
+  if (ret !== null) this.emit('data', ret);
+  return ret;
 };
 
-exports.unenroll = function(item) {
-  clearTimeout(item._idleTimeoutId);
-  item._idleTimeout = -1;
+function onEofChunk(stream, state) {
+  if (state.ended) return;
+
+  if (state.decoder) {
+    var chunk = state.decoder.end();
+
+    if (chunk && chunk.length) {
+      state.buffer.push(chunk);
+      state.length += state.objectMode ? 1 : chunk.length;
+    }
+  }
+
+  state.ended = true;
+
+  if (state.sync) {
+    // if we are sync, wait until next tick to emit the data.
+    // Otherwise we risk emitting data in the flow()
+    // the readable code triggers during a read() call
+    emitReadable(stream);
+  } else {
+    // emit 'readable' now to make sure it gets picked up.
+    state.needReadable = false;
+
+    if (!state.emittedReadable) {
+      state.emittedReadable = true;
+      emitReadable_(stream);
+    }
+  }
+} // Don't emit readable right away in sync mode, because this can trigger
+// another read() call => stack overflow.  This way, it might trigger
+// a nextTick recursion warning, but that's not so bad.
+
+
+function emitReadable(stream) {
+  var state = stream._readableState;
+  state.needReadable = false;
+
+  if (!state.emittedReadable) {
+    debug('emitReadable', state.flowing);
+    state.emittedReadable = true;
+    process.nextTick(emitReadable_, stream);
+  }
+}
+
+function emitReadable_(stream) {
+  var state = stream._readableState;
+  debug('emitReadable_', state.destroyed, state.length, state.ended);
+
+  if (!state.destroyed && (state.length || state.ended)) {
+    stream.emit('readable');
+  } // The stream needs another readable event if
+  // 1. It is not flowing, as the flow mechanism will take
+  //    care of it.
+  // 2. It is not ended.
+  // 3. It is below the highWaterMark, so we can schedule
+  //    another readable later.
+
+
+  state.needReadable = !state.flowing && !state.ended && state.length <= state.highWaterMark;
+  flow(stream);
+} // at this point, the user has presumably seen the 'readable' event,
+// and called read() to consume some data.  that may have triggered
+// in turn another _read(n) call, in which case reading = true if
+// it's in progress.
+// However, if we're not ended, or reading, and the length < hwm,
+// then go ahead and try to read some more preemptively.
+
+
+function maybeReadMore(stream, state) {
+  if (!state.readingMore) {
+    state.readingMore = true;
+    process.nextTick(maybeReadMore_, stream, state);
+  }
+}
+
+function maybeReadMore_(stream, state) {
+  // Attempt to read more data if we should.
+  //
+  // The conditions for reading more data are (one of):
+  // - Not enough data buffered (state.length < state.highWaterMark). The loop
+  //   is responsible for filling the buffer with enough data if such data
+  //   is available. If highWaterMark is 0 and we are not in the flowing mode
+  //   we should _not_ attempt to buffer any extra data. We'll get more data
+  //   when the stream consumer calls read() instead.
+  // - No data in the buffer, and the stream is in flowing mode. In this mode
+  //   the loop below is responsible for ensuring read() is called. Failing to
+  //   call read here would abort the flow and there's no other mechanism for
+  //   continuing the flow if the stream consumer has just subscribed to the
+  //   'data' event.
+  //
+  // In addition to the above conditions to keep reading data, the following
+  // conditions prevent the data from being read:
+  // - The stream has ended (state.ended).
+  // - There is already a pending 'read' operation (state.reading). This is a
+  //   case where the the stream has called the implementation defined _read()
+  //   method, but they are processing the call asynchronously and have _not_
+  //   called push() with new data. In this case we skip performing more
+  //   read()s. The execution ends in this method again after the _read() ends
+  //   up calling push() with more data.
+  while (!state.reading && !state.ended && (state.length < state.highWaterMark || state.flowing && state.length === 0)) {
+    var len = state.length;
+    debug('maybeReadMore read 0');
+    stream.read(0);
+    if (len === state.length) // didn't get any data, stop spinning.
+      break;
+  }
+
+  state.readingMore = false;
+} // abstract method.  to be overridden in specific implementation classes.
+// call cb(er, data) where data is <= n in length.
+// for virtual (non-string, non-buffer) streams, "length" is somewhat
+// arbitrary, and perhaps not very meaningful.
+
+
+Readable.prototype._read = function (n) {
+  this.emit('error', new ERR_METHOD_NOT_IMPLEMENTED('_read()'));
 };
 
-exports._unrefActive = exports.active = function(item) {
-  clearTimeout(item._idleTimeoutId);
+Readable.prototype.pipe = function (dest, pipeOpts) {
+  var src = this;
+  var state = this._readableState;
 
-  var msecs = item._idleTimeout;
-  if (msecs >= 0) {
-    item._idleTimeoutId = setTimeout(function onTimeout() {
-      if (item._onTimeout)
-        item._onTimeout();
-    }, msecs);
+  switch (state.pipesCount) {
+    case 0:
+      state.pipes = dest;
+      break;
+
+    case 1:
+      state.pipes = [state.pipes, dest];
+      break;
+
+    default:
+      state.pipes.push(dest);
+      break;
+  }
+
+  state.pipesCount += 1;
+  debug('pipe count=%d opts=%j', state.pipesCount, pipeOpts);
+  var doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process.stdout && dest !== process.stderr;
+  var endFn = doEnd ? onend : unpipe;
+  if (state.endEmitted) process.nextTick(endFn);else src.once('end', endFn);
+  dest.on('unpipe', onunpipe);
+
+  function onunpipe(readable, unpipeInfo) {
+    debug('onunpipe');
+
+    if (readable === src) {
+      if (unpipeInfo && unpipeInfo.hasUnpiped === false) {
+        unpipeInfo.hasUnpiped = true;
+        cleanup();
+      }
+    }
+  }
+
+  function onend() {
+    debug('onend');
+    dest.end();
+  } // when the dest drains, it reduces the awaitDrain counter
+  // on the source.  This would be more elegant with a .once()
+  // handler in flow(), but adding and removing repeatedly is
+  // too slow.
+
+
+  var ondrain = pipeOnDrain(src);
+  dest.on('drain', ondrain);
+  var cleanedUp = false;
+
+  function cleanup() {
+    debug('cleanup'); // cleanup event handlers once the pipe is broken
+
+    dest.removeListener('close', onclose);
+    dest.removeListener('finish', onfinish);
+    dest.removeListener('drain', ondrain);
+    dest.removeListener('error', onerror);
+    dest.removeListener('unpipe', onunpipe);
+    src.removeListener('end', onend);
+    src.removeListener('end', unpipe);
+    src.removeListener('data', ondata);
+    cleanedUp = true; // if the reader is waiting for a drain event from this
+    // specific writer, then it would cause it to never start
+    // flowing again.
+    // So, if this is awaiting a drain, then we just call it now.
+    // If we don't know, then assume that we are waiting for one.
+
+    if (state.awaitDrain && (!dest._writableState || dest._writableState.needDrain)) ondrain();
+  }
+
+  src.on('data', ondata);
+
+  function ondata(chunk) {
+    debug('ondata');
+    var ret = dest.write(chunk);
+    debug('dest.write', ret);
+
+    if (ret === false) {
+      // If the user unpiped during `dest.write()`, it is possible
+      // to get stuck in a permanently paused state if that write
+      // also returned false.
+      // => Check whether `dest` is still a piping destination.
+      if ((state.pipesCount === 1 && state.pipes === dest || state.pipesCount > 1 && indexOf(state.pipes, dest) !== -1) && !cleanedUp) {
+        debug('false write response, pause', state.awaitDrain);
+        state.awaitDrain++;
+      }
+
+      src.pause();
+    }
+  } // if the dest has an error, then stop piping into it.
+  // however, don't suppress the throwing behavior for this.
+
+
+  function onerror(er) {
+    debug('onerror', er);
+    unpipe();
+    dest.removeListener('error', onerror);
+    if (EElistenerCount(dest, 'error') === 0) dest.emit('error', er);
+  } // Make sure our error handler is attached before userland ones.
+
+
+  prependListener(dest, 'error', onerror); // Both close and finish should trigger unpipe, but only once.
+
+  function onclose() {
+    dest.removeListener('finish', onfinish);
+    unpipe();
+  }
+
+  dest.once('close', onclose);
+
+  function onfinish() {
+    debug('onfinish');
+    dest.removeListener('close', onclose);
+    unpipe();
+  }
+
+  dest.once('finish', onfinish);
+
+  function unpipe() {
+    debug('unpipe');
+    src.unpipe(dest);
+  } // tell the dest that it's being piped to
+
+
+  dest.emit('pipe', src); // start the flow if it hasn't been started already.
+
+  if (!state.flowing) {
+    debug('pipe resume');
+    src.resume();
+  }
+
+  return dest;
+};
+
+function pipeOnDrain(src) {
+  return function pipeOnDrainFunctionResult() {
+    var state = src._readableState;
+    debug('pipeOnDrain', state.awaitDrain);
+    if (state.awaitDrain) state.awaitDrain--;
+
+    if (state.awaitDrain === 0 && EElistenerCount(src, 'data')) {
+      state.flowing = true;
+      flow(src);
+    }
+  };
+}
+
+Readable.prototype.unpipe = function (dest) {
+  var state = this._readableState;
+  var unpipeInfo = {
+    hasUnpiped: false
+  }; // if we're not piping anywhere, then do nothing.
+
+  if (state.pipesCount === 0) return this; // just one destination.  most common case.
+
+  if (state.pipesCount === 1) {
+    // passed in one, but it's not the right one.
+    if (dest && dest !== state.pipes) return this;
+    if (!dest) dest = state.pipes; // got a match.
+
+    state.pipes = null;
+    state.pipesCount = 0;
+    state.flowing = false;
+    if (dest) dest.emit('unpipe', this, unpipeInfo);
+    return this;
+  } // slow case. multiple pipe destinations.
+
+
+  if (!dest) {
+    // remove all.
+    var dests = state.pipes;
+    var len = state.pipesCount;
+    state.pipes = null;
+    state.pipesCount = 0;
+    state.flowing = false;
+
+    for (var i = 0; i < len; i++) {
+      dests[i].emit('unpipe', this, {
+        hasUnpiped: false
+      });
+    }
+
+    return this;
+  } // try to find the right one.
+
+
+  var index = indexOf(state.pipes, dest);
+  if (index === -1) return this;
+  state.pipes.splice(index, 1);
+  state.pipesCount -= 1;
+  if (state.pipesCount === 1) state.pipes = state.pipes[0];
+  dest.emit('unpipe', this, unpipeInfo);
+  return this;
+}; // set up data events if they are asked for
+// Ensure readable listeners eventually get something
+
+
+Readable.prototype.on = function (ev, fn) {
+  var res = Stream.prototype.on.call(this, ev, fn);
+  var state = this._readableState;
+
+  if (ev === 'data') {
+    // update readableListening so that resume() may be a no-op
+    // a few lines down. This is needed to support once('readable').
+    state.readableListening = this.listenerCount('readable') > 0; // Try start flowing on next tick if stream isn't explicitly paused
+
+    if (state.flowing !== false) this.resume();
+  } else if (ev === 'readable') {
+    if (!state.endEmitted && !state.readableListening) {
+      state.readableListening = state.needReadable = true;
+      state.flowing = false;
+      state.emittedReadable = false;
+      debug('on readable', state.length, state.reading);
+
+      if (state.length) {
+        emitReadable(this);
+      } else if (!state.reading) {
+        process.nextTick(nReadingNextTick, this);
+      }
+    }
+  }
+
+  return res;
+};
+
+Readable.prototype.addListener = Readable.prototype.on;
+
+Readable.prototype.removeListener = function (ev, fn) {
+  var res = Stream.prototype.removeListener.call(this, ev, fn);
+
+  if (ev === 'readable') {
+    // We need to check if there is someone still listening to
+    // readable and reset the state. However this needs to happen
+    // after readable has been emitted but before I/O (nextTick) to
+    // support once('readable', fn) cycles. This means that calling
+    // resume within the same tick will have no
+    // effect.
+    process.nextTick(updateReadableListening, this);
+  }
+
+  return res;
+};
+
+Readable.prototype.removeAllListeners = function (ev) {
+  var res = Stream.prototype.removeAllListeners.apply(this, arguments);
+
+  if (ev === 'readable' || ev === undefined) {
+    // We need to check if there is someone still listening to
+    // readable and reset the state. However this needs to happen
+    // after readable has been emitted but before I/O (nextTick) to
+    // support once('readable', fn) cycles. This means that calling
+    // resume within the same tick will have no
+    // effect.
+    process.nextTick(updateReadableListening, this);
+  }
+
+  return res;
+};
+
+function updateReadableListening(self) {
+  var state = self._readableState;
+  state.readableListening = self.listenerCount('readable') > 0;
+
+  if (state.resumeScheduled && !state.paused) {
+    // flowing needs to be set to true now, otherwise
+    // the upcoming resume will not flow.
+    state.flowing = true; // crude way to check if we should resume
+  } else if (self.listenerCount('data') > 0) {
+    self.resume();
+  }
+}
+
+function nReadingNextTick(self) {
+  debug('readable nexttick read 0');
+  self.read(0);
+} // pause() and resume() are remnants of the legacy readable stream API
+// If the user uses them, then switch into old mode.
+
+
+Readable.prototype.resume = function () {
+  var state = this._readableState;
+
+  if (!state.flowing) {
+    debug('resume'); // we flow only if there is no one listening
+    // for readable, but we still have to call
+    // resume()
+
+    state.flowing = !state.readableListening;
+    resume(this, state);
+  }
+
+  state.paused = false;
+  return this;
+};
+
+function resume(stream, state) {
+  if (!state.resumeScheduled) {
+    state.resumeScheduled = true;
+    process.nextTick(resume_, stream, state);
+  }
+}
+
+function resume_(stream, state) {
+  debug('resume', state.reading);
+
+  if (!state.reading) {
+    stream.read(0);
+  }
+
+  state.resumeScheduled = false;
+  stream.emit('resume');
+  flow(stream);
+  if (state.flowing && !state.reading) stream.read(0);
+}
+
+Readable.prototype.pause = function () {
+  debug('call pause flowing=%j', this._readableState.flowing);
+
+  if (this._readableState.flowing !== false) {
+    debug('pause');
+    this._readableState.flowing = false;
+    this.emit('pause');
+  }
+
+  this._readableState.paused = true;
+  return this;
+};
+
+function flow(stream) {
+  var state = stream._readableState;
+  debug('flow', state.flowing);
+
+  while (state.flowing && stream.read() !== null) {
+    ;
+  }
+} // wrap an old-style stream as the async data source.
+// This is *not* part of the readable stream interface.
+// It is an ugly unfortunate mess of history.
+
+
+Readable.prototype.wrap = function (stream) {
+  var _this = this;
+
+  var state = this._readableState;
+  var paused = false;
+  stream.on('end', function () {
+    debug('wrapped end');
+
+    if (state.decoder && !state.ended) {
+      var chunk = state.decoder.end();
+      if (chunk && chunk.length) _this.push(chunk);
+    }
+
+    _this.push(null);
+  });
+  stream.on('data', function (chunk) {
+    debug('wrapped data');
+    if (state.decoder) chunk = state.decoder.write(chunk); // don't skip over falsy values in objectMode
+
+    if (state.objectMode && (chunk === null || chunk === undefined)) return;else if (!state.objectMode && (!chunk || !chunk.length)) return;
+
+    var ret = _this.push(chunk);
+
+    if (!ret) {
+      paused = true;
+      stream.pause();
+    }
+  }); // proxy all the other methods.
+  // important when wrapping filters and duplexes.
+
+  for (var i in stream) {
+    if (this[i] === undefined && typeof stream[i] === 'function') {
+      this[i] = function methodWrap(method) {
+        return function methodWrapReturnFunction() {
+          return stream[method].apply(stream, arguments);
+        };
+      }(i);
+    }
+  } // proxy certain important events.
+
+
+  for (var n = 0; n < kProxyEvents.length; n++) {
+    stream.on(kProxyEvents[n], this.emit.bind(this, kProxyEvents[n]));
+  } // when we try to consume some more bytes, simply unpause the
+  // underlying stream.
+
+
+  this._read = function (n) {
+    debug('wrapped _read', n);
+
+    if (paused) {
+      paused = false;
+      stream.resume();
+    }
+  };
+
+  return this;
+};
+
+if (typeof Symbol === 'function') {
+  Readable.prototype[Symbol.asyncIterator] = function () {
+    emitExperimentalWarning('Readable[Symbol.asyncIterator]');
+
+    if (createReadableStreamAsyncIterator === undefined) {
+      createReadableStreamAsyncIterator = require('./internal/streams/async_iterator');
+    }
+
+    return createReadableStreamAsyncIterator(this);
+  };
+}
+
+Object.defineProperty(Readable.prototype, 'readableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._readableState.highWaterMark;
+  }
+});
+Object.defineProperty(Readable.prototype, 'readableBuffer', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._readableState && this._readableState.buffer;
+  }
+});
+Object.defineProperty(Readable.prototype, 'readableFlowing', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._readableState.flowing;
+  },
+  set: function set(state) {
+    if (this._readableState) {
+      this._readableState.flowing = state;
+    }
+  }
+}); // exposed for testing purposes only.
+
+Readable._fromList = fromList;
+Object.defineProperty(Readable.prototype, 'readableLength', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._readableState.length;
+  }
+}); // Pluck off n bytes from an array of buffers.
+// Length is the combined lengths of all the buffers in the list.
+// This function is designed to be inlinable, so please take care when making
+// changes to the function body.
+
+function fromList(n, state) {
+  // nothing buffered
+  if (state.length === 0) return null;
+  var ret;
+  if (state.objectMode) ret = state.buffer.shift();else if (!n || n >= state.length) {
+    // read it all, truncate the list
+    if (state.decoder) ret = state.buffer.join('');else if (state.buffer.length === 1) ret = state.buffer.first();else ret = state.buffer.concat(state.length);
+    state.buffer.clear();
+  } else {
+    // read part of list
+    ret = state.buffer.consume(n, state.decoder);
+  }
+  return ret;
+}
+
+function endReadable(stream) {
+  var state = stream._readableState;
+  debug('endReadable', state.endEmitted);
+
+  if (!state.endEmitted) {
+    state.ended = true;
+    process.nextTick(endReadableNT, state, stream);
+  }
+}
+
+function endReadableNT(state, stream) {
+  debug('endReadableNT', state.endEmitted, state.length); // Check that we didn't get one last unshift.
+
+  if (!state.endEmitted && state.length === 0) {
+    state.endEmitted = true;
+    stream.readable = false;
+    stream.emit('end');
+  }
+}
+
+function indexOf(xs, x) {
+  for (var i = 0, l = xs.length; i < l; i++) {
+    if (xs[i] === x) return i;
+  }
+
+  return -1;
+}
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../errors":147,"../experimentalWarning":148,"./_stream_duplex":149,"./internal/streams/async_iterator":154,"./internal/streams/buffer_list":155,"./internal/streams/destroy":156,"./internal/streams/state":159,"./internal/streams/stream":160,"_process":109,"buffer":4,"events":101,"inherits":105,"string_decoder/":162,"util":2}],152:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+// a transform stream is a readable/writable stream where you do
+// something with the data.  Sometimes it's called a "filter",
+// but that's not a great name for it, since that implies a thing where
+// some bits pass through, and others are simply ignored.  (That would
+// be a valid example of a transform, of course.)
+//
+// While the output is causally related to the input, it's not a
+// necessarily symmetric or synchronous transformation.  For example,
+// a zlib stream might take multiple plain-text writes(), and then
+// emit a single compressed chunk some time in the future.
+//
+// Here's how this works:
+//
+// The Transform stream has all the aspects of the readable and writable
+// stream classes.  When you write(chunk), that calls _write(chunk,cb)
+// internally, and returns false if there's a lot of pending writes
+// buffered up.  When you call read(), that calls _read(n) until
+// there's enough pending readable data buffered up.
+//
+// In a transform stream, the written data is placed in a buffer.  When
+// _read(n) is called, it transforms the queued up data, calling the
+// buffered _write cb's as it consumes chunks.  If consuming a single
+// written chunk would result in multiple output chunks, then the first
+// outputted bit calls the readcb, and subsequent chunks just go into
+// the read buffer, and will cause it to emit 'readable' if necessary.
+//
+// This way, back-pressure is actually determined by the reading side,
+// since _read has to be called to start processing a new chunk.  However,
+// a pathological inflate type of transform can cause excessive buffering
+// here.  For example, imagine a stream where every byte of input is
+// interpreted as an integer from 0-255, and then results in that many
+// bytes of output.  Writing the 4 bytes {ff,ff,ff,ff} would result in
+// 1kb of data being output.  In this case, you could write a very small
+// amount of input, and end up with a very large amount of output.  In
+// such a pathological inflating mechanism, there'd be no way to tell
+// the system to stop doing the transform.  A single 4MB write could
+// cause the system to run out of memory.
+//
+// However, even in such a pathological case, only a single written chunk
+// would be consumed, and then the rest would wait (un-transformed) until
+// the results of the previous transformed chunk were consumed.
+'use strict';
+
+module.exports = Transform;
+
+var _require$codes = require('../errors').codes,
+    ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
+    ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
+    ERR_TRANSFORM_ALREADY_TRANSFORMING = _require$codes.ERR_TRANSFORM_ALREADY_TRANSFORMING,
+    ERR_TRANSFORM_WITH_LENGTH_0 = _require$codes.ERR_TRANSFORM_WITH_LENGTH_0;
+
+var Duplex = require('./_stream_duplex');
+
+require('inherits')(Transform, Duplex);
+
+function afterTransform(er, data) {
+  var ts = this._transformState;
+  ts.transforming = false;
+  var cb = ts.writecb;
+
+  if (cb === null) {
+    return this.emit('error', new ERR_MULTIPLE_CALLBACK());
+  }
+
+  ts.writechunk = null;
+  ts.writecb = null;
+  if (data != null) // single equals check for both `null` and `undefined`
+    this.push(data);
+  cb(er);
+  var rs = this._readableState;
+  rs.reading = false;
+
+  if (rs.needReadable || rs.length < rs.highWaterMark) {
+    this._read(rs.highWaterMark);
+  }
+}
+
+function Transform(options) {
+  if (!(this instanceof Transform)) return new Transform(options);
+  Duplex.call(this, options);
+  this._transformState = {
+    afterTransform: afterTransform.bind(this),
+    needTransform: false,
+    transforming: false,
+    writecb: null,
+    writechunk: null,
+    writeencoding: null
+  }; // start out asking for a readable event once data is transformed.
+
+  this._readableState.needReadable = true; // we have implemented the _read method, and done the other things
+  // that Readable wants before the first _read call, so unset the
+  // sync guard flag.
+
+  this._readableState.sync = false;
+
+  if (options) {
+    if (typeof options.transform === 'function') this._transform = options.transform;
+    if (typeof options.flush === 'function') this._flush = options.flush;
+  } // When the writable side finishes, then flush out anything remaining.
+
+
+  this.on('prefinish', prefinish);
+}
+
+function prefinish() {
+  var _this = this;
+
+  if (typeof this._flush === 'function' && !this._readableState.destroyed) {
+    this._flush(function (er, data) {
+      done(_this, er, data);
+    });
+  } else {
+    done(this, null, null);
+  }
+}
+
+Transform.prototype.push = function (chunk, encoding) {
+  this._transformState.needTransform = false;
+  return Duplex.prototype.push.call(this, chunk, encoding);
+}; // This is the part where you do stuff!
+// override this function in implementation classes.
+// 'chunk' is an input chunk.
+//
+// Call `push(newChunk)` to pass along transformed output
+// to the readable side.  You may call 'push' zero or more times.
+//
+// Call `cb(err)` when you are done with this chunk.  If you pass
+// an error, then that'll put the hurt on the whole operation.  If you
+// never call cb(), then you'll never get another chunk.
+
+
+Transform.prototype._transform = function (chunk, encoding, cb) {
+  cb(new ERR_METHOD_NOT_IMPLEMENTED('_transform()'));
+};
+
+Transform.prototype._write = function (chunk, encoding, cb) {
+  var ts = this._transformState;
+  ts.writecb = cb;
+  ts.writechunk = chunk;
+  ts.writeencoding = encoding;
+
+  if (!ts.transforming) {
+    var rs = this._readableState;
+    if (ts.needTransform || rs.needReadable || rs.length < rs.highWaterMark) this._read(rs.highWaterMark);
+  }
+}; // Doesn't matter what the args are here.
+// _transform does all the work.
+// That we got here means that the readable side wants more data.
+
+
+Transform.prototype._read = function (n) {
+  var ts = this._transformState;
+
+  if (ts.writechunk !== null && !ts.transforming) {
+    ts.transforming = true;
+
+    this._transform(ts.writechunk, ts.writeencoding, ts.afterTransform);
+  } else {
+    // mark that we need a transform, so that any data that comes in
+    // will get processed, now that we've asked for it.
+    ts.needTransform = true;
   }
 };
 
-// That's not how node.js implements it but the exposed api is the same.
-exports.setImmediate = typeof setImmediate === "function" ? setImmediate : function(fn) {
-  var id = nextImmediateId++;
-  var args = arguments.length < 2 ? false : slice.call(arguments, 1);
+Transform.prototype._destroy = function (err, cb) {
+  Duplex.prototype._destroy.call(this, err, function (err2) {
+    cb(err2);
+  });
+};
 
-  immediateIds[id] = true;
+function done(stream, er, data) {
+  if (er) return stream.emit('error', er);
+  if (data != null) // single equals check for both `null` and `undefined`
+    stream.push(data); // TODO(BridgeAR): Write a test for these two error cases
+  // if there's nothing in the write buffer, then that means
+  // that nothing more will ever be provided
 
-  nextTick(function onNextTick() {
-    if (immediateIds[id]) {
-      // fn.call() is faster so we optimize for the common use-case
-      // @see http://jsperf.com/call-apply-segu
-      if (args) {
-        fn.apply(null, args);
-      } else {
-        fn.call(null);
+  if (stream._writableState.length) throw new ERR_TRANSFORM_WITH_LENGTH_0();
+  if (stream._transformState.transforming) throw new ERR_TRANSFORM_ALREADY_TRANSFORMING();
+  return stream.push(null);
+}
+},{"../errors":147,"./_stream_duplex":149,"inherits":105}],153:[function(require,module,exports){
+(function (process,global){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+// A bit simpler than readable streams.
+// Implement an async ._write(chunk, encoding, cb), and it'll handle all
+// the drain event emission and buffering.
+'use strict';
+
+module.exports = Writable;
+/* <replacement> */
+
+function WriteReq(chunk, encoding, cb) {
+  this.chunk = chunk;
+  this.encoding = encoding;
+  this.callback = cb;
+  this.next = null;
+} // It seems a linked list but it is not
+// there will be only 2 of these for each stream
+
+
+function CorkedRequest(state) {
+  var _this = this;
+
+  this.next = null;
+  this.entry = null;
+
+  this.finish = function () {
+    onCorkedFinish(_this, state);
+  };
+}
+/* </replacement> */
+
+/*<replacement>*/
+
+
+var Duplex;
+/*</replacement>*/
+
+Writable.WritableState = WritableState;
+/*<replacement>*/
+
+var internalUtil = {
+  deprecate: require('util-deprecate')
+};
+/*</replacement>*/
+
+/*<replacement>*/
+
+var Stream = require('./internal/streams/stream');
+/*</replacement>*/
+
+
+var Buffer = require('buffer').Buffer;
+
+var OurUint8Array = global.Uint8Array || function () {};
+
+function _uint8ArrayToBuffer(chunk) {
+  return Buffer.from(chunk);
+}
+
+function _isUint8Array(obj) {
+  return Buffer.isBuffer(obj) || obj instanceof OurUint8Array;
+}
+
+var destroyImpl = require('./internal/streams/destroy');
+
+var _require = require('./internal/streams/state'),
+    getHighWaterMark = _require.getHighWaterMark;
+
+var _require$codes = require('../errors').codes,
+    ERR_INVALID_ARG_TYPE = _require$codes.ERR_INVALID_ARG_TYPE,
+    ERR_METHOD_NOT_IMPLEMENTED = _require$codes.ERR_METHOD_NOT_IMPLEMENTED,
+    ERR_MULTIPLE_CALLBACK = _require$codes.ERR_MULTIPLE_CALLBACK,
+    ERR_STREAM_CANNOT_PIPE = _require$codes.ERR_STREAM_CANNOT_PIPE,
+    ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED,
+    ERR_STREAM_NULL_VALUES = _require$codes.ERR_STREAM_NULL_VALUES,
+    ERR_STREAM_WRITE_AFTER_END = _require$codes.ERR_STREAM_WRITE_AFTER_END,
+    ERR_UNKNOWN_ENCODING = _require$codes.ERR_UNKNOWN_ENCODING;
+
+require('inherits')(Writable, Stream);
+
+function nop() {}
+
+function WritableState(options, stream, isDuplex) {
+  Duplex = Duplex || require('./_stream_duplex');
+  options = options || {}; // Duplex streams are both readable and writable, but share
+  // the same options object.
+  // However, some cases require setting options to different
+  // values for the readable and the writable sides of the duplex stream,
+  // e.g. options.readableObjectMode vs. options.writableObjectMode, etc.
+
+  if (typeof isDuplex !== 'boolean') isDuplex = stream instanceof Duplex; // object stream flag to indicate whether or not this stream
+  // contains buffers or objects.
+
+  this.objectMode = !!options.objectMode;
+  if (isDuplex) this.objectMode = this.objectMode || !!options.writableObjectMode; // the point at which write() starts returning false
+  // Note: 0 is a valid value, means that we always return false if
+  // the entire buffer is not flushed immediately on write()
+
+  this.highWaterMark = getHighWaterMark(this, options, 'writableHighWaterMark', isDuplex); // if _final has been called
+
+  this.finalCalled = false; // drain event flag.
+
+  this.needDrain = false; // at the start of calling end()
+
+  this.ending = false; // when end() has been called, and returned
+
+  this.ended = false; // when 'finish' is emitted
+
+  this.finished = false; // has it been destroyed
+
+  this.destroyed = false; // should we decode strings into buffers before passing to _write?
+  // this is here so that some node-core streams can optimize string
+  // handling at a lower level.
+
+  var noDecode = options.decodeStrings === false;
+  this.decodeStrings = !noDecode; // Crypto is kind of old and crusty.  Historically, its default string
+  // encoding is 'binary' so we have to make this configurable.
+  // Everything else in the universe uses 'utf8', though.
+
+  this.defaultEncoding = options.defaultEncoding || 'utf8'; // not an actual buffer we keep track of, but a measurement
+  // of how much we're waiting to get pushed to some underlying
+  // socket or file.
+
+  this.length = 0; // a flag to see when we're in the middle of a write.
+
+  this.writing = false; // when true all writes will be buffered until .uncork() call
+
+  this.corked = 0; // a flag to be able to tell if the onwrite cb is called immediately,
+  // or on a later tick.  We set this to true at first, because any
+  // actions that shouldn't happen until "later" should generally also
+  // not happen before the first write call.
+
+  this.sync = true; // a flag to know if we're processing previously buffered items, which
+  // may call the _write() callback in the same tick, so that we don't
+  // end up in an overlapped onwrite situation.
+
+  this.bufferProcessing = false; // the callback that's passed to _write(chunk,cb)
+
+  this.onwrite = function (er) {
+    onwrite(stream, er);
+  }; // the callback that the user supplies to write(chunk,encoding,cb)
+
+
+  this.writecb = null; // the amount that is being written when _write is called.
+
+  this.writelen = 0;
+  this.bufferedRequest = null;
+  this.lastBufferedRequest = null; // number of pending user-supplied write callbacks
+  // this must be 0 before 'finish' can be emitted
+
+  this.pendingcb = 0; // emit prefinish if the only thing we're waiting for is _write cbs
+  // This is relevant for synchronous Transform streams
+
+  this.prefinished = false; // True if the error was already emitted and should not be thrown again
+
+  this.errorEmitted = false; // Should close be emitted on destroy. Defaults to true.
+
+  this.emitClose = options.emitClose !== false; // count buffered requests
+
+  this.bufferedRequestCount = 0; // allocate the first CorkedRequest, there is always
+  // one allocated and free to use, and we maintain at most two
+
+  this.corkedRequestsFree = new CorkedRequest(this);
+}
+
+WritableState.prototype.getBuffer = function getBuffer() {
+  var current = this.bufferedRequest;
+  var out = [];
+
+  while (current) {
+    out.push(current);
+    current = current.next;
+  }
+
+  return out;
+};
+
+(function () {
+  try {
+    Object.defineProperty(WritableState.prototype, 'buffer', {
+      get: internalUtil.deprecate(function writableStateBufferGetter() {
+        return this.getBuffer();
+      }, '_writableState.buffer is deprecated. Use _writableState.getBuffer ' + 'instead.', 'DEP0003')
+    });
+  } catch (_) {}
+})(); // Test _writableState for inheritance to account for Duplex streams,
+// whose prototype chain only points to Readable.
+
+
+var realHasInstance;
+
+if (typeof Symbol === 'function' && Symbol.hasInstance && typeof Function.prototype[Symbol.hasInstance] === 'function') {
+  realHasInstance = Function.prototype[Symbol.hasInstance];
+  Object.defineProperty(Writable, Symbol.hasInstance, {
+    value: function value(object) {
+      if (realHasInstance.call(this, object)) return true;
+      if (this !== Writable) return false;
+      return object && object._writableState instanceof WritableState;
+    }
+  });
+} else {
+  realHasInstance = function realHasInstance(object) {
+    return object instanceof this;
+  };
+}
+
+function Writable(options) {
+  Duplex = Duplex || require('./_stream_duplex'); // Writable ctor is applied to Duplexes, too.
+  // `realHasInstance` is necessary because using plain `instanceof`
+  // would return false, as no `_writableState` property is attached.
+  // Trying to use the custom `instanceof` for Writable here will also break the
+  // Node.js LazyTransform implementation, which has a non-trivial getter for
+  // `_writableState` that would lead to infinite recursion.
+  // Checking for a Stream.Duplex instance is faster here instead of inside
+  // the WritableState constructor, at least with V8 6.5
+
+  var isDuplex = this instanceof Duplex;
+  if (!isDuplex && !realHasInstance.call(Writable, this)) return new Writable(options);
+  this._writableState = new WritableState(options, this, isDuplex); // legacy.
+
+  this.writable = true;
+
+  if (options) {
+    if (typeof options.write === 'function') this._write = options.write;
+    if (typeof options.writev === 'function') this._writev = options.writev;
+    if (typeof options.destroy === 'function') this._destroy = options.destroy;
+    if (typeof options.final === 'function') this._final = options.final;
+  }
+
+  Stream.call(this);
+} // Otherwise people can pipe Writable streams, which is just wrong.
+
+
+Writable.prototype.pipe = function () {
+  this.emit('error', new ERR_STREAM_CANNOT_PIPE());
+};
+
+function writeAfterEnd(stream, cb) {
+  var er = new ERR_STREAM_WRITE_AFTER_END(); // TODO: defer error events consistently everywhere, not just the cb
+
+  stream.emit('error', er);
+  process.nextTick(cb, er);
+} // Checks that a user-supplied chunk is valid, especially for the particular
+// mode the stream is in. Currently this means that `null` is never accepted
+// and undefined/non-string values are only allowed in object mode.
+
+
+function validChunk(stream, state, chunk, cb) {
+  var er;
+
+  if (chunk === null) {
+    er = new ERR_STREAM_NULL_VALUES();
+  } else if (typeof chunk !== 'string' && !state.objectMode) {
+    er = new ERR_INVALID_ARG_TYPE('chunk', ['string', 'Buffer'], chunk);
+  }
+
+  if (er) {
+    stream.emit('error', er);
+    process.nextTick(cb, er);
+    return false;
+  }
+
+  return true;
+}
+
+Writable.prototype.write = function (chunk, encoding, cb) {
+  var state = this._writableState;
+  var ret = false;
+
+  var isBuf = !state.objectMode && _isUint8Array(chunk);
+
+  if (isBuf && !Buffer.isBuffer(chunk)) {
+    chunk = _uint8ArrayToBuffer(chunk);
+  }
+
+  if (typeof encoding === 'function') {
+    cb = encoding;
+    encoding = null;
+  }
+
+  if (isBuf) encoding = 'buffer';else if (!encoding) encoding = state.defaultEncoding;
+  if (typeof cb !== 'function') cb = nop;
+  if (state.ending) writeAfterEnd(this, cb);else if (isBuf || validChunk(this, state, chunk, cb)) {
+    state.pendingcb++;
+    ret = writeOrBuffer(this, state, isBuf, chunk, encoding, cb);
+  }
+  return ret;
+};
+
+Writable.prototype.cork = function () {
+  this._writableState.corked++;
+};
+
+Writable.prototype.uncork = function () {
+  var state = this._writableState;
+
+  if (state.corked) {
+    state.corked--;
+    if (!state.writing && !state.corked && !state.bufferProcessing && state.bufferedRequest) clearBuffer(this, state);
+  }
+};
+
+Writable.prototype.setDefaultEncoding = function setDefaultEncoding(encoding) {
+  // node::ParseEncoding() requires lower case.
+  if (typeof encoding === 'string') encoding = encoding.toLowerCase();
+  if (!(['hex', 'utf8', 'utf-8', 'ascii', 'binary', 'base64', 'ucs2', 'ucs-2', 'utf16le', 'utf-16le', 'raw'].indexOf((encoding + '').toLowerCase()) > -1)) throw new ERR_UNKNOWN_ENCODING(encoding);
+  this._writableState.defaultEncoding = encoding;
+  return this;
+};
+
+Object.defineProperty(Writable.prototype, 'writableBuffer', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState && this._writableState.getBuffer();
+  }
+});
+
+function decodeChunk(state, chunk, encoding) {
+  if (!state.objectMode && state.decodeStrings !== false && typeof chunk === 'string') {
+    chunk = Buffer.from(chunk, encoding);
+  }
+
+  return chunk;
+}
+
+Object.defineProperty(Writable.prototype, 'writableHighWaterMark', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState.highWaterMark;
+  }
+}); // if we're already writing something, then just put this
+// in the queue, and wait our turn.  Otherwise, call _write
+// If we return false, then we need a drain event, so set that flag.
+
+function writeOrBuffer(stream, state, isBuf, chunk, encoding, cb) {
+  if (!isBuf) {
+    var newChunk = decodeChunk(state, chunk, encoding);
+
+    if (chunk !== newChunk) {
+      isBuf = true;
+      encoding = 'buffer';
+      chunk = newChunk;
+    }
+  }
+
+  var len = state.objectMode ? 1 : chunk.length;
+  state.length += len;
+  var ret = state.length < state.highWaterMark; // we must ensure that previous needDrain will not be reset to false.
+
+  if (!ret) state.needDrain = true;
+
+  if (state.writing || state.corked) {
+    var last = state.lastBufferedRequest;
+    state.lastBufferedRequest = {
+      chunk: chunk,
+      encoding: encoding,
+      isBuf: isBuf,
+      callback: cb,
+      next: null
+    };
+
+    if (last) {
+      last.next = state.lastBufferedRequest;
+    } else {
+      state.bufferedRequest = state.lastBufferedRequest;
+    }
+
+    state.bufferedRequestCount += 1;
+  } else {
+    doWrite(stream, state, false, len, chunk, encoding, cb);
+  }
+
+  return ret;
+}
+
+function doWrite(stream, state, writev, len, chunk, encoding, cb) {
+  state.writelen = len;
+  state.writecb = cb;
+  state.writing = true;
+  state.sync = true;
+  if (state.destroyed) state.onwrite(new ERR_STREAM_DESTROYED('write'));else if (writev) stream._writev(chunk, state.onwrite);else stream._write(chunk, encoding, state.onwrite);
+  state.sync = false;
+}
+
+function onwriteError(stream, state, sync, er, cb) {
+  --state.pendingcb;
+
+  if (sync) {
+    // defer the callback if we are being called synchronously
+    // to avoid piling up things on the stack
+    process.nextTick(cb, er); // this can emit finish, and it will always happen
+    // after error
+
+    process.nextTick(finishMaybe, stream, state);
+    stream._writableState.errorEmitted = true;
+    stream.emit('error', er);
+  } else {
+    // the caller expect this to happen before if
+    // it is async
+    cb(er);
+    stream._writableState.errorEmitted = true;
+    stream.emit('error', er); // this can emit finish, but finish must
+    // always follow error
+
+    finishMaybe(stream, state);
+  }
+}
+
+function onwriteStateUpdate(state) {
+  state.writing = false;
+  state.writecb = null;
+  state.length -= state.writelen;
+  state.writelen = 0;
+}
+
+function onwrite(stream, er) {
+  var state = stream._writableState;
+  var sync = state.sync;
+  var cb = state.writecb;
+  if (typeof cb !== 'function') throw new ERR_MULTIPLE_CALLBACK();
+  onwriteStateUpdate(state);
+  if (er) onwriteError(stream, state, sync, er, cb);else {
+    // Check if we're actually ready to finish, but don't emit yet
+    var finished = needFinish(state) || stream.destroyed;
+
+    if (!finished && !state.corked && !state.bufferProcessing && state.bufferedRequest) {
+      clearBuffer(stream, state);
+    }
+
+    if (sync) {
+      process.nextTick(afterWrite, stream, state, finished, cb);
+    } else {
+      afterWrite(stream, state, finished, cb);
+    }
+  }
+}
+
+function afterWrite(stream, state, finished, cb) {
+  if (!finished) onwriteDrain(stream, state);
+  state.pendingcb--;
+  cb();
+  finishMaybe(stream, state);
+} // Must force callback to be called on nextTick, so that we don't
+// emit 'drain' before the write() consumer gets the 'false' return
+// value, and has a chance to attach a 'drain' listener.
+
+
+function onwriteDrain(stream, state) {
+  if (state.length === 0 && state.needDrain) {
+    state.needDrain = false;
+    stream.emit('drain');
+  }
+} // if there's something in the buffer waiting, then process it
+
+
+function clearBuffer(stream, state) {
+  state.bufferProcessing = true;
+  var entry = state.bufferedRequest;
+
+  if (stream._writev && entry && entry.next) {
+    // Fast case, write everything using _writev()
+    var l = state.bufferedRequestCount;
+    var buffer = new Array(l);
+    var holder = state.corkedRequestsFree;
+    holder.entry = entry;
+    var count = 0;
+    var allBuffers = true;
+
+    while (entry) {
+      buffer[count] = entry;
+      if (!entry.isBuf) allBuffers = false;
+      entry = entry.next;
+      count += 1;
+    }
+
+    buffer.allBuffers = allBuffers;
+    doWrite(stream, state, true, state.length, buffer, '', holder.finish); // doWrite is almost always async, defer these to save a bit of time
+    // as the hot path ends with doWrite
+
+    state.pendingcb++;
+    state.lastBufferedRequest = null;
+
+    if (holder.next) {
+      state.corkedRequestsFree = holder.next;
+      holder.next = null;
+    } else {
+      state.corkedRequestsFree = new CorkedRequest(state);
+    }
+
+    state.bufferedRequestCount = 0;
+  } else {
+    // Slow case, write chunks one-by-one
+    while (entry) {
+      var chunk = entry.chunk;
+      var encoding = entry.encoding;
+      var cb = entry.callback;
+      var len = state.objectMode ? 1 : chunk.length;
+      doWrite(stream, state, false, len, chunk, encoding, cb);
+      entry = entry.next;
+      state.bufferedRequestCount--; // if we didn't call the onwrite immediately, then
+      // it means that we need to wait until it does.
+      // also, that means that the chunk and cb are currently
+      // being processed, so move the buffer counter past them.
+
+      if (state.writing) {
+        break;
       }
-      // Prevent ids from leaking
-      exports.clearImmediate(id);
+    }
+
+    if (entry === null) state.lastBufferedRequest = null;
+  }
+
+  state.bufferedRequest = entry;
+  state.bufferProcessing = false;
+}
+
+Writable.prototype._write = function (chunk, encoding, cb) {
+  cb(new ERR_METHOD_NOT_IMPLEMENTED('_write()'));
+};
+
+Writable.prototype._writev = null;
+
+Writable.prototype.end = function (chunk, encoding, cb) {
+  var state = this._writableState;
+
+  if (typeof chunk === 'function') {
+    cb = chunk;
+    chunk = null;
+    encoding = null;
+  } else if (typeof encoding === 'function') {
+    cb = encoding;
+    encoding = null;
+  }
+
+  if (chunk !== null && chunk !== undefined) this.write(chunk, encoding); // .end() fully uncorks
+
+  if (state.corked) {
+    state.corked = 1;
+    this.uncork();
+  } // ignore unnecessary end() calls.
+
+
+  if (!state.ending) endWritable(this, state, cb);
+  return this;
+};
+
+Object.defineProperty(Writable.prototype, 'writableLength', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    return this._writableState.length;
+  }
+});
+
+function needFinish(state) {
+  return state.ending && state.length === 0 && state.bufferedRequest === null && !state.finished && !state.writing;
+}
+
+function callFinal(stream, state) {
+  stream._final(function (err) {
+    state.pendingcb--;
+
+    if (err) {
+      stream.emit('error', err);
+    }
+
+    state.prefinished = true;
+    stream.emit('prefinish');
+    finishMaybe(stream, state);
+  });
+}
+
+function prefinish(stream, state) {
+  if (!state.prefinished && !state.finalCalled) {
+    if (typeof stream._final === 'function' && !state.destroyed) {
+      state.pendingcb++;
+      state.finalCalled = true;
+      process.nextTick(callFinal, stream, state);
+    } else {
+      state.prefinished = true;
+      stream.emit('prefinish');
+    }
+  }
+}
+
+function finishMaybe(stream, state) {
+  var need = needFinish(state);
+
+  if (need) {
+    prefinish(stream, state);
+
+    if (state.pendingcb === 0) {
+      state.finished = true;
+      stream.emit('finish');
+    }
+  }
+
+  return need;
+}
+
+function endWritable(stream, state, cb) {
+  state.ending = true;
+  finishMaybe(stream, state);
+
+  if (cb) {
+    if (state.finished) process.nextTick(cb);else stream.once('finish', cb);
+  }
+
+  state.ended = true;
+  stream.writable = false;
+}
+
+function onCorkedFinish(corkReq, state, err) {
+  var entry = corkReq.entry;
+  corkReq.entry = null;
+
+  while (entry) {
+    var cb = entry.callback;
+    state.pendingcb--;
+    cb(err);
+    entry = entry.next;
+  } // reuse the free corkReq.
+
+
+  state.corkedRequestsFree.next = corkReq;
+}
+
+Object.defineProperty(Writable.prototype, 'destroyed', {
+  // making it explicit this property is not enumerable
+  // because otherwise some prototype manipulation in
+  // userland will fail
+  enumerable: false,
+  get: function get() {
+    if (this._writableState === undefined) {
+      return false;
+    }
+
+    return this._writableState.destroyed;
+  },
+  set: function set(value) {
+    // we ignore the value if the stream
+    // has not been initialized yet
+    if (!this._writableState) {
+      return;
+    } // backward compatibility, the user is explicitly
+    // managing destroyed
+
+
+    this._writableState.destroyed = value;
+  }
+});
+Writable.prototype.destroy = destroyImpl.destroy;
+Writable.prototype._undestroy = destroyImpl.undestroy;
+
+Writable.prototype._destroy = function (err, cb) {
+  cb(err);
+};
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"../errors":147,"./_stream_duplex":149,"./internal/streams/destroy":156,"./internal/streams/state":159,"./internal/streams/stream":160,"_process":109,"buffer":4,"inherits":105,"util-deprecate":165}],154:[function(require,module,exports){
+(function (process){
+'use strict';
+
+var _Object$setPrototypeO;
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var finished = require('./end-of-stream');
+
+var kLastResolve = Symbol('lastResolve');
+var kLastReject = Symbol('lastReject');
+var kError = Symbol('error');
+var kEnded = Symbol('ended');
+var kLastPromise = Symbol('lastPromise');
+var kHandlePromise = Symbol('handlePromise');
+var kStream = Symbol('stream');
+
+function createIterResult(value, done) {
+  return {
+    value: value,
+    done: done
+  };
+}
+
+function readAndResolve(iter) {
+  var resolve = iter[kLastResolve];
+
+  if (resolve !== null) {
+    var data = iter[kStream].read(); // we defer if data is null
+    // we can be expecting either 'end' or
+    // 'error'
+
+    if (data !== null) {
+      iter[kLastPromise] = null;
+      iter[kLastResolve] = null;
+      iter[kLastReject] = null;
+      resolve(createIterResult(data, false));
+    }
+  }
+}
+
+function onReadable(iter) {
+  // we wait for the next tick, because it might
+  // emit an error with process.nextTick
+  process.nextTick(readAndResolve, iter);
+}
+
+function wrapForNext(lastPromise, iter) {
+  return function (resolve, reject) {
+    lastPromise.then(function () {
+      if (iter[kEnded]) {
+        resolve(createIterResult(undefined, true));
+        return;
+      }
+
+      iter[kHandlePromise](resolve, reject);
+    }, reject);
+  };
+}
+
+var AsyncIteratorPrototype = Object.getPrototypeOf(function () {});
+var ReadableStreamAsyncIteratorPrototype = Object.setPrototypeOf((_Object$setPrototypeO = {
+  get stream() {
+    return this[kStream];
+  },
+
+  next: function next() {
+    var _this = this;
+
+    // if we have detected an error in the meanwhile
+    // reject straight away
+    var error = this[kError];
+
+    if (error !== null) {
+      return Promise.reject(error);
+    }
+
+    if (this[kEnded]) {
+      return Promise.resolve(createIterResult(undefined, true));
+    }
+
+    if (this[kStream].destroyed) {
+      // We need to defer via nextTick because if .destroy(err) is
+      // called, the error will be emitted via nextTick, and
+      // we cannot guarantee that there is no error lingering around
+      // waiting to be emitted.
+      return new Promise(function (resolve, reject) {
+        process.nextTick(function () {
+          if (_this[kError]) {
+            reject(_this[kError]);
+          } else {
+            resolve(createIterResult(undefined, true));
+          }
+        });
+      });
+    } // if we have multiple next() calls
+    // we will wait for the previous Promise to finish
+    // this logic is optimized to support for await loops,
+    // where next() is only called once at a time
+
+
+    var lastPromise = this[kLastPromise];
+    var promise;
+
+    if (lastPromise) {
+      promise = new Promise(wrapForNext(lastPromise, this));
+    } else {
+      // fast path needed to support multiple this.push()
+      // without triggering the next() queue
+      var data = this[kStream].read();
+
+      if (data !== null) {
+        return Promise.resolve(createIterResult(data, false));
+      }
+
+      promise = new Promise(this[kHandlePromise]);
+    }
+
+    this[kLastPromise] = promise;
+    return promise;
+  }
+}, _defineProperty(_Object$setPrototypeO, Symbol.asyncIterator, function () {
+  return this;
+}), _defineProperty(_Object$setPrototypeO, "return", function _return() {
+  var _this2 = this;
+
+  // destroy(err, cb) is a private API
+  // we can guarantee we have that here, because we control the
+  // Readable class this is attached to
+  return new Promise(function (resolve, reject) {
+    _this2[kStream].destroy(null, function (err) {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      resolve(createIterResult(undefined, true));
+    });
+  });
+}), _Object$setPrototypeO), AsyncIteratorPrototype);
+
+var createReadableStreamAsyncIterator = function createReadableStreamAsyncIterator(stream) {
+  var _Object$create;
+
+  var iterator = Object.create(ReadableStreamAsyncIteratorPrototype, (_Object$create = {}, _defineProperty(_Object$create, kStream, {
+    value: stream,
+    writable: true
+  }), _defineProperty(_Object$create, kLastResolve, {
+    value: null,
+    writable: true
+  }), _defineProperty(_Object$create, kLastReject, {
+    value: null,
+    writable: true
+  }), _defineProperty(_Object$create, kError, {
+    value: null,
+    writable: true
+  }), _defineProperty(_Object$create, kEnded, {
+    value: stream._readableState.endEmitted,
+    writable: true
+  }), _defineProperty(_Object$create, kHandlePromise, {
+    value: function value(resolve, reject) {
+      var data = iterator[kStream].read();
+
+      if (data) {
+        iterator[kLastPromise] = null;
+        iterator[kLastResolve] = null;
+        iterator[kLastReject] = null;
+        resolve(createIterResult(data, false));
+      } else {
+        iterator[kLastResolve] = resolve;
+        iterator[kLastReject] = reject;
+      }
+    },
+    writable: true
+  }), _Object$create));
+  iterator[kLastPromise] = null;
+  finished(stream, function (err) {
+    if (err && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
+      var reject = iterator[kLastReject]; // reject if we are waiting for data in the Promise
+      // returned by next() and store the error
+
+      if (reject !== null) {
+        iterator[kLastPromise] = null;
+        iterator[kLastResolve] = null;
+        iterator[kLastReject] = null;
+        reject(err);
+      }
+
+      iterator[kError] = err;
+      return;
+    }
+
+    var resolve = iterator[kLastResolve];
+
+    if (resolve !== null) {
+      iterator[kLastPromise] = null;
+      iterator[kLastResolve] = null;
+      iterator[kLastReject] = null;
+      resolve(createIterResult(undefined, true));
+    }
+
+    iterator[kEnded] = true;
+  });
+  stream.on('readable', onReadable.bind(null, iterator));
+  return iterator;
+};
+
+module.exports = createReadableStreamAsyncIterator;
+}).call(this,require('_process'))
+},{"./end-of-stream":157,"_process":109}],155:[function(require,module,exports){
+'use strict';
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var _require = require('buffer'),
+    Buffer = _require.Buffer;
+
+var _require2 = require('util'),
+    inspect = _require2.inspect;
+
+var custom = inspect && inspect.custom || 'inspect';
+
+function copyBuffer(src, target, offset) {
+  Buffer.prototype.copy.call(src, target, offset);
+}
+
+module.exports =
+/*#__PURE__*/
+function () {
+  function BufferList() {
+    this.head = null;
+    this.tail = null;
+    this.length = 0;
+  }
+
+  var _proto = BufferList.prototype;
+
+  _proto.push = function push(v) {
+    var entry = {
+      data: v,
+      next: null
+    };
+    if (this.length > 0) this.tail.next = entry;else this.head = entry;
+    this.tail = entry;
+    ++this.length;
+  };
+
+  _proto.unshift = function unshift(v) {
+    var entry = {
+      data: v,
+      next: this.head
+    };
+    if (this.length === 0) this.tail = entry;
+    this.head = entry;
+    ++this.length;
+  };
+
+  _proto.shift = function shift() {
+    if (this.length === 0) return;
+    var ret = this.head.data;
+    if (this.length === 1) this.head = this.tail = null;else this.head = this.head.next;
+    --this.length;
+    return ret;
+  };
+
+  _proto.clear = function clear() {
+    this.head = this.tail = null;
+    this.length = 0;
+  };
+
+  _proto.join = function join(s) {
+    if (this.length === 0) return '';
+    var p = this.head;
+    var ret = '' + p.data;
+
+    while (p = p.next) {
+      ret += s + p.data;
+    }
+
+    return ret;
+  };
+
+  _proto.concat = function concat(n) {
+    if (this.length === 0) return Buffer.alloc(0);
+    var ret = Buffer.allocUnsafe(n >>> 0);
+    var p = this.head;
+    var i = 0;
+
+    while (p) {
+      copyBuffer(p.data, ret, i);
+      i += p.data.length;
+      p = p.next;
+    }
+
+    return ret;
+  } // Consumes a specified amount of bytes or characters from the buffered data.
+  ;
+
+  _proto.consume = function consume(n, hasStrings) {
+    var ret;
+
+    if (n < this.head.data.length) {
+      // `slice` is the same for buffers and strings.
+      ret = this.head.data.slice(0, n);
+      this.head.data = this.head.data.slice(n);
+    } else if (n === this.head.data.length) {
+      // First chunk is a perfect match.
+      ret = this.shift();
+    } else {
+      // Result spans more than one buffer.
+      ret = hasStrings ? this._getString(n) : this._getBuffer(n);
+    }
+
+    return ret;
+  };
+
+  _proto.first = function first() {
+    return this.head.data;
+  } // Consumes a specified amount of characters from the buffered data.
+  ;
+
+  _proto._getString = function _getString(n) {
+    var p = this.head;
+    var c = 1;
+    var ret = p.data;
+    n -= ret.length;
+
+    while (p = p.next) {
+      var str = p.data;
+      var nb = n > str.length ? str.length : n;
+      if (nb === str.length) ret += str;else ret += str.slice(0, n);
+      n -= nb;
+
+      if (n === 0) {
+        if (nb === str.length) {
+          ++c;
+          if (p.next) this.head = p.next;else this.head = this.tail = null;
+        } else {
+          this.head = p;
+          p.data = str.slice(nb);
+        }
+
+        break;
+      }
+
+      ++c;
+    }
+
+    this.length -= c;
+    return ret;
+  } // Consumes a specified amount of bytes from the buffered data.
+  ;
+
+  _proto._getBuffer = function _getBuffer(n) {
+    var ret = Buffer.allocUnsafe(n);
+    var p = this.head;
+    var c = 1;
+    p.data.copy(ret);
+    n -= p.data.length;
+
+    while (p = p.next) {
+      var buf = p.data;
+      var nb = n > buf.length ? buf.length : n;
+      buf.copy(ret, ret.length - n, 0, nb);
+      n -= nb;
+
+      if (n === 0) {
+        if (nb === buf.length) {
+          ++c;
+          if (p.next) this.head = p.next;else this.head = this.tail = null;
+        } else {
+          this.head = p;
+          p.data = buf.slice(nb);
+        }
+
+        break;
+      }
+
+      ++c;
+    }
+
+    this.length -= c;
+    return ret;
+  } // Make sure the linked list only shows the minimal necessary information.
+  ;
+
+  _proto[custom] = function (_, options) {
+    return inspect(this, _objectSpread({}, options, {
+      // Only inspect one level.
+      depth: 0,
+      // It should not recurse.
+      customInspect: false
+    }));
+  };
+
+  return BufferList;
+}();
+},{"buffer":4,"util":2}],156:[function(require,module,exports){
+(function (process){
+'use strict'; // undocumented cb() API, needed for core, not for public API
+
+function destroy(err, cb) {
+  var _this = this;
+
+  var readableDestroyed = this._readableState && this._readableState.destroyed;
+  var writableDestroyed = this._writableState && this._writableState.destroyed;
+
+  if (readableDestroyed || writableDestroyed) {
+    if (cb) {
+      cb(err);
+    } else if (err && (!this._writableState || !this._writableState.errorEmitted)) {
+      process.nextTick(emitErrorNT, this, err);
+    }
+
+    return this;
+  } // we set destroyed to true before firing error callbacks in order
+  // to make it re-entrance safe in case destroy() is called within callbacks
+
+
+  if (this._readableState) {
+    this._readableState.destroyed = true;
+  } // if this is a duplex stream mark the writable part as destroyed as well
+
+
+  if (this._writableState) {
+    this._writableState.destroyed = true;
+  }
+
+  this._destroy(err || null, function (err) {
+    if (!cb && err) {
+      process.nextTick(emitErrorAndCloseNT, _this, err);
+
+      if (_this._writableState) {
+        _this._writableState.errorEmitted = true;
+      }
+    } else if (cb) {
+      process.nextTick(emitCloseNT, _this);
+      cb(err);
+    } else {
+      process.nextTick(emitCloseNT, _this);
     }
   });
 
-  return id;
-};
-
-exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate : function(id) {
-  delete immediateIds[id];
-};
-}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":112,"timers":160}],161:[function(require,module,exports){
-var Buffer = require('buffer').Buffer
-
-module.exports = function (buf) {
-	// If the buffer is backed by a Uint8Array, a faster version will work
-	if (buf instanceof Uint8Array) {
-		// If the buffer isn't a subarray, return the underlying ArrayBuffer
-		if (buf.byteOffset === 0 && buf.byteLength === buf.buffer.byteLength) {
-			return buf.buffer
-		} else if (typeof buf.buffer.slice === 'function') {
-			// Otherwise we need to get a proper copy
-			return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
-		}
-	}
-
-	if (Buffer.isBuffer(buf)) {
-		// This is the slow version that will work with any Buffer
-		// implementation (even in old browsers)
-		var arrayCopy = new Uint8Array(buf.length)
-		var len = buf.length
-		for (var i = 0; i < len; i++) {
-			arrayCopy[i] = buf[i]
-		}
-		return arrayCopy.buffer
-	} else {
-		throw new Error('Argument must be a Buffer')
-	}
+  return this;
 }
 
-},{"buffer":4}],162:[function(require,module,exports){
+function emitErrorAndCloseNT(self, err) {
+  emitErrorNT(self, err);
+  emitCloseNT(self);
+}
+
+function emitCloseNT(self) {
+  if (self._writableState && !self._writableState.emitClose) return;
+  if (self._readableState && !self._readableState.emitClose) return;
+  self.emit('close');
+}
+
+function undestroy() {
+  if (this._readableState) {
+    this._readableState.destroyed = false;
+    this._readableState.reading = false;
+    this._readableState.ended = false;
+    this._readableState.endEmitted = false;
+  }
+
+  if (this._writableState) {
+    this._writableState.destroyed = false;
+    this._writableState.ended = false;
+    this._writableState.ending = false;
+    this._writableState.finalCalled = false;
+    this._writableState.prefinished = false;
+    this._writableState.finished = false;
+    this._writableState.errorEmitted = false;
+  }
+}
+
+function emitErrorNT(self, err) {
+  self.emit('error', err);
+}
+
+module.exports = {
+  destroy: destroy,
+  undestroy: undestroy
+};
+}).call(this,require('_process'))
+},{"_process":109}],157:[function(require,module,exports){
+// Ported from https://github.com/mafintosh/end-of-stream with
+// permission from the author, Mathias Buus (@mafintosh).
+'use strict';
+
+var ERR_STREAM_PREMATURE_CLOSE = require('../../../errors').codes.ERR_STREAM_PREMATURE_CLOSE;
+
+function once(callback) {
+  var called = false;
+  return function () {
+    if (called) return;
+    called = true;
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    callback.apply(this, args);
+  };
+}
+
+function noop() {}
+
+function isRequest(stream) {
+  return stream.setHeader && typeof stream.abort === 'function';
+}
+
+function eos(stream, opts, callback) {
+  if (typeof opts === 'function') return eos(stream, null, opts);
+  if (!opts) opts = {};
+  callback = once(callback || noop);
+  var readable = opts.readable || opts.readable !== false && stream.readable;
+  var writable = opts.writable || opts.writable !== false && stream.writable;
+
+  var onlegacyfinish = function onlegacyfinish() {
+    if (!stream.writable) onfinish();
+  };
+
+  var writableEnded = stream._writableState && stream._writableState.finished;
+
+  var onfinish = function onfinish() {
+    writable = false;
+    writableEnded = true;
+    if (!readable) callback.call(stream);
+  };
+
+  var readableEnded = stream._readableState && stream._readableState.endEmitted;
+
+  var onend = function onend() {
+    readable = false;
+    readableEnded = true;
+    if (!writable) callback.call(stream);
+  };
+
+  var onerror = function onerror(err) {
+    callback.call(stream, err);
+  };
+
+  var onclose = function onclose() {
+    var err;
+
+    if (readable && !readableEnded) {
+      if (!stream._readableState || !stream._readableState.ended) err = new ERR_STREAM_PREMATURE_CLOSE();
+      return callback.call(stream, err);
+    }
+
+    if (writable && !writableEnded) {
+      if (!stream._writableState || !stream._writableState.ended) err = new ERR_STREAM_PREMATURE_CLOSE();
+      return callback.call(stream, err);
+    }
+  };
+
+  var onrequest = function onrequest() {
+    stream.req.on('finish', onfinish);
+  };
+
+  if (isRequest(stream)) {
+    stream.on('complete', onfinish);
+    stream.on('abort', onclose);
+    if (stream.req) onrequest();else stream.on('request', onrequest);
+  } else if (writable && !stream._writableState) {
+    // legacy streams
+    stream.on('end', onlegacyfinish);
+    stream.on('close', onlegacyfinish);
+  }
+
+  stream.on('end', onend);
+  stream.on('finish', onfinish);
+  if (opts.error !== false) stream.on('error', onerror);
+  stream.on('close', onclose);
+  return function () {
+    stream.removeListener('complete', onfinish);
+    stream.removeListener('abort', onclose);
+    stream.removeListener('request', onrequest);
+    if (stream.req) stream.req.removeListener('finish', onfinish);
+    stream.removeListener('end', onlegacyfinish);
+    stream.removeListener('close', onlegacyfinish);
+    stream.removeListener('finish', onfinish);
+    stream.removeListener('end', onend);
+    stream.removeListener('error', onerror);
+    stream.removeListener('close', onclose);
+  };
+}
+
+module.exports = eos;
+},{"../../../errors":147}],158:[function(require,module,exports){
+// Ported from https://github.com/mafintosh/pump with
+// permission from the author, Mathias Buus (@mafintosh).
+'use strict';
+
+var eos;
+
+function once(callback) {
+  var called = false;
+  return function () {
+    if (called) return;
+    called = true;
+    callback.apply(void 0, arguments);
+  };
+}
+
+var _require$codes = require('../../../errors').codes,
+    ERR_MISSING_ARGS = _require$codes.ERR_MISSING_ARGS,
+    ERR_STREAM_DESTROYED = _require$codes.ERR_STREAM_DESTROYED;
+
+function noop(err) {
+  // Rethrow the error if it exists to avoid swallowing it
+  if (err) throw err;
+}
+
+function isRequest(stream) {
+  return stream.setHeader && typeof stream.abort === 'function';
+}
+
+function destroyer(stream, reading, writing, callback) {
+  callback = once(callback);
+  var closed = false;
+  stream.on('close', function () {
+    closed = true;
+  });
+  if (eos === undefined) eos = require('./end-of-stream');
+  eos(stream, {
+    readable: reading,
+    writable: writing
+  }, function (err) {
+    if (err) return callback(err);
+    closed = true;
+    callback();
+  });
+  var destroyed = false;
+  return function (err) {
+    if (closed) return;
+    if (destroyed) return;
+    destroyed = true; // request.destroy just do .end - .abort is what we want
+
+    if (isRequest(stream)) return stream.abort();
+    if (typeof stream.destroy === 'function') return stream.destroy();
+    callback(err || new ERR_STREAM_DESTROYED('pipe'));
+  };
+}
+
+function call(fn) {
+  fn();
+}
+
+function pipe(from, to) {
+  return from.pipe(to);
+}
+
+function popCallback(streams) {
+  if (!streams.length) return noop;
+  if (typeof streams[streams.length - 1] !== 'function') return noop;
+  return streams.pop();
+}
+
+function pipeline() {
+  for (var _len = arguments.length, streams = new Array(_len), _key = 0; _key < _len; _key++) {
+    streams[_key] = arguments[_key];
+  }
+
+  var callback = popCallback(streams);
+  if (Array.isArray(streams[0])) streams = streams[0];
+
+  if (streams.length < 2) {
+    throw new ERR_MISSING_ARGS('streams');
+  }
+
+  var error;
+  var destroys = streams.map(function (stream, i) {
+    var reading = i < streams.length - 1;
+    var writing = i > 0;
+    return destroyer(stream, reading, writing, function (err) {
+      if (!error) error = err;
+      if (err) destroys.forEach(call);
+      if (reading) return;
+      destroys.forEach(call);
+      callback(error);
+    });
+  });
+  return streams.reduce(pipe);
+}
+
+module.exports = pipeline;
+},{"../../../errors":147,"./end-of-stream":157}],159:[function(require,module,exports){
+'use strict';
+
+var ERR_INVALID_OPT_VALUE = require('../../../errors').codes.ERR_INVALID_OPT_VALUE;
+
+function highWaterMarkFrom(options, isDuplex, duplexKey) {
+  return options.highWaterMark != null ? options.highWaterMark : isDuplex ? options[duplexKey] : null;
+}
+
+function getHighWaterMark(state, options, duplexKey, isDuplex) {
+  var hwm = highWaterMarkFrom(options, isDuplex, duplexKey);
+
+  if (hwm != null) {
+    if (!(isFinite(hwm) && Math.floor(hwm) === hwm) || hwm < 0) {
+      var name = isDuplex ? duplexKey : 'highWaterMark';
+      throw new ERR_INVALID_OPT_VALUE(name, hwm);
+    }
+
+    return Math.floor(hwm);
+  } // Default value
+
+
+  return state.objectMode ? 16 : 16 * 1024;
+}
+
+module.exports = {
+  getHighWaterMark: getHighWaterMark
+};
+},{"../../../errors":147}],160:[function(require,module,exports){
+module.exports = require('events').EventEmitter;
+
+},{"events":101}],161:[function(require,module,exports){
+exports = module.exports = require('./lib/_stream_readable.js');
+exports.Stream = exports;
+exports.Readable = exports;
+exports.Writable = require('./lib/_stream_writable.js');
+exports.Duplex = require('./lib/_stream_duplex.js');
+exports.Transform = require('./lib/_stream_transform.js');
+exports.PassThrough = require('./lib/_stream_passthrough.js');
+exports.finished = require('./lib/internal/streams/end-of-stream.js');
+exports.pipeline = require('./lib/internal/streams/pipeline.js');
+
+},{"./lib/_stream_duplex.js":149,"./lib/_stream_passthrough.js":150,"./lib/_stream_readable.js":151,"./lib/_stream_transform.js":152,"./lib/_stream_writable.js":153,"./lib/internal/streams/end-of-stream.js":157,"./lib/internal/streams/pipeline.js":158}],162:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+'use strict';
+
+/*<replacement>*/
+
+var Buffer = require('safe-buffer').Buffer;
+/*</replacement>*/
+
+var isEncoding = Buffer.isEncoding || function (encoding) {
+  encoding = '' + encoding;
+  switch (encoding && encoding.toLowerCase()) {
+    case 'hex':case 'utf8':case 'utf-8':case 'ascii':case 'binary':case 'base64':case 'ucs2':case 'ucs-2':case 'utf16le':case 'utf-16le':case 'raw':
+      return true;
+    default:
+      return false;
+  }
+};
+
+function _normalizeEncoding(enc) {
+  if (!enc) return 'utf8';
+  var retried;
+  while (true) {
+    switch (enc) {
+      case 'utf8':
+      case 'utf-8':
+        return 'utf8';
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return 'utf16le';
+      case 'latin1':
+      case 'binary':
+        return 'latin1';
+      case 'base64':
+      case 'ascii':
+      case 'hex':
+        return enc;
+      default:
+        if (retried) return; // undefined
+        enc = ('' + enc).toLowerCase();
+        retried = true;
+    }
+  }
+};
+
+// Do not cache `Buffer.isEncoding` when checking encoding names as some
+// modules monkey-patch it to support additional encodings
+function normalizeEncoding(enc) {
+  var nenc = _normalizeEncoding(enc);
+  if (typeof nenc !== 'string' && (Buffer.isEncoding === isEncoding || !isEncoding(enc))) throw new Error('Unknown encoding: ' + enc);
+  return nenc || enc;
+}
+
+// StringDecoder provides an interface for efficiently splitting a series of
+// buffers into a series of JS strings without breaking apart multi-byte
+// characters.
+exports.StringDecoder = StringDecoder;
+function StringDecoder(encoding) {
+  this.encoding = normalizeEncoding(encoding);
+  var nb;
+  switch (this.encoding) {
+    case 'utf16le':
+      this.text = utf16Text;
+      this.end = utf16End;
+      nb = 4;
+      break;
+    case 'utf8':
+      this.fillLast = utf8FillLast;
+      nb = 4;
+      break;
+    case 'base64':
+      this.text = base64Text;
+      this.end = base64End;
+      nb = 3;
+      break;
+    default:
+      this.write = simpleWrite;
+      this.end = simpleEnd;
+      return;
+  }
+  this.lastNeed = 0;
+  this.lastTotal = 0;
+  this.lastChar = Buffer.allocUnsafe(nb);
+}
+
+StringDecoder.prototype.write = function (buf) {
+  if (buf.length === 0) return '';
+  var r;
+  var i;
+  if (this.lastNeed) {
+    r = this.fillLast(buf);
+    if (r === undefined) return '';
+    i = this.lastNeed;
+    this.lastNeed = 0;
+  } else {
+    i = 0;
+  }
+  if (i < buf.length) return r ? r + this.text(buf, i) : this.text(buf, i);
+  return r || '';
+};
+
+StringDecoder.prototype.end = utf8End;
+
+// Returns only complete characters in a Buffer
+StringDecoder.prototype.text = utf8Text;
+
+// Attempts to complete a partial non-UTF-8 character using bytes from a Buffer
+StringDecoder.prototype.fillLast = function (buf) {
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, buf.length);
+  this.lastNeed -= buf.length;
+};
+
+// Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
+// continuation byte. If an invalid byte is detected, -2 is returned.
+function utf8CheckByte(byte) {
+  if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
+  return byte >> 6 === 0x02 ? -1 : -2;
+}
+
+// Checks at most 3 bytes at the end of a Buffer in order to detect an
+// incomplete multi-byte UTF-8 character. The total number of bytes (2, 3, or 4)
+// needed to complete the UTF-8 character (if applicable) are returned.
+function utf8CheckIncomplete(self, buf, i) {
+  var j = buf.length - 1;
+  if (j < i) return 0;
+  var nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 1;
+    return nb;
+  }
+  if (--j < i || nb === -2) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 2;
+    return nb;
+  }
+  if (--j < i || nb === -2) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) {
+      if (nb === 2) nb = 0;else self.lastNeed = nb - 3;
+    }
+    return nb;
+  }
+  return 0;
+}
+
+// Validates as many continuation bytes for a multi-byte UTF-8 character as
+// needed or are available. If we see a non-continuation byte where we expect
+// one, we "replace" the validated continuation bytes we've seen so far with
+// a single UTF-8 replacement character ('\ufffd'), to match v8's UTF-8 decoding
+// behavior. The continuation byte check is included three times in the case
+// where all of the continuation bytes for a character exist in the same buffer.
+// It is also done this way as a slight performance increase instead of using a
+// loop.
+function utf8CheckExtraBytes(self, buf, p) {
+  if ((buf[0] & 0xC0) !== 0x80) {
+    self.lastNeed = 0;
+    return '\ufffd';
+  }
+  if (self.lastNeed > 1 && buf.length > 1) {
+    if ((buf[1] & 0xC0) !== 0x80) {
+      self.lastNeed = 1;
+      return '\ufffd';
+    }
+    if (self.lastNeed > 2 && buf.length > 2) {
+      if ((buf[2] & 0xC0) !== 0x80) {
+        self.lastNeed = 2;
+        return '\ufffd';
+      }
+    }
+  }
+}
+
+// Attempts to complete a multi-byte UTF-8 character using bytes from a Buffer.
+function utf8FillLast(buf) {
+  var p = this.lastTotal - this.lastNeed;
+  var r = utf8CheckExtraBytes(this, buf, p);
+  if (r !== undefined) return r;
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, p, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, p, 0, buf.length);
+  this.lastNeed -= buf.length;
+}
+
+// Returns all complete UTF-8 characters in a Buffer. If the Buffer ended on a
+// partial character, the character's bytes are buffered until the required
+// number of bytes are available.
+function utf8Text(buf, i) {
+  var total = utf8CheckIncomplete(this, buf, i);
+  if (!this.lastNeed) return buf.toString('utf8', i);
+  this.lastTotal = total;
+  var end = buf.length - (total - this.lastNeed);
+  buf.copy(this.lastChar, 0, end);
+  return buf.toString('utf8', i, end);
+}
+
+// For UTF-8, a replacement character is added when ending on a partial
+// character.
+function utf8End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + '\ufffd';
+  return r;
+}
+
+// UTF-16LE typically needs two bytes per character, but even if we have an even
+// number of bytes available, we need to check if we end on a leading/high
+// surrogate. In that case, we need to wait for the next two bytes in order to
+// decode the last character properly.
+function utf16Text(buf, i) {
+  if ((buf.length - i) % 2 === 0) {
+    var r = buf.toString('utf16le', i);
+    if (r) {
+      var c = r.charCodeAt(r.length - 1);
+      if (c >= 0xD800 && c <= 0xDBFF) {
+        this.lastNeed = 2;
+        this.lastTotal = 4;
+        this.lastChar[0] = buf[buf.length - 2];
+        this.lastChar[1] = buf[buf.length - 1];
+        return r.slice(0, -1);
+      }
+    }
+    return r;
+  }
+  this.lastNeed = 1;
+  this.lastTotal = 2;
+  this.lastChar[0] = buf[buf.length - 1];
+  return buf.toString('utf16le', i, buf.length - 1);
+}
+
+// For UTF-16LE we do not explicitly append special replacement characters if we
+// end on a partial character, we simply let v8 handle that.
+function utf16End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) {
+    var end = this.lastTotal - this.lastNeed;
+    return r + this.lastChar.toString('utf16le', 0, end);
+  }
+  return r;
+}
+
+function base64Text(buf, i) {
+  var n = (buf.length - i) % 3;
+  if (n === 0) return buf.toString('base64', i);
+  this.lastNeed = 3 - n;
+  this.lastTotal = 3;
+  if (n === 1) {
+    this.lastChar[0] = buf[buf.length - 1];
+  } else {
+    this.lastChar[0] = buf[buf.length - 2];
+    this.lastChar[1] = buf[buf.length - 1];
+  }
+  return buf.toString('base64', i, buf.length - n);
+}
+
+function base64End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + this.lastChar.toString('base64', 0, 3 - this.lastNeed);
+  return r;
+}
+
+// Pass bytes on through for single-byte encodings (e.g. ascii, latin1, hex)
+function simpleWrite(buf) {
+  return buf.toString(this.encoding);
+}
+
+function simpleEnd(buf) {
+  return buf && buf.length ? this.write(buf) : '';
+}
+},{"safe-buffer":131}],163:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -24081,7 +24562,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":163,"punycode":113,"querystring":116}],163:[function(require,module,exports){
+},{"./util":164,"punycode":110,"querystring":113}],164:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -24099,7 +24580,7 @@ module.exports = {
   }
 };
 
-},{}],164:[function(require,module,exports){
+},{}],165:[function(require,module,exports){
 (function (global){
 
 /**
@@ -24170,7 +24651,7 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],165:[function(require,module,exports){
+},{}],166:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -24191,7 +24672,7 @@ function extend() {
     return target
 }
 
-},{}],166:[function(require,module,exports){
+},{}],167:[function(require,module,exports){
 /*!
  * HTML Parser By John Resig (ejohn.org)
  * Modified by Juriy "kangax" Zaytsev
@@ -24760,7 +25241,7 @@ exports.HTMLtoDOM = function(html, doc) {
   return doc;
 };
 
-},{"./utils":168}],167:[function(require,module,exports){
+},{"./utils":169}],168:[function(require,module,exports){
 'use strict';
 
 function Sorter() {
@@ -24833,7 +25314,7 @@ TokenChain.prototype = {
 
 module.exports = TokenChain;
 
-},{}],168:[function(require,module,exports){
+},{}],169:[function(require,module,exports){
 'use strict';
 
 function createMap(values, ignoreCase) {
@@ -24861,7 +25342,7 @@ var decode = require('he').decode;
 var HTMLParser = require('./htmlparser').HTMLParser;
 var RelateUrl = require('relateurl');
 var TokenChain = require('./tokenchain');
-var UglifyJS = require('uglify-js');
+var Terser = require('terser');
 var utils = require('./utils');
 
 function trimWhitespace(str) {
@@ -25554,7 +26035,7 @@ function processOptions(values) {
         var start = text.match(/^\s*<!--.*/);
         var code = start ? text.slice(start[0].length).replace(/\n\s*-->\s*$/, '') : text;
         value.parse.bare_returns = inline;
-        var result = UglifyJS.minify(code, value);
+        var result = Terser.minify(code, value);
         if (result.error) {
           options.log(result.error);
           return text;
@@ -26199,8 +26680,10 @@ exports.minify = function(value, options) {
   return result;
 };
 
-},{"./htmlparser":166,"./tokenchain":167,"./utils":168,"clean-css":6,"he":103,"relateurl":129,"uglify-js":"uglify-js"}],"uglify-js":[function(require,module,exports){
-(function (Buffer){
-(function(exports){"use strict";function characters(str){return str.split("")}function member(name,array){return array.indexOf(name)>=0}function find_if(func,array){for(var i=array.length;--i>=0;)if(func(array[i]))return array[i]}function repeat_string(str,i){if(i<=0)return"";if(i==1)return str;var d=repeat_string(str,i>>1);d+=d;return i&1?d+str:d}function configure_error_stack(fn){Object.defineProperty(fn.prototype,"stack",{get:function(){var err=new Error(this.message);err.name=this.name;try{throw err}catch(e){return e.stack}}})}function DefaultsError(msg,defs){this.message=msg;this.defs=defs}DefaultsError.prototype=Object.create(Error.prototype);DefaultsError.prototype.constructor=DefaultsError;DefaultsError.prototype.name="DefaultsError";configure_error_stack(DefaultsError);function defaults(args,defs,croak){if(args===true)args={};var ret=args||{};if(croak)for(var i in ret)if(HOP(ret,i)&&!HOP(defs,i)){throw new DefaultsError("`"+i+"` is not a supported option",defs)}for(var i in defs)if(HOP(defs,i)){ret[i]=args&&HOP(args,i)?args[i]:defs[i]}return ret}function merge(obj,ext){var count=0;for(var i in ext)if(HOP(ext,i)){obj[i]=ext[i];count++}return count}function noop(){}function return_false(){return false}function return_true(){return true}function return_this(){return this}function return_null(){return null}var MAP=function(){function MAP(a,f,backwards){var ret=[],top=[],i;function doit(){var val=f(a[i],i);var is_last=val instanceof Last;if(is_last)val=val.v;if(val instanceof AtTop){val=val.v;if(val instanceof Splice){top.push.apply(top,backwards?val.v.slice().reverse():val.v)}else{top.push(val)}}else if(val!==skip){if(val instanceof Splice){ret.push.apply(ret,backwards?val.v.slice().reverse():val.v)}else{ret.push(val)}}return is_last}if(Array.isArray(a)){if(backwards){for(i=a.length;--i>=0;)if(doit())break;ret.reverse();top.reverse()}else{for(i=0;i<a.length;++i)if(doit())break}}else{for(i in a)if(HOP(a,i))if(doit())break}return top.concat(ret)}MAP.at_top=function(val){return new AtTop(val)};MAP.splice=function(val){return new Splice(val)};MAP.last=function(val){return new Last(val)};var skip=MAP.skip={};function AtTop(val){this.v=val}function Splice(val){this.v=val}function Last(val){this.v=val}return MAP}();function push_uniq(array,el){if(array.indexOf(el)<0)return array.push(el)}function string_template(text,props){return text.replace(/\{(.+?)\}/g,function(str,p){return props&&props[p]})}function remove(array,el){var index=array.indexOf(el);if(index>=0)array.splice(index,1)}function makePredicate(words){if(!Array.isArray(words))words=words.split(" ");var map=Object.create(null);words.forEach(function(word){map[word]=true});return map}function all(array,predicate){for(var i=array.length;--i>=0;)if(!predicate(array[i]))return false;return true}function Dictionary(){this._values=Object.create(null);this._size=0}Dictionary.prototype={set:function(key,val){if(!this.has(key))++this._size;this._values["$"+key]=val;return this},add:function(key,val){if(this.has(key)){this.get(key).push(val)}else{this.set(key,[val])}return this},get:function(key){return this._values["$"+key]},del:function(key){if(this.has(key)){--this._size;delete this._values["$"+key]}return this},has:function(key){return"$"+key in this._values},each:function(f){for(var i in this._values)f(this._values[i],i.substr(1))},size:function(){return this._size},map:function(f){var ret=[];for(var i in this._values)ret.push(f(this._values[i],i.substr(1)));return ret},clone:function(){var ret=new Dictionary;for(var i in this._values)ret._values[i]=this._values[i];ret._size=this._size;return ret},toObject:function(){return this._values}};Dictionary.fromObject=function(obj){var dict=new Dictionary;dict._size=merge(dict._values,obj);return dict};function HOP(obj,prop){return Object.prototype.hasOwnProperty.call(obj,prop)}function first_in_statement(stack){var node=stack.parent(-1);for(var i=0,p;p=stack.parent(i++);node=p){if(p.TYPE=="Call"){if(p.expression===node)continue}else if(p instanceof AST_Binary){if(p.left===node)continue}else if(p instanceof AST_Conditional){if(p.condition===node)continue}else if(p instanceof AST_PropAccess){if(p.expression===node)continue}else if(p instanceof AST_Sequence){if(p.expressions[0]===node)continue}else if(p instanceof AST_Statement){return p.body===node}else if(p instanceof AST_UnaryPostfix){if(p.expression===node)continue}return false}}"use strict";function DEFNODE(type,props,methods,base){if(typeof base==="undefined")base=AST_Node;props=props?props.split(/\s+/):[];var self_props=props;if(base&&base.PROPS)props=props.concat(base.PROPS);var code=["return function AST_",type,"(props){","if(props){"];props.forEach(function(prop){code.push("this.",prop,"=props.",prop,";")});var proto=base&&new base;if(proto&&proto.initialize||methods&&methods.initialize)code.push("this.initialize();");code.push("}}");var ctor=new Function(code.join(""))();if(proto){ctor.prototype=proto;ctor.BASE=base}if(base)base.SUBCLASSES.push(ctor);ctor.prototype.CTOR=ctor;ctor.PROPS=props||null;ctor.SELF_PROPS=self_props;ctor.SUBCLASSES=[];if(type){ctor.prototype.TYPE=ctor.TYPE=type}if(methods)for(var name in methods)if(HOP(methods,name)){if(/^\$/.test(name)){ctor[name.substr(1)]=methods[name]}else{ctor.prototype[name]=methods[name]}}ctor.DEFMETHOD=function(name,method){this.prototype[name]=method};if(typeof exports!=="undefined"){exports["AST_"+type]=ctor}return ctor}var AST_Token=DEFNODE("Token","type value line col pos endline endcol endpos nlb comments_before comments_after file raw",{},null);var AST_Node=DEFNODE("Node","start end",{_clone:function(deep){if(deep){var self=this.clone();return self.transform(new TreeTransformer(function(node){if(node!==self){return node.clone(true)}}))}return new this.CTOR(this)},clone:function(deep){return this._clone(deep)},$documentation:"Base class of all AST nodes",$propdoc:{start:"[AST_Token] The first token of this node",end:"[AST_Token] The last token of this node"},_walk:function(visitor){return visitor._visit(this)},walk:function(visitor){return this._walk(visitor)}},null);AST_Node.warn=function(txt,props){if(AST_Node.warn_function)AST_Node.warn_function(string_template(txt,props))};var AST_Statement=DEFNODE("Statement",null,{$documentation:"Base class of all statements"});var AST_Debugger=DEFNODE("Debugger",null,{$documentation:"Represents a debugger statement"},AST_Statement);var AST_Directive=DEFNODE("Directive","value quote",{$documentation:'Represents a directive, like "use strict";',$propdoc:{value:"[string] The value of this directive as a plain string (it's not an AST_String!)",quote:"[string] the original quote character"}},AST_Statement);var AST_SimpleStatement=DEFNODE("SimpleStatement","body",{$documentation:"A statement consisting of an expression, i.e. a = 1 + 2",$propdoc:{body:"[AST_Node] an expression node (should not be instanceof AST_Statement)"},_walk:function(visitor){return visitor._visit(this,function(){this.body._walk(visitor)})}},AST_Statement);function walk_body(node,visitor){var body=node.body;if(body instanceof AST_Statement){body._walk(visitor)}else body.forEach(function(node){node._walk(visitor)})}var AST_Block=DEFNODE("Block","body",{$documentation:"A body of statements (usually braced)",$propdoc:{body:"[AST_Statement*] an array of statements"},_walk:function(visitor){return visitor._visit(this,function(){walk_body(this,visitor)})}},AST_Statement);var AST_BlockStatement=DEFNODE("BlockStatement",null,{$documentation:"A block statement"},AST_Block);var AST_EmptyStatement=DEFNODE("EmptyStatement",null,{$documentation:"The empty statement (empty block or simply a semicolon)"},AST_Statement);var AST_StatementWithBody=DEFNODE("StatementWithBody","body",{$documentation:"Base class for all statements that contain one nested body: `For`, `ForIn`, `Do`, `While`, `With`",$propdoc:{body:"[AST_Statement] the body; this should always be present, even if it's an AST_EmptyStatement"}},AST_Statement);var AST_LabeledStatement=DEFNODE("LabeledStatement","label",{$documentation:"Statement with a label",$propdoc:{label:"[AST_Label] a label definition"},_walk:function(visitor){return visitor._visit(this,function(){this.label._walk(visitor);this.body._walk(visitor)})},clone:function(deep){var node=this._clone(deep);if(deep){var label=node.label;var def=this.label;node.walk(new TreeWalker(function(node){if(node instanceof AST_LoopControl&&node.label&&node.label.thedef===def){node.label.thedef=label;label.references.push(node)}}))}return node}},AST_StatementWithBody);var AST_IterationStatement=DEFNODE("IterationStatement",null,{$documentation:"Internal class.  All loops inherit from it."},AST_StatementWithBody);var AST_DWLoop=DEFNODE("DWLoop","condition",{$documentation:"Base class for do/while statements",$propdoc:{condition:"[AST_Node] the loop condition.  Should not be instanceof AST_Statement"}},AST_IterationStatement);var AST_Do=DEFNODE("Do",null,{$documentation:"A `do` statement",_walk:function(visitor){return visitor._visit(this,function(){this.body._walk(visitor);this.condition._walk(visitor)})}},AST_DWLoop);var AST_While=DEFNODE("While",null,{$documentation:"A `while` statement",_walk:function(visitor){return visitor._visit(this,function(){this.condition._walk(visitor);this.body._walk(visitor)})}},AST_DWLoop);var AST_For=DEFNODE("For","init condition step",{$documentation:"A `for` statement",$propdoc:{init:"[AST_Node?] the `for` initialization code, or null if empty",condition:"[AST_Node?] the `for` termination clause, or null if empty",step:"[AST_Node?] the `for` update clause, or null if empty"},_walk:function(visitor){return visitor._visit(this,function(){if(this.init)this.init._walk(visitor);if(this.condition)this.condition._walk(visitor);if(this.step)this.step._walk(visitor);this.body._walk(visitor)})}},AST_IterationStatement);var AST_ForIn=DEFNODE("ForIn","init object",{$documentation:"A `for ... in` statement",$propdoc:{init:"[AST_Node] the `for/in` initialization code",object:"[AST_Node] the object that we're looping through"},_walk:function(visitor){return visitor._visit(this,function(){this.init._walk(visitor);this.object._walk(visitor);this.body._walk(visitor)})}},AST_IterationStatement);var AST_With=DEFNODE("With","expression",{$documentation:"A `with` statement",$propdoc:{expression:"[AST_Node] the `with` expression"},_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor);this.body._walk(visitor)})}},AST_StatementWithBody);var AST_Scope=DEFNODE("Scope","variables functions uses_with uses_eval parent_scope enclosed cname",{$documentation:"Base class for all statements introducing a lexical scope",$propdoc:{variables:"[Object/S] a map of name -> SymbolDef for all variables/functions defined in this scope",functions:"[Object/S] like `variables`, but only lists function declarations",uses_with:"[boolean/S] tells whether this scope uses the `with` statement",uses_eval:"[boolean/S] tells whether this scope contains a direct call to the global `eval`",parent_scope:"[AST_Scope?/S] link to the parent scope",enclosed:"[SymbolDef*/S] a list of all symbol definitions that are accessed from this scope or any subscopes",cname:"[integer/S] current index for mangling variables (used internally by the mangler)"},clone:function(deep){var node=this._clone(deep);if(this.variables)node.variables=this.variables.clone();if(this.functions)node.functions=this.functions.clone();if(this.enclosed)node.enclosed=this.enclosed.slice();return node},pinned:function(){return this.uses_eval||this.uses_with}},AST_Block);var AST_Toplevel=DEFNODE("Toplevel","globals",{$documentation:"The toplevel scope",$propdoc:{globals:"[Object/S] a map of name -> SymbolDef for all undeclared names"},wrap_commonjs:function(name){var body=this.body;var wrapped_tl="(function(exports){'$ORIG';})(typeof "+name+"=='undefined'?("+name+"={}):"+name+");";wrapped_tl=parse(wrapped_tl);wrapped_tl=wrapped_tl.transform(new TreeTransformer(function(node){if(node instanceof AST_Directive&&node.value=="$ORIG"){return MAP.splice(body)}}));return wrapped_tl},wrap_enclose:function(args_values){if(typeof args_values!="string")args_values="";var index=args_values.indexOf(":");if(index<0)index=args_values.length;var body=this.body;return parse(["(function(",args_values.slice(0,index),'){"$ORIG"})(',args_values.slice(index+1),")"].join("")).transform(new TreeTransformer(function(node){if(node instanceof AST_Directive&&node.value=="$ORIG"){return MAP.splice(body)}}))}},AST_Scope);var AST_Lambda=DEFNODE("Lambda","name argnames uses_arguments",{$documentation:"Base class for functions",$propdoc:{name:"[AST_SymbolDeclaration?] the name of this function",argnames:"[AST_SymbolFunarg*] array of function arguments",uses_arguments:"[boolean/S] tells whether this function accesses the arguments array"},_walk:function(visitor){return visitor._visit(this,function(){if(this.name)this.name._walk(visitor);this.argnames.forEach(function(argname){argname._walk(visitor)});walk_body(this,visitor)})}},AST_Scope);var AST_Accessor=DEFNODE("Accessor",null,{$documentation:"A setter/getter function.  The `name` property is always null."},AST_Lambda);var AST_Function=DEFNODE("Function","inlined",{$documentation:"A function expression"},AST_Lambda);var AST_Defun=DEFNODE("Defun","inlined",{$documentation:"A function definition"},AST_Lambda);var AST_Jump=DEFNODE("Jump",null,{$documentation:"Base class for “jumps” (for now that's `return`, `throw`, `break` and `continue`)"},AST_Statement);var AST_Exit=DEFNODE("Exit","value",{$documentation:"Base class for “exits” (`return` and `throw`)",$propdoc:{value:"[AST_Node?] the value returned or thrown by this statement; could be null for AST_Return"},_walk:function(visitor){return visitor._visit(this,this.value&&function(){this.value._walk(visitor)})}},AST_Jump);var AST_Return=DEFNODE("Return",null,{$documentation:"A `return` statement"},AST_Exit);var AST_Throw=DEFNODE("Throw",null,{$documentation:"A `throw` statement"},AST_Exit);var AST_LoopControl=DEFNODE("LoopControl","label",{$documentation:"Base class for loop control statements (`break` and `continue`)",$propdoc:{label:"[AST_LabelRef?] the label, or null if none"},_walk:function(visitor){return visitor._visit(this,this.label&&function(){this.label._walk(visitor)})}},AST_Jump);var AST_Break=DEFNODE("Break",null,{$documentation:"A `break` statement"},AST_LoopControl);var AST_Continue=DEFNODE("Continue",null,{$documentation:"A `continue` statement"},AST_LoopControl);var AST_If=DEFNODE("If","condition alternative",{$documentation:"A `if` statement",$propdoc:{condition:"[AST_Node] the `if` condition",alternative:"[AST_Statement?] the `else` part, or null if not present"},_walk:function(visitor){return visitor._visit(this,function(){this.condition._walk(visitor);this.body._walk(visitor);if(this.alternative)this.alternative._walk(visitor)})}},AST_StatementWithBody);var AST_Switch=DEFNODE("Switch","expression",{$documentation:"A `switch` statement",$propdoc:{expression:"[AST_Node] the `switch` “discriminant”"},_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor);walk_body(this,visitor)})}},AST_Block);var AST_SwitchBranch=DEFNODE("SwitchBranch",null,{$documentation:"Base class for `switch` branches"},AST_Block);var AST_Default=DEFNODE("Default",null,{$documentation:"A `default` switch branch"},AST_SwitchBranch);var AST_Case=DEFNODE("Case","expression",{$documentation:"A `case` switch branch",$propdoc:{expression:"[AST_Node] the `case` expression"},_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor);walk_body(this,visitor)})}},AST_SwitchBranch);var AST_Try=DEFNODE("Try","bcatch bfinally",{$documentation:"A `try` statement",$propdoc:{bcatch:"[AST_Catch?] the catch block, or null if not present",bfinally:"[AST_Finally?] the finally block, or null if not present"},_walk:function(visitor){return visitor._visit(this,function(){walk_body(this,visitor);if(this.bcatch)this.bcatch._walk(visitor);if(this.bfinally)this.bfinally._walk(visitor)})}},AST_Block);var AST_Catch=DEFNODE("Catch","argname",{$documentation:"A `catch` node; only makes sense as part of a `try` statement",$propdoc:{argname:"[AST_SymbolCatch] symbol for the exception"},_walk:function(visitor){return visitor._visit(this,function(){this.argname._walk(visitor);walk_body(this,visitor)})}},AST_Block);var AST_Finally=DEFNODE("Finally",null,{$documentation:"A `finally` node; only makes sense as part of a `try` statement"},AST_Block);var AST_Definitions=DEFNODE("Definitions","definitions",{$documentation:"Base class for `var` nodes (variable declarations/initializations)",$propdoc:{definitions:"[AST_VarDef*] array of variable definitions"},_walk:function(visitor){return visitor._visit(this,function(){this.definitions.forEach(function(defn){defn._walk(visitor)})})}},AST_Statement);var AST_Var=DEFNODE("Var",null,{$documentation:"A `var` statement"},AST_Definitions);var AST_VarDef=DEFNODE("VarDef","name value",{$documentation:"A variable declaration; only appears in a AST_Definitions node",$propdoc:{name:"[AST_SymbolVar] name of the variable",value:"[AST_Node?] initializer, or null of there's no initializer"},_walk:function(visitor){return visitor._visit(this,function(){this.name._walk(visitor);if(this.value)this.value._walk(visitor)})}});var AST_Call=DEFNODE("Call","expression args",{$documentation:"A function call expression",$propdoc:{expression:"[AST_Node] expression to invoke as function",args:"[AST_Node*] array of arguments"},_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor);this.args.forEach(function(node){node._walk(visitor)})})}});var AST_New=DEFNODE("New",null,{$documentation:"An object instantiation.  Derives from a function call since it has exactly the same properties"},AST_Call);var AST_Sequence=DEFNODE("Sequence","expressions",{$documentation:"A sequence expression (comma-separated expressions)",$propdoc:{expressions:"[AST_Node*] array of expressions (at least two)"},_walk:function(visitor){return visitor._visit(this,function(){this.expressions.forEach(function(node){node._walk(visitor)})})}});var AST_PropAccess=DEFNODE("PropAccess","expression property",{$documentation:'Base class for property access expressions, i.e. `a.foo` or `a["foo"]`',$propdoc:{expression:"[AST_Node] the “container” expression",property:"[AST_Node|string] the property to access.  For AST_Dot this is always a plain string, while for AST_Sub it's an arbitrary AST_Node"}});var AST_Dot=DEFNODE("Dot",null,{$documentation:"A dotted property access expression",_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor)})}},AST_PropAccess);var AST_Sub=DEFNODE("Sub",null,{$documentation:'Index-style property access, i.e. `a["foo"]`',_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor);this.property._walk(visitor)})}},AST_PropAccess);var AST_Unary=DEFNODE("Unary","operator expression",{$documentation:"Base class for unary expressions",$propdoc:{operator:"[string] the operator",expression:"[AST_Node] expression that this unary operator applies to"},_walk:function(visitor){return visitor._visit(this,function(){this.expression._walk(visitor)})}});var AST_UnaryPrefix=DEFNODE("UnaryPrefix",null,{$documentation:"Unary prefix expression, i.e. `typeof i` or `++i`"},AST_Unary);var AST_UnaryPostfix=DEFNODE("UnaryPostfix",null,{$documentation:"Unary postfix expression, i.e. `i++`"},AST_Unary);var AST_Binary=DEFNODE("Binary","operator left right",{$documentation:"Binary expression, i.e. `a + b`",$propdoc:{left:"[AST_Node] left-hand side expression",operator:"[string] the operator",right:"[AST_Node] right-hand side expression"},_walk:function(visitor){return visitor._visit(this,function(){this.left._walk(visitor);this.right._walk(visitor)})}});var AST_Conditional=DEFNODE("Conditional","condition consequent alternative",{$documentation:"Conditional expression using the ternary operator, i.e. `a ? b : c`",$propdoc:{condition:"[AST_Node]",consequent:"[AST_Node]",alternative:"[AST_Node]"},_walk:function(visitor){return visitor._visit(this,function(){this.condition._walk(visitor);this.consequent._walk(visitor);this.alternative._walk(visitor)})}});var AST_Assign=DEFNODE("Assign",null,{$documentation:"An assignment expression — `a = b + 5`"},AST_Binary);var AST_Array=DEFNODE("Array","elements",{$documentation:"An array literal",$propdoc:{elements:"[AST_Node*] array of elements"},_walk:function(visitor){return visitor._visit(this,function(){this.elements.forEach(function(element){element._walk(visitor)})})}});var AST_Object=DEFNODE("Object","properties",{$documentation:"An object literal",$propdoc:{properties:"[AST_ObjectProperty*] array of properties"},_walk:function(visitor){return visitor._visit(this,function(){this.properties.forEach(function(prop){prop._walk(visitor)})})}});var AST_ObjectProperty=DEFNODE("ObjectProperty","key value",{$documentation:"Base class for literal object properties",$propdoc:{key:"[string|AST_SymbolAccessor] property name. For ObjectKeyVal this is a string. For getters and setters this is an AST_SymbolAccessor.",value:"[AST_Node] property value.  For getters and setters this is an AST_Accessor."},_walk:function(visitor){return visitor._visit(this,function(){this.value._walk(visitor)})}});var AST_ObjectKeyVal=DEFNODE("ObjectKeyVal","quote",{$documentation:"A key: value object property",$propdoc:{quote:"[string] the original quote character"}},AST_ObjectProperty);var AST_ObjectSetter=DEFNODE("ObjectSetter",null,{$documentation:"An object setter property"},AST_ObjectProperty);var AST_ObjectGetter=DEFNODE("ObjectGetter",null,{$documentation:"An object getter property"},AST_ObjectProperty);var AST_Symbol=DEFNODE("Symbol","scope name thedef",{$propdoc:{name:"[string] name of this symbol",scope:"[AST_Scope/S] the current scope (not necessarily the definition scope)",thedef:"[SymbolDef/S] the definition of this symbol"},$documentation:"Base class for all symbols"});var AST_SymbolAccessor=DEFNODE("SymbolAccessor",null,{$documentation:"The name of a property accessor (setter/getter function)"},AST_Symbol);var AST_SymbolDeclaration=DEFNODE("SymbolDeclaration","init",{$documentation:"A declaration symbol (symbol in var, function name or argument, symbol in catch)"},AST_Symbol);var AST_SymbolVar=DEFNODE("SymbolVar",null,{$documentation:"Symbol defining a variable"},AST_SymbolDeclaration);var AST_SymbolFunarg=DEFNODE("SymbolFunarg",null,{$documentation:"Symbol naming a function argument"},AST_SymbolVar);var AST_SymbolDefun=DEFNODE("SymbolDefun",null,{$documentation:"Symbol defining a function"},AST_SymbolDeclaration);var AST_SymbolLambda=DEFNODE("SymbolLambda",null,{$documentation:"Symbol naming a function expression"},AST_SymbolDeclaration);var AST_SymbolCatch=DEFNODE("SymbolCatch",null,{$documentation:"Symbol naming the exception in catch"},AST_SymbolDeclaration);var AST_Label=DEFNODE("Label","references",{$documentation:"Symbol naming a label (declaration)",$propdoc:{references:"[AST_LoopControl*] a list of nodes referring to this label"},initialize:function(){this.references=[];this.thedef=this}},AST_Symbol);var AST_SymbolRef=DEFNODE("SymbolRef",null,{$documentation:"Reference to some symbol (not definition/declaration)"},AST_Symbol);var AST_LabelRef=DEFNODE("LabelRef",null,{$documentation:"Reference to a label symbol"},AST_Symbol);var AST_This=DEFNODE("This",null,{$documentation:"The `this` symbol"},AST_Symbol);var AST_Constant=DEFNODE("Constant",null,{$documentation:"Base class for all constants",getValue:function(){return this.value}});var AST_String=DEFNODE("String","value quote",{$documentation:"A string literal",$propdoc:{value:"[string] the contents of this string",quote:"[string] the original quote character"}},AST_Constant);var AST_Number=DEFNODE("Number","value literal",{$documentation:"A number literal",$propdoc:{value:"[number] the numeric value",literal:"[string] numeric value as string (optional)"}},AST_Constant);var AST_RegExp=DEFNODE("RegExp","value",{$documentation:"A regexp literal",$propdoc:{value:"[RegExp] the actual regexp"}},AST_Constant);var AST_Atom=DEFNODE("Atom",null,{$documentation:"Base class for atoms"},AST_Constant);var AST_Null=DEFNODE("Null",null,{$documentation:"The `null` atom",value:null},AST_Atom);var AST_NaN=DEFNODE("NaN",null,{$documentation:"The impossible value",value:0/0},AST_Atom);var AST_Undefined=DEFNODE("Undefined",null,{$documentation:"The `undefined` value",value:function(){}()},AST_Atom);var AST_Hole=DEFNODE("Hole",null,{$documentation:"A hole in an array",value:function(){}()},AST_Atom);var AST_Infinity=DEFNODE("Infinity",null,{$documentation:"The `Infinity` value",value:1/0},AST_Atom);var AST_Boolean=DEFNODE("Boolean",null,{$documentation:"Base class for booleans"},AST_Atom);var AST_False=DEFNODE("False",null,{$documentation:"The `false` atom",value:false},AST_Boolean);var AST_True=DEFNODE("True",null,{$documentation:"The `true` atom",value:true},AST_Boolean);function TreeWalker(callback){this.visit=callback;this.stack=[];this.directives=Object.create(null)}TreeWalker.prototype={_visit:function(node,descend){this.push(node);var ret=this.visit(node,descend?function(){descend.call(node)}:noop);if(!ret&&descend){descend.call(node)}this.pop();return ret},parent:function(n){return this.stack[this.stack.length-2-(n||0)]},push:function(node){if(node instanceof AST_Lambda){this.directives=Object.create(this.directives)}else if(node instanceof AST_Directive&&!this.directives[node.value]){this.directives[node.value]=node}this.stack.push(node)},pop:function(){if(this.stack.pop()instanceof AST_Lambda){this.directives=Object.getPrototypeOf(this.directives)}},self:function(){return this.stack[this.stack.length-1]},find_parent:function(type){var stack=this.stack;for(var i=stack.length;--i>=0;){var x=stack[i];if(x instanceof type)return x}},has_directive:function(type){var dir=this.directives[type];if(dir)return dir;var node=this.stack[this.stack.length-1];if(node instanceof AST_Scope){for(var i=0;i<node.body.length;++i){var st=node.body[i];if(!(st instanceof AST_Directive))break;if(st.value==type)return st}}},loopcontrol_target:function(node){var stack=this.stack;if(node.label)for(var i=stack.length;--i>=0;){var x=stack[i];if(x instanceof AST_LabeledStatement&&x.label.name==node.label.name)return x.body}else for(var i=stack.length;--i>=0;){var x=stack[i];if(x instanceof AST_IterationStatement||node instanceof AST_Break&&x instanceof AST_Switch)return x}},in_boolean_context:function(){var self=this.self();for(var i=0,p;p=this.parent(i);i++){if(p instanceof AST_SimpleStatement||p instanceof AST_Conditional&&p.condition===self||p instanceof AST_DWLoop&&p.condition===self||p instanceof AST_For&&p.condition===self||p instanceof AST_If&&p.condition===self||p instanceof AST_UnaryPrefix&&p.operator=="!"&&p.expression===self){return true}if(p instanceof AST_Binary&&(p.operator=="&&"||p.operator=="||")||p instanceof AST_Conditional||p.tail_node()===self){self=p}else{return false}}}};"use strict";var KEYWORDS="break case catch const continue debugger default delete do else finally for function if in instanceof new return switch throw try typeof var void while with";var KEYWORDS_ATOM="false null true";var RESERVED_WORDS="abstract boolean byte char class double enum export extends final float goto implements import int interface let long native package private protected public short static super synchronized this throws transient volatile yield"+" "+KEYWORDS_ATOM+" "+KEYWORDS;var KEYWORDS_BEFORE_EXPRESSION="return new delete throw else case";KEYWORDS=makePredicate(KEYWORDS);RESERVED_WORDS=makePredicate(RESERVED_WORDS);KEYWORDS_BEFORE_EXPRESSION=makePredicate(KEYWORDS_BEFORE_EXPRESSION);KEYWORDS_ATOM=makePredicate(KEYWORDS_ATOM);var OPERATOR_CHARS=makePredicate(characters("+-*&%=<>!?|~^"));var RE_HEX_NUMBER=/^0x[0-9a-f]+$/i;var RE_OCT_NUMBER=/^0[0-7]+$/;var OPERATORS=makePredicate(["in","instanceof","typeof","new","void","delete","++","--","+","-","!","~","&","|","^","*","/","%",">>","<<",">>>","<",">","<=",">=","==","===","!=","!==","?","=","+=","-=","/=","*=","%=",">>=","<<=",">>>=","|=","^=","&=","&&","||"]);var WHITESPACE_CHARS=makePredicate(characters("  \n\r\t\f\v​           \u2028\u2029  　\ufeff"));var NEWLINE_CHARS=makePredicate(characters("\n\r\u2028\u2029"));var PUNC_BEFORE_EXPRESSION=makePredicate(characters("[{(,;:"));var PUNC_CHARS=makePredicate(characters("[]{}(),;:"));var UNICODE={letter:new RegExp("[\\u0041-\\u005A\\u0061-\\u007A\\u00AA\\u00B5\\u00BA\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02C1\\u02C6-\\u02D1\\u02E0-\\u02E4\\u02EC\\u02EE\\u0370-\\u0374\\u0376\\u0377\\u037A-\\u037D\\u037F\\u0386\\u0388-\\u038A\\u038C\\u038E-\\u03A1\\u03A3-\\u03F5\\u03F7-\\u0481\\u048A-\\u052F\\u0531-\\u0556\\u0559\\u0561-\\u0587\\u05D0-\\u05EA\\u05F0-\\u05F2\\u0620-\\u064A\\u066E\\u066F\\u0671-\\u06D3\\u06D5\\u06E5\\u06E6\\u06EE\\u06EF\\u06FA-\\u06FC\\u06FF\\u0710\\u0712-\\u072F\\u074D-\\u07A5\\u07B1\\u07CA-\\u07EA\\u07F4\\u07F5\\u07FA\\u0800-\\u0815\\u081A\\u0824\\u0828\\u0840-\\u0858\\u08A0-\\u08B2\\u0904-\\u0939\\u093D\\u0950\\u0958-\\u0961\\u0971-\\u0980\\u0985-\\u098C\\u098F\\u0990\\u0993-\\u09A8\\u09AA-\\u09B0\\u09B2\\u09B6-\\u09B9\\u09BD\\u09CE\\u09DC\\u09DD\\u09DF-\\u09E1\\u09F0\\u09F1\\u0A05-\\u0A0A\\u0A0F\\u0A10\\u0A13-\\u0A28\\u0A2A-\\u0A30\\u0A32\\u0A33\\u0A35\\u0A36\\u0A38\\u0A39\\u0A59-\\u0A5C\\u0A5E\\u0A72-\\u0A74\\u0A85-\\u0A8D\\u0A8F-\\u0A91\\u0A93-\\u0AA8\\u0AAA-\\u0AB0\\u0AB2\\u0AB3\\u0AB5-\\u0AB9\\u0ABD\\u0AD0\\u0AE0\\u0AE1\\u0B05-\\u0B0C\\u0B0F\\u0B10\\u0B13-\\u0B28\\u0B2A-\\u0B30\\u0B32\\u0B33\\u0B35-\\u0B39\\u0B3D\\u0B5C\\u0B5D\\u0B5F-\\u0B61\\u0B71\\u0B83\\u0B85-\\u0B8A\\u0B8E-\\u0B90\\u0B92-\\u0B95\\u0B99\\u0B9A\\u0B9C\\u0B9E\\u0B9F\\u0BA3\\u0BA4\\u0BA8-\\u0BAA\\u0BAE-\\u0BB9\\u0BD0\\u0C05-\\u0C0C\\u0C0E-\\u0C10\\u0C12-\\u0C28\\u0C2A-\\u0C39\\u0C3D\\u0C58\\u0C59\\u0C60\\u0C61\\u0C85-\\u0C8C\\u0C8E-\\u0C90\\u0C92-\\u0CA8\\u0CAA-\\u0CB3\\u0CB5-\\u0CB9\\u0CBD\\u0CDE\\u0CE0\\u0CE1\\u0CF1\\u0CF2\\u0D05-\\u0D0C\\u0D0E-\\u0D10\\u0D12-\\u0D3A\\u0D3D\\u0D4E\\u0D60\\u0D61\\u0D7A-\\u0D7F\\u0D85-\\u0D96\\u0D9A-\\u0DB1\\u0DB3-\\u0DBB\\u0DBD\\u0DC0-\\u0DC6\\u0E01-\\u0E30\\u0E32\\u0E33\\u0E40-\\u0E46\\u0E81\\u0E82\\u0E84\\u0E87\\u0E88\\u0E8A\\u0E8D\\u0E94-\\u0E97\\u0E99-\\u0E9F\\u0EA1-\\u0EA3\\u0EA5\\u0EA7\\u0EAA\\u0EAB\\u0EAD-\\u0EB0\\u0EB2\\u0EB3\\u0EBD\\u0EC0-\\u0EC4\\u0EC6\\u0EDC-\\u0EDF\\u0F00\\u0F40-\\u0F47\\u0F49-\\u0F6C\\u0F88-\\u0F8C\\u1000-\\u102A\\u103F\\u1050-\\u1055\\u105A-\\u105D\\u1061\\u1065\\u1066\\u106E-\\u1070\\u1075-\\u1081\\u108E\\u10A0-\\u10C5\\u10C7\\u10CD\\u10D0-\\u10FA\\u10FC-\\u1248\\u124A-\\u124D\\u1250-\\u1256\\u1258\\u125A-\\u125D\\u1260-\\u1288\\u128A-\\u128D\\u1290-\\u12B0\\u12B2-\\u12B5\\u12B8-\\u12BE\\u12C0\\u12C2-\\u12C5\\u12C8-\\u12D6\\u12D8-\\u1310\\u1312-\\u1315\\u1318-\\u135A\\u1380-\\u138F\\u13A0-\\u13F4\\u1401-\\u166C\\u166F-\\u167F\\u1681-\\u169A\\u16A0-\\u16EA\\u16EE-\\u16F8\\u1700-\\u170C\\u170E-\\u1711\\u1720-\\u1731\\u1740-\\u1751\\u1760-\\u176C\\u176E-\\u1770\\u1780-\\u17B3\\u17D7\\u17DC\\u1820-\\u1877\\u1880-\\u18A8\\u18AA\\u18B0-\\u18F5\\u1900-\\u191E\\u1950-\\u196D\\u1970-\\u1974\\u1980-\\u19AB\\u19C1-\\u19C7\\u1A00-\\u1A16\\u1A20-\\u1A54\\u1AA7\\u1B05-\\u1B33\\u1B45-\\u1B4B\\u1B83-\\u1BA0\\u1BAE\\u1BAF\\u1BBA-\\u1BE5\\u1C00-\\u1C23\\u1C4D-\\u1C4F\\u1C5A-\\u1C7D\\u1CE9-\\u1CEC\\u1CEE-\\u1CF1\\u1CF5\\u1CF6\\u1D00-\\u1DBF\\u1E00-\\u1F15\\u1F18-\\u1F1D\\u1F20-\\u1F45\\u1F48-\\u1F4D\\u1F50-\\u1F57\\u1F59\\u1F5B\\u1F5D\\u1F5F-\\u1F7D\\u1F80-\\u1FB4\\u1FB6-\\u1FBC\\u1FBE\\u1FC2-\\u1FC4\\u1FC6-\\u1FCC\\u1FD0-\\u1FD3\\u1FD6-\\u1FDB\\u1FE0-\\u1FEC\\u1FF2-\\u1FF4\\u1FF6-\\u1FFC\\u2071\\u207F\\u2090-\\u209C\\u2102\\u2107\\u210A-\\u2113\\u2115\\u2119-\\u211D\\u2124\\u2126\\u2128\\u212A-\\u212D\\u212F-\\u2139\\u213C-\\u213F\\u2145-\\u2149\\u214E\\u2160-\\u2188\\u2C00-\\u2C2E\\u2C30-\\u2C5E\\u2C60-\\u2CE4\\u2CEB-\\u2CEE\\u2CF2\\u2CF3\\u2D00-\\u2D25\\u2D27\\u2D2D\\u2D30-\\u2D67\\u2D6F\\u2D80-\\u2D96\\u2DA0-\\u2DA6\\u2DA8-\\u2DAE\\u2DB0-\\u2DB6\\u2DB8-\\u2DBE\\u2DC0-\\u2DC6\\u2DC8-\\u2DCE\\u2DD0-\\u2DD6\\u2DD8-\\u2DDE\\u2E2F\\u3005-\\u3007\\u3021-\\u3029\\u3031-\\u3035\\u3038-\\u303C\\u3041-\\u3096\\u309D-\\u309F\\u30A1-\\u30FA\\u30FC-\\u30FF\\u3105-\\u312D\\u3131-\\u318E\\u31A0-\\u31BA\\u31F0-\\u31FF\\u3400-\\u4DB5\\u4E00-\\u9FCC\\uA000-\\uA48C\\uA4D0-\\uA4FD\\uA500-\\uA60C\\uA610-\\uA61F\\uA62A\\uA62B\\uA640-\\uA66E\\uA67F-\\uA69D\\uA6A0-\\uA6EF\\uA717-\\uA71F\\uA722-\\uA788\\uA78B-\\uA78E\\uA790-\\uA7AD\\uA7B0\\uA7B1\\uA7F7-\\uA801\\uA803-\\uA805\\uA807-\\uA80A\\uA80C-\\uA822\\uA840-\\uA873\\uA882-\\uA8B3\\uA8F2-\\uA8F7\\uA8FB\\uA90A-\\uA925\\uA930-\\uA946\\uA960-\\uA97C\\uA984-\\uA9B2\\uA9CF\\uA9E0-\\uA9E4\\uA9E6-\\uA9EF\\uA9FA-\\uA9FE\\uAA00-\\uAA28\\uAA40-\\uAA42\\uAA44-\\uAA4B\\uAA60-\\uAA76\\uAA7A\\uAA7E-\\uAAAF\\uAAB1\\uAAB5\\uAAB6\\uAAB9-\\uAABD\\uAAC0\\uAAC2\\uAADB-\\uAADD\\uAAE0-\\uAAEA\\uAAF2-\\uAAF4\\uAB01-\\uAB06\\uAB09-\\uAB0E\\uAB11-\\uAB16\\uAB20-\\uAB26\\uAB28-\\uAB2E\\uAB30-\\uAB5A\\uAB5C-\\uAB5F\\uAB64\\uAB65\\uABC0-\\uABE2\\uAC00-\\uD7A3\\uD7B0-\\uD7C6\\uD7CB-\\uD7FB\\uF900-\\uFA6D\\uFA70-\\uFAD9\\uFB00-\\uFB06\\uFB13-\\uFB17\\uFB1D\\uFB1F-\\uFB28\\uFB2A-\\uFB36\\uFB38-\\uFB3C\\uFB3E\\uFB40\\uFB41\\uFB43\\uFB44\\uFB46-\\uFBB1\\uFBD3-\\uFD3D\\uFD50-\\uFD8F\\uFD92-\\uFDC7\\uFDF0-\\uFDFB\\uFE70-\\uFE74\\uFE76-\\uFEFC\\uFF21-\\uFF3A\\uFF41-\\uFF5A\\uFF66-\\uFFBE\\uFFC2-\\uFFC7\\uFFCA-\\uFFCF\\uFFD2-\\uFFD7\\uFFDA-\\uFFDC]"),digit:new RegExp("[\\u0030-\\u0039\\u0660-\\u0669\\u06F0-\\u06F9\\u07C0-\\u07C9\\u0966-\\u096F\\u09E6-\\u09EF\\u0A66-\\u0A6F\\u0AE6-\\u0AEF\\u0B66-\\u0B6F\\u0BE6-\\u0BEF\\u0C66-\\u0C6F\\u0CE6-\\u0CEF\\u0D66-\\u0D6F\\u0DE6-\\u0DEF\\u0E50-\\u0E59\\u0ED0-\\u0ED9\\u0F20-\\u0F29\\u1040-\\u1049\\u1090-\\u1099\\u17E0-\\u17E9\\u1810-\\u1819\\u1946-\\u194F\\u19D0-\\u19D9\\u1A80-\\u1A89\\u1A90-\\u1A99\\u1B50-\\u1B59\\u1BB0-\\u1BB9\\u1C40-\\u1C49\\u1C50-\\u1C59\\uA620-\\uA629\\uA8D0-\\uA8D9\\uA900-\\uA909\\uA9D0-\\uA9D9\\uA9F0-\\uA9F9\\uAA50-\\uAA59\\uABF0-\\uABF9\\uFF10-\\uFF19]"),non_spacing_mark:new RegExp("[\\u0300-\\u036F\\u0483-\\u0487\\u0591-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7\\u0610-\\u061A\\u064B-\\u065E\\u0670\\u06D6-\\u06DC\\u06DF-\\u06E4\\u06E7\\u06E8\\u06EA-\\u06ED\\u0711\\u0730-\\u074A\\u07A6-\\u07B0\\u07EB-\\u07F3\\u0816-\\u0819\\u081B-\\u0823\\u0825-\\u0827\\u0829-\\u082D\\u0900-\\u0902\\u093C\\u0941-\\u0948\\u094D\\u0951-\\u0955\\u0962\\u0963\\u0981\\u09BC\\u09C1-\\u09C4\\u09CD\\u09E2\\u09E3\\u0A01\\u0A02\\u0A3C\\u0A41\\u0A42\\u0A47\\u0A48\\u0A4B-\\u0A4D\\u0A51\\u0A70\\u0A71\\u0A75\\u0A81\\u0A82\\u0ABC\\u0AC1-\\u0AC5\\u0AC7\\u0AC8\\u0ACD\\u0AE2\\u0AE3\\u0B01\\u0B3C\\u0B3F\\u0B41-\\u0B44\\u0B4D\\u0B56\\u0B62\\u0B63\\u0B82\\u0BC0\\u0BCD\\u0C3E-\\u0C40\\u0C46-\\u0C48\\u0C4A-\\u0C4D\\u0C55\\u0C56\\u0C62\\u0C63\\u0CBC\\u0CBF\\u0CC6\\u0CCC\\u0CCD\\u0CE2\\u0CE3\\u0D41-\\u0D44\\u0D4D\\u0D62\\u0D63\\u0DCA\\u0DD2-\\u0DD4\\u0DD6\\u0E31\\u0E34-\\u0E3A\\u0E47-\\u0E4E\\u0EB1\\u0EB4-\\u0EB9\\u0EBB\\u0EBC\\u0EC8-\\u0ECD\\u0F18\\u0F19\\u0F35\\u0F37\\u0F39\\u0F71-\\u0F7E\\u0F80-\\u0F84\\u0F86\\u0F87\\u0F90-\\u0F97\\u0F99-\\u0FBC\\u0FC6\\u102D-\\u1030\\u1032-\\u1037\\u1039\\u103A\\u103D\\u103E\\u1058\\u1059\\u105E-\\u1060\\u1071-\\u1074\\u1082\\u1085\\u1086\\u108D\\u109D\\u135F\\u1712-\\u1714\\u1732-\\u1734\\u1752\\u1753\\u1772\\u1773\\u17B7-\\u17BD\\u17C6\\u17C9-\\u17D3\\u17DD\\u180B-\\u180D\\u18A9\\u1920-\\u1922\\u1927\\u1928\\u1932\\u1939-\\u193B\\u1A17\\u1A18\\u1A56\\u1A58-\\u1A5E\\u1A60\\u1A62\\u1A65-\\u1A6C\\u1A73-\\u1A7C\\u1A7F\\u1B00-\\u1B03\\u1B34\\u1B36-\\u1B3A\\u1B3C\\u1B42\\u1B6B-\\u1B73\\u1B80\\u1B81\\u1BA2-\\u1BA5\\u1BA8\\u1BA9\\u1C2C-\\u1C33\\u1C36\\u1C37\\u1CD0-\\u1CD2\\u1CD4-\\u1CE0\\u1CE2-\\u1CE8\\u1CED\\u1DC0-\\u1DE6\\u1DFD-\\u1DFF\\u20D0-\\u20DC\\u20E1\\u20E5-\\u20F0\\u2CEF-\\u2CF1\\u2DE0-\\u2DFF\\u302A-\\u302F\\u3099\\u309A\\uA66F\\uA67C\\uA67D\\uA6F0\\uA6F1\\uA802\\uA806\\uA80B\\uA825\\uA826\\uA8C4\\uA8E0-\\uA8F1\\uA926-\\uA92D\\uA947-\\uA951\\uA980-\\uA982\\uA9B3\\uA9B6-\\uA9B9\\uA9BC\\uAA29-\\uAA2E\\uAA31\\uAA32\\uAA35\\uAA36\\uAA43\\uAA4C\\uAAB0\\uAAB2-\\uAAB4\\uAAB7\\uAAB8\\uAABE\\uAABF\\uAAC1\\uABE5\\uABE8\\uABED\\uFB1E\\uFE00-\\uFE0F\\uFE20-\\uFE26]"),space_combining_mark:new RegExp("[\\u0903\\u093E-\\u0940\\u0949-\\u094C\\u094E\\u0982\\u0983\\u09BE-\\u09C0\\u09C7\\u09C8\\u09CB\\u09CC\\u09D7\\u0A03\\u0A3E-\\u0A40\\u0A83\\u0ABE-\\u0AC0\\u0AC9\\u0ACB\\u0ACC\\u0B02\\u0B03\\u0B3E\\u0B40\\u0B47\\u0B48\\u0B4B\\u0B4C\\u0B57\\u0BBE\\u0BBF\\u0BC1\\u0BC2\\u0BC6-\\u0BC8\\u0BCA-\\u0BCC\\u0BD7\\u0C01-\\u0C03\\u0C41-\\u0C44\\u0C82\\u0C83\\u0CBE\\u0CC0-\\u0CC4\\u0CC7\\u0CC8\\u0CCA\\u0CCB\\u0CD5\\u0CD6\\u0D02\\u0D03\\u0D3E-\\u0D40\\u0D46-\\u0D48\\u0D4A-\\u0D4C\\u0D57\\u0D82\\u0D83\\u0DCF-\\u0DD1\\u0DD8-\\u0DDF\\u0DF2\\u0DF3\\u0F3E\\u0F3F\\u0F7F\\u102B\\u102C\\u1031\\u1038\\u103B\\u103C\\u1056\\u1057\\u1062-\\u1064\\u1067-\\u106D\\u1083\\u1084\\u1087-\\u108C\\u108F\\u109A-\\u109C\\u17B6\\u17BE-\\u17C5\\u17C7\\u17C8\\u1923-\\u1926\\u1929-\\u192B\\u1930\\u1931\\u1933-\\u1938\\u19B0-\\u19C0\\u19C8\\u19C9\\u1A19-\\u1A1B\\u1A55\\u1A57\\u1A61\\u1A63\\u1A64\\u1A6D-\\u1A72\\u1B04\\u1B35\\u1B3B\\u1B3D-\\u1B41\\u1B43\\u1B44\\u1B82\\u1BA1\\u1BA6\\u1BA7\\u1BAA\\u1C24-\\u1C2B\\u1C34\\u1C35\\u1CE1\\u1CF2\\uA823\\uA824\\uA827\\uA880\\uA881\\uA8B4-\\uA8C3\\uA952\\uA953\\uA983\\uA9B4\\uA9B5\\uA9BA\\uA9BB\\uA9BD-\\uA9C0\\uAA2F\\uAA30\\uAA33\\uAA34\\uAA4D\\uAA7B\\uABE3\\uABE4\\uABE6\\uABE7\\uABE9\\uABEA\\uABEC]"),connector_punctuation:new RegExp("[\\u005F\\u203F\\u2040\\u2054\\uFE33\\uFE34\\uFE4D-\\uFE4F\\uFF3F]")};function is_letter(code){return code>=97&&code<=122||code>=65&&code<=90||code>=170&&UNICODE.letter.test(String.fromCharCode(code))}function is_surrogate_pair_head(code){if(typeof code=="string")code=code.charCodeAt(0);return code>=55296&&code<=56319}function is_surrogate_pair_tail(code){if(typeof code=="string")code=code.charCodeAt(0);return code>=56320&&code<=57343}function is_digit(code){return code>=48&&code<=57}function is_alphanumeric_char(code){return is_digit(code)||is_letter(code)}function is_unicode_digit(code){return UNICODE.digit.test(String.fromCharCode(code))}function is_unicode_combining_mark(ch){return UNICODE.non_spacing_mark.test(ch)||UNICODE.space_combining_mark.test(ch)}function is_unicode_connector_punctuation(ch){return UNICODE.connector_punctuation.test(ch)}function is_identifier(name){return!RESERVED_WORDS[name]&&/^[a-z_$][a-z0-9_$]*$/i.test(name)}function is_identifier_start(code){return code==36||code==95||is_letter(code)}function is_identifier_char(ch){var code=ch.charCodeAt(0);return is_identifier_start(code)||is_digit(code)||code==8204||code==8205||is_unicode_combining_mark(ch)||is_unicode_connector_punctuation(ch)||is_unicode_digit(code)}function is_identifier_string(str){return/^[a-z_$][a-z0-9_$]*$/i.test(str)}function parse_js_number(num){if(RE_HEX_NUMBER.test(num)){return parseInt(num.substr(2),16)}else if(RE_OCT_NUMBER.test(num)){return parseInt(num.substr(1),8)}else{var val=parseFloat(num);if(val==num)return val}}function JS_Parse_Error(message,filename,line,col,pos){this.message=message;this.filename=filename;this.line=line;this.col=col;this.pos=pos}JS_Parse_Error.prototype=Object.create(Error.prototype);JS_Parse_Error.prototype.constructor=JS_Parse_Error;JS_Parse_Error.prototype.name="SyntaxError";configure_error_stack(JS_Parse_Error);function js_error(message,filename,line,col,pos){throw new JS_Parse_Error(message,filename,line,col,pos)}function is_token(token,type,val){return token.type==type&&(val==null||token.value==val)}var EX_EOF={};function tokenizer($TEXT,filename,html5_comments,shebang){var S={text:$TEXT,filename:filename,pos:0,tokpos:0,line:1,tokline:0,col:0,tokcol:0,newline_before:false,regex_allowed:false,comments_before:[],directives:{},directive_stack:[]};function peek(){return S.text.charAt(S.pos)}function next(signal_eof,in_string){var ch=S.text.charAt(S.pos++);if(signal_eof&&!ch)throw EX_EOF;if(NEWLINE_CHARS[ch]){S.newline_before=S.newline_before||!in_string;++S.line;S.col=0;if(!in_string&&ch=="\r"&&peek()=="\n"){++S.pos;ch="\n"}}else{++S.col}return ch}function forward(i){while(i-- >0)next()}function looking_at(str){return S.text.substr(S.pos,str.length)==str}function find_eol(){var text=S.text;for(var i=S.pos,n=S.text.length;i<n;++i){var ch=text[i];if(NEWLINE_CHARS[ch])return i}return-1}function find(what,signal_eof){var pos=S.text.indexOf(what,S.pos);if(signal_eof&&pos==-1)throw EX_EOF;return pos}function start_token(){S.tokline=S.line;S.tokcol=S.col;S.tokpos=S.pos}var prev_was_dot=false;function token(type,value,is_comment){S.regex_allowed=type=="operator"&&!UNARY_POSTFIX[value]||type=="keyword"&&KEYWORDS_BEFORE_EXPRESSION[value]||type=="punc"&&PUNC_BEFORE_EXPRESSION[value];if(type=="punc"&&value=="."){prev_was_dot=true}else if(!is_comment){prev_was_dot=false}var ret={type:type,value:value,line:S.tokline,col:S.tokcol,pos:S.tokpos,endline:S.line,endcol:S.col,endpos:S.pos,nlb:S.newline_before,file:filename};if(/^(?:num|string|regexp)$/i.test(type)){ret.raw=$TEXT.substring(ret.pos,ret.endpos)}if(!is_comment){ret.comments_before=S.comments_before;ret.comments_after=S.comments_before=[]}S.newline_before=false;return new AST_Token(ret)}function skip_whitespace(){while(WHITESPACE_CHARS[peek()])next()}function read_while(pred){var ret="",ch,i=0;while((ch=peek())&&pred(ch,i++))ret+=next();return ret}function parse_error(err){js_error(err,filename,S.tokline,S.tokcol,S.tokpos)}function read_num(prefix){var has_e=false,after_e=false,has_x=false,has_dot=prefix==".";var num=read_while(function(ch,i){var code=ch.charCodeAt(0);switch(code){case 120:case 88:return has_x?false:has_x=true;case 101:case 69:return has_x?true:has_e?false:has_e=after_e=true;case 45:return after_e||i==0&&!prefix;case 43:return after_e;case after_e=false,46:return!has_dot&&!has_x&&!has_e?has_dot=true:false}return is_alphanumeric_char(code)});if(prefix)num=prefix+num;if(RE_OCT_NUMBER.test(num)&&next_token.has_directive("use strict")){parse_error("Legacy octal literals are not allowed in strict mode")}var valid=parse_js_number(num);if(!isNaN(valid)){return token("num",valid)}else{parse_error("Invalid syntax: "+num)}}function read_escaped_char(in_string){var ch=next(true,in_string);switch(ch.charCodeAt(0)){case 110:return"\n";case 114:return"\r";case 116:return"\t";case 98:return"\b";case 118:return"\v";case 102:return"\f";case 120:return String.fromCharCode(hex_bytes(2));case 117:return String.fromCharCode(hex_bytes(4));case 10:return"";case 13:if(peek()=="\n"){next(true,in_string);return""}}if(ch>="0"&&ch<="7")return read_octal_escape_sequence(ch);return ch}function read_octal_escape_sequence(ch){var p=peek();if(p>="0"&&p<="7"){ch+=next(true);if(ch[0]<="3"&&(p=peek())>="0"&&p<="7")ch+=next(true)}if(ch==="0")return"\0";if(ch.length>0&&next_token.has_directive("use strict"))parse_error("Legacy octal escape sequences are not allowed in strict mode");return String.fromCharCode(parseInt(ch,8))}function hex_bytes(n){var num=0;for(;n>0;--n){var digit=parseInt(next(true),16);if(isNaN(digit))parse_error("Invalid hex-character pattern in string");num=num<<4|digit}return num}var read_string=with_eof_error("Unterminated string constant",function(quote_char){var quote=next(),ret="";for(;;){var ch=next(true,true);if(ch=="\\")ch=read_escaped_char(true);else if(NEWLINE_CHARS[ch])parse_error("Unterminated string constant");else if(ch==quote)break;ret+=ch}var tok=token("string",ret);tok.quote=quote_char;return tok});function skip_line_comment(type){var regex_allowed=S.regex_allowed;var i=find_eol(),ret;if(i==-1){ret=S.text.substr(S.pos);S.pos=S.text.length}else{ret=S.text.substring(S.pos,i);S.pos=i}S.col=S.tokcol+(S.pos-S.tokpos);S.comments_before.push(token(type,ret,true));S.regex_allowed=regex_allowed;return next_token}var skip_multiline_comment=with_eof_error("Unterminated multiline comment",function(){var regex_allowed=S.regex_allowed;var i=find("*/",true);var text=S.text.substring(S.pos,i).replace(/\r\n|\r|\u2028|\u2029/g,"\n");forward(text.length+2);S.comments_before.push(token("comment2",text,true));S.regex_allowed=regex_allowed;return next_token});function read_name(){var backslash=false,name="",ch,escaped=false,hex;while((ch=peek())!=null){if(!backslash){if(ch=="\\")escaped=backslash=true,next();else if(is_identifier_char(ch))name+=next();else break}else{if(ch!="u")parse_error("Expecting UnicodeEscapeSequence -- uXXXX");ch=read_escaped_char();if(!is_identifier_char(ch))parse_error("Unicode char: "+ch.charCodeAt(0)+" is not valid in identifier");name+=ch;backslash=false}}if(KEYWORDS[name]&&escaped){hex=name.charCodeAt(0).toString(16).toUpperCase();name="\\u"+"0000".substr(hex.length)+hex+name.slice(1)}return name}var read_regexp=with_eof_error("Unterminated regular expression",function(source){var prev_backslash=false,ch,in_class=false;while(ch=next(true))if(NEWLINE_CHARS[ch]){parse_error("Unexpected line terminator")}else if(prev_backslash){source+="\\"+ch;prev_backslash=false}else if(ch=="["){in_class=true;source+=ch}else if(ch=="]"&&in_class){in_class=false;source+=ch}else if(ch=="/"&&!in_class){break}else if(ch=="\\"){prev_backslash=true}else{source+=ch}var mods=read_name();try{var regexp=new RegExp(source,mods);regexp.raw_source=source;return token("regexp",regexp)}catch(e){parse_error(e.message)}});function read_operator(prefix){function grow(op){if(!peek())return op;var bigger=op+peek();if(OPERATORS[bigger]){next();return grow(bigger)}else{return op}}return token("operator",grow(prefix||next()))}function handle_slash(){next();switch(peek()){case"/":next();return skip_line_comment("comment1");case"*":next();return skip_multiline_comment()}return S.regex_allowed?read_regexp(""):read_operator("/")}function handle_dot(){next();return is_digit(peek().charCodeAt(0))?read_num("."):token("punc",".")}function read_word(){var word=read_name();if(prev_was_dot)return token("name",word);return KEYWORDS_ATOM[word]?token("atom",word):!KEYWORDS[word]?token("name",word):OPERATORS[word]?token("operator",word):token("keyword",word)}function with_eof_error(eof_error,cont){return function(x){try{return cont(x)}catch(ex){if(ex===EX_EOF)parse_error(eof_error);else throw ex}}}function next_token(force_regexp){if(force_regexp!=null)return read_regexp(force_regexp);if(shebang&&S.pos==0&&looking_at("#!")){start_token();forward(2);skip_line_comment("comment5")}for(;;){skip_whitespace();start_token();if(html5_comments){if(looking_at("\x3c!--")){forward(4);skip_line_comment("comment3");continue}if(looking_at("--\x3e")&&S.newline_before){forward(3);skip_line_comment("comment4");continue}}var ch=peek();if(!ch)return token("eof");var code=ch.charCodeAt(0);switch(code){case 34:case 39:return read_string(ch);case 46:return handle_dot();case 47:{var tok=handle_slash();if(tok===next_token)continue;return tok}}if(is_digit(code))return read_num();if(PUNC_CHARS[ch])return token("punc",next());if(OPERATOR_CHARS[ch])return read_operator();if(code==92||is_identifier_start(code))return read_word();break}parse_error("Unexpected character '"+ch+"'")}next_token.context=function(nc){if(nc)S=nc;return S};next_token.add_directive=function(directive){S.directive_stack[S.directive_stack.length-1].push(directive);if(S.directives[directive]===undefined){S.directives[directive]=1}else{S.directives[directive]++}};next_token.push_directives_stack=function(){S.directive_stack.push([])};next_token.pop_directives_stack=function(){var directives=S.directive_stack[S.directive_stack.length-1];for(var i=0;i<directives.length;i++){S.directives[directives[i]]--}S.directive_stack.pop()};next_token.has_directive=function(directive){return S.directives[directive]>0};return next_token}var UNARY_PREFIX=makePredicate(["typeof","void","delete","--","++","!","~","-","+"]);var UNARY_POSTFIX=makePredicate(["--","++"]);var ASSIGNMENT=makePredicate(["=","+=","-=","/=","*=","%=",">>=","<<=",">>>=","|=","^=","&="]);var PRECEDENCE=function(a,ret){for(var i=0;i<a.length;++i){var b=a[i];for(var j=0;j<b.length;++j){ret[b[j]]=i+1}}return ret}([["||"],["&&"],["|"],["^"],["&"],["==","===","!=","!=="],["<",">","<=",">=","in","instanceof"],[">>","<<",">>>"],["+","-"],["*","/","%"]],{});var ATOMIC_START_TOKEN=makePredicate(["atom","num","string","regexp","name"]);function parse($TEXT,options){options=defaults(options,{bare_returns:false,expression:false,filename:null,html5_comments:true,shebang:true,strict:false,toplevel:null},true);var S={input:typeof $TEXT=="string"?tokenizer($TEXT,options.filename,options.html5_comments,options.shebang):$TEXT,token:null,prev:null,peeked:null,in_function:0,in_directives:true,in_loop:0,labels:[]};S.token=next();function is(type,value){return is_token(S.token,type,value)}function peek(){return S.peeked||(S.peeked=S.input())}function next(){S.prev=S.token;if(S.peeked){S.token=S.peeked;S.peeked=null}else{S.token=S.input()}S.in_directives=S.in_directives&&(S.token.type=="string"||is("punc",";"));return S.token}function prev(){return S.prev}function croak(msg,line,col,pos){var ctx=S.input.context();js_error(msg,ctx.filename,line!=null?line:ctx.tokline,col!=null?col:ctx.tokcol,pos!=null?pos:ctx.tokpos)}function token_error(token,msg){croak(msg,token.line,token.col)}function token_to_string(type,value){return type+(value===undefined?"":" «"+value+"»")}function unexpected(token){if(token==null)token=S.token;token_error(token,"Unexpected token: "+token_to_string(token.type,token.value))}function expect_token(type,val){if(is(type,val)){return next()}token_error(S.token,"Unexpected token: "+token_to_string(S.token.type,S.token.value)+", expected: "+token_to_string(type,val))}function expect(punc){return expect_token("punc",punc)}function has_newline_before(token){return token.nlb||!all(token.comments_before,function(comment){return!comment.nlb})}function can_insert_semicolon(){return!options.strict&&(is("eof")||is("punc","}")||has_newline_before(S.token))}function semicolon(optional){if(is("punc",";"))next();else if(!optional&&!can_insert_semicolon())expect_token("punc",";")}function parenthesised(){expect("(");var exp=expression(true);expect(")");return exp}function embed_tokens(parser){return function(){var start=S.token;var expr=parser.apply(null,arguments);var end=prev();expr.start=start;expr.end=end;return expr}}function handle_regexp(){if(is("operator","/")||is("operator","/=")){S.peeked=null;S.token=S.input(S.token.value.substr(1))}}var statement=embed_tokens(function(strict_defun){handle_regexp();switch(S.token.type){case"string":if(S.in_directives){var token=peek();if(S.token.raw.indexOf("\\")==-1&&(is_token(token,"punc",";")||is_token(token,"punc","}")||has_newline_before(token)||is_token(token,"eof"))){S.input.add_directive(S.token.value)}else{S.in_directives=false}}var dir=S.in_directives,stat=simple_statement();return dir?new AST_Directive(stat.body):stat;case"num":case"regexp":case"operator":case"atom":return simple_statement();case"name":return is_token(peek(),"punc",":")?labeled_statement():simple_statement();case"punc":switch(S.token.value){case"{":return new AST_BlockStatement({start:S.token,body:block_(),end:prev()});case"[":case"(":return simple_statement();case";":S.in_directives=false;next();return new AST_EmptyStatement;default:unexpected()}case"keyword":switch(S.token.value){case"break":next();return break_cont(AST_Break);case"continue":next();return break_cont(AST_Continue);case"debugger":next();semicolon();return new AST_Debugger;case"do":next();var body=in_loop(statement);expect_token("keyword","while");var condition=parenthesised();semicolon(true);return new AST_Do({body:body,condition:condition});case"while":next();return new AST_While({condition:parenthesised(),body:in_loop(statement)});case"for":next();return for_();case"function":if(!strict_defun&&S.input.has_directive("use strict")){croak("In strict mode code, functions can only be declared at top level or immediately within another function.")}next();return function_(AST_Defun);case"if":next();return if_();case"return":if(S.in_function==0&&!options.bare_returns)croak("'return' outside of function");next();var value=null;if(is("punc",";")){next()}else if(!can_insert_semicolon()){value=expression(true);semicolon()}return new AST_Return({value:value});case"switch":next();return new AST_Switch({expression:parenthesised(),body:in_loop(switch_body_)});case"throw":next();if(has_newline_before(S.token))croak("Illegal newline after 'throw'");var value=expression(true);semicolon();return new AST_Throw({value:value});case"try":next();return try_();case"var":next();var node=var_();semicolon();return node;case"with":if(S.input.has_directive("use strict")){croak("Strict mode may not include a with statement")}next();return new AST_With({expression:parenthesised(),body:statement()})}}unexpected()});function labeled_statement(){var label=as_symbol(AST_Label);if(!all(S.labels,function(l){return l.name!=label.name})){croak("Label "+label.name+" defined twice")}expect(":");S.labels.push(label);var stat=statement();S.labels.pop();if(!(stat instanceof AST_IterationStatement)){label.references.forEach(function(ref){if(ref instanceof AST_Continue){ref=ref.label.start;croak("Continue label `"+label.name+"` refers to non-IterationStatement.",ref.line,ref.col,ref.pos)}})}return new AST_LabeledStatement({body:stat,label:label})}function simple_statement(tmp){return new AST_SimpleStatement({body:(tmp=expression(true),semicolon(),tmp)})}function break_cont(type){var label=null,ldef;if(!can_insert_semicolon()){label=as_symbol(AST_LabelRef,true)}if(label!=null){ldef=find_if(function(l){return l.name==label.name},S.labels);if(!ldef)croak("Undefined label "+label.name);label.thedef=ldef}else if(S.in_loop==0)croak(type.TYPE+" not inside a loop or switch");semicolon();var stat=new type({label:label});if(ldef)ldef.references.push(stat);return stat}function for_(){expect("(");var init=null;if(!is("punc",";")){init=is("keyword","var")?(next(),var_(true)):expression(true,true);if(is("operator","in")){if(init instanceof AST_Var){if(init.definitions.length>1)croak("Only one variable declaration allowed in for..in loop",init.start.line,init.start.col,init.start.pos)}else if(!is_assignable(init)){croak("Invalid left-hand side in for..in loop",init.start.line,init.start.col,init.start.pos)}next();return for_in(init)}}return regular_for(init)}function regular_for(init){expect(";");var test=is("punc",";")?null:expression(true);expect(";");var step=is("punc",")")?null:expression(true);expect(")");return new AST_For({init:init,condition:test,step:step,body:in_loop(statement)})}function for_in(init){var obj=expression(true);expect(")");return new AST_ForIn({init:init,object:obj,body:in_loop(statement)})}var function_=function(ctor){var in_statement=ctor===AST_Defun;var name=is("name")?as_symbol(in_statement?AST_SymbolDefun:AST_SymbolLambda):null;if(in_statement&&!name)expect_token("name");if(name&&ctor!==AST_Accessor&&!(name instanceof AST_SymbolDeclaration))unexpected(prev());expect("(");var argnames=[];for(var first=true;!is("punc",")");){if(first)first=false;else expect(",");argnames.push(as_symbol(AST_SymbolFunarg))}next();var loop=S.in_loop;var labels=S.labels;++S.in_function;S.in_directives=true;S.input.push_directives_stack();S.in_loop=0;S.labels=[];var body=block_(true);if(S.input.has_directive("use strict")){if(name)strict_verify_symbol(name);argnames.forEach(strict_verify_symbol)}S.input.pop_directives_stack();--S.in_function;S.in_loop=loop;S.labels=labels;return new ctor({name:name,argnames:argnames,body:body})};function if_(){var cond=parenthesised(),body=statement(),belse=null;if(is("keyword","else")){next();belse=statement()}return new AST_If({condition:cond,body:body,alternative:belse})}function block_(strict_defun){expect("{");var a=[];while(!is("punc","}")){if(is("eof"))expect_token("punc","}");a.push(statement(strict_defun))}next();return a}function switch_body_(){expect("{");var a=[],cur=null,branch=null,tmp;while(!is("punc","}")){if(is("eof"))expect_token("punc","}");if(is("keyword","case")){if(branch)branch.end=prev();cur=[];branch=new AST_Case({start:(tmp=S.token,next(),tmp),expression:expression(true),body:cur});a.push(branch);expect(":")}else if(is("keyword","default")){if(branch)branch.end=prev();cur=[];branch=new AST_Default({start:(tmp=S.token,next(),expect(":"),tmp),body:cur});a.push(branch)}else{if(!cur)unexpected();cur.push(statement())}}if(branch)branch.end=prev();next();return a}function try_(){var body=block_(),bcatch=null,bfinally=null;if(is("keyword","catch")){var start=S.token;next();expect("(");var name=as_symbol(AST_SymbolCatch);expect(")");bcatch=new AST_Catch({start:start,argname:name,body:block_(),end:prev()})}if(is("keyword","finally")){var start=S.token;next();bfinally=new AST_Finally({start:start,body:block_(),end:prev()})}if(!bcatch&&!bfinally)croak("Missing catch/finally blocks");return new AST_Try({body:body,bcatch:bcatch,bfinally:bfinally})}function vardefs(no_in){var a=[];for(;;){a.push(new AST_VarDef({start:S.token,name:as_symbol(AST_SymbolVar),value:is("operator","=")?(next(),expression(false,no_in)):null,end:prev()}));if(!is("punc",","))break;next()}return a}var var_=function(no_in){return new AST_Var({start:prev(),definitions:vardefs(no_in),end:prev()})};var new_=function(allow_calls){var start=S.token;expect_token("operator","new");var newexp=expr_atom(false),args;if(is("punc","(")){next();args=expr_list(")")}else{args=[]}var call=new AST_New({start:start,expression:newexp,args:args,end:prev()});mark_pure(call);return subscripts(call,allow_calls)};function as_atom_node(){var tok=S.token,ret;switch(tok.type){case"name":ret=_make_symbol(AST_SymbolRef);break;case"num":ret=new AST_Number({start:tok,end:tok,value:tok.value});break;case"string":ret=new AST_String({start:tok,end:tok,value:tok.value,quote:tok.quote});break;case"regexp":ret=new AST_RegExp({start:tok,end:tok,value:tok.value});break;case"atom":switch(tok.value){case"false":ret=new AST_False({start:tok,end:tok});break;case"true":ret=new AST_True({start:tok,end:tok});break;case"null":ret=new AST_Null({start:tok,end:tok});break}break}next();return ret}var expr_atom=function(allow_calls){if(is("operator","new")){return new_(allow_calls)}var start=S.token;if(is("punc")){switch(start.value){case"(":next();var ex=expression(true);var len=start.comments_before.length;[].unshift.apply(ex.start.comments_before,start.comments_before);start.comments_before=ex.start.comments_before;start.comments_before_length=len;if(len==0&&start.comments_before.length>0){var comment=start.comments_before[0];if(!comment.nlb){comment.nlb=start.nlb;start.nlb=false}}start.comments_after=ex.start.comments_after;ex.start=start;expect(")");var end=prev();end.comments_before=ex.end.comments_before;[].push.apply(ex.end.comments_after,end.comments_after);end.comments_after=ex.end.comments_after;ex.end=end;if(ex instanceof AST_Call)mark_pure(ex);return subscripts(ex,allow_calls);case"[":return subscripts(array_(),allow_calls);case"{":return subscripts(object_(),allow_calls)}unexpected()}if(is("keyword","function")){next();var func=function_(AST_Function);func.start=start;func.end=prev();return subscripts(func,allow_calls)}if(ATOMIC_START_TOKEN[S.token.type]){return subscripts(as_atom_node(),allow_calls)}unexpected()};function expr_list(closing,allow_trailing_comma,allow_empty){var first=true,a=[];while(!is("punc",closing)){if(first)first=false;else expect(",");if(allow_trailing_comma&&is("punc",closing))break;if(is("punc",",")&&allow_empty){a.push(new AST_Hole({start:S.token,end:S.token}))}else{a.push(expression(false))}}next();return a}var array_=embed_tokens(function(){expect("[");return new AST_Array({elements:expr_list("]",!options.strict,true)})});var create_accessor=embed_tokens(function(){return function_(AST_Accessor)});var object_=embed_tokens(function(){expect("{");var first=true,a=[];while(!is("punc","}")){if(first)first=false;else expect(",");if(!options.strict&&is("punc","}"))break;var start=S.token;var type=start.type;var name=as_property_name();if(type=="name"&&!is("punc",":")){var key=new AST_SymbolAccessor({start:S.token,name:""+as_property_name(),end:prev()});if(name=="get"){a.push(new AST_ObjectGetter({start:start,key:key,value:create_accessor(),end:prev()}));continue}if(name=="set"){a.push(new AST_ObjectSetter({start:start,key:key,value:create_accessor(),end:prev()}));continue}}expect(":");a.push(new AST_ObjectKeyVal({start:start,quote:start.quote,key:""+name,value:expression(false),end:prev()}))}next();return new AST_Object({properties:a})});function as_property_name(){var tmp=S.token;switch(tmp.type){case"operator":if(!KEYWORDS[tmp.value])unexpected();case"num":case"string":case"name":case"keyword":case"atom":next();return tmp.value;default:unexpected()}}function as_name(){if(!is("name"))expect_token("name");var name=S.token.value;next();return name}function _make_symbol(type){var name=S.token.value;return new(name=="this"?AST_This:type)({name:String(name),start:S.token,end:S.token})}function strict_verify_symbol(sym){if(sym.name=="arguments"||sym.name=="eval")croak("Unexpected "+sym.name+" in strict mode",sym.start.line,sym.start.col,sym.start.pos)}function as_symbol(type,noerror){if(!is("name")){if(!noerror)croak("Name expected");return null}var sym=_make_symbol(type);if(S.input.has_directive("use strict")&&sym instanceof AST_SymbolDeclaration){strict_verify_symbol(sym)}next();return sym}function mark_pure(call){var start=call.start;var comments=start.comments_before;var i=HOP(start,"comments_before_length")?start.comments_before_length:comments.length;while(--i>=0){var comment=comments[i];if(/[@#]__PURE__/.test(comment.value)){call.pure=comment;break}}}var subscripts=function(expr,allow_calls){var start=expr.start;if(is("punc",".")){next();return subscripts(new AST_Dot({start:start,expression:expr,property:as_name(),end:prev()}),allow_calls)}if(is("punc","[")){next();var prop=expression(true);expect("]");return subscripts(new AST_Sub({start:start,expression:expr,property:prop,end:prev()}),allow_calls)}if(allow_calls&&is("punc","(")){next();var call=new AST_Call({start:start,expression:expr,args:expr_list(")"),end:prev()});mark_pure(call);return subscripts(call,true)}return expr};var maybe_unary=function(allow_calls){var start=S.token;if(is("operator")&&UNARY_PREFIX[start.value]){next();handle_regexp();var ex=make_unary(AST_UnaryPrefix,start,maybe_unary(allow_calls));ex.start=start;ex.end=prev();return ex}var val=expr_atom(allow_calls);while(is("operator")&&UNARY_POSTFIX[S.token.value]&&!has_newline_before(S.token)){val=make_unary(AST_UnaryPostfix,S.token,val);val.start=start;val.end=S.token;next()}return val};function make_unary(ctor,token,expr){var op=token.value;switch(op){case"++":case"--":if(!is_assignable(expr))croak("Invalid use of "+op+" operator",token.line,token.col,token.pos);break;case"delete":if(expr instanceof AST_SymbolRef&&S.input.has_directive("use strict"))croak("Calling delete on expression not allowed in strict mode",expr.start.line,expr.start.col,expr.start.pos);break}return new ctor({operator:op,expression:expr})}var expr_op=function(left,min_prec,no_in){var op=is("operator")?S.token.value:null;if(op=="in"&&no_in)op=null;var prec=op!=null?PRECEDENCE[op]:null;if(prec!=null&&prec>min_prec){next();var right=expr_op(maybe_unary(true),prec,no_in);return expr_op(new AST_Binary({start:left.start,left:left,operator:op,right:right,end:right.end}),min_prec,no_in)}return left};function expr_ops(no_in){return expr_op(maybe_unary(true),0,no_in)}var maybe_conditional=function(no_in){var start=S.token;var expr=expr_ops(no_in);if(is("operator","?")){next();var yes=expression(false);expect(":");return new AST_Conditional({start:start,condition:expr,consequent:yes,alternative:expression(false,no_in),end:prev()})}return expr};function is_assignable(expr){return expr instanceof AST_PropAccess||expr instanceof AST_SymbolRef}var maybe_assign=function(no_in){var start=S.token;var left=maybe_conditional(no_in),val=S.token.value;if(is("operator")&&ASSIGNMENT[val]){if(is_assignable(left)){next();return new AST_Assign({start:start,left:left,operator:val,right:maybe_assign(no_in),end:prev()})}croak("Invalid assignment")}return left};var expression=function(commas,no_in){var start=S.token;var exprs=[];while(true){exprs.push(maybe_assign(no_in));if(!commas||!is("punc",","))break;next();commas=true}return exprs.length==1?exprs[0]:new AST_Sequence({start:start,expressions:exprs,end:peek()})};function in_loop(cont){++S.in_loop;var ret=cont();--S.in_loop;return ret}if(options.expression){handle_regexp();return expression(true)}return function(){var start=S.token;var body=[];S.input.push_directives_stack();while(!is("eof"))body.push(statement(true));S.input.pop_directives_stack();var end=prev();var toplevel=options.toplevel;if(toplevel){toplevel.body=toplevel.body.concat(body);toplevel.end=end}else{toplevel=new AST_Toplevel({start:start,body:body,end:end})}return toplevel}()}"use strict";function TreeTransformer(before,after){TreeWalker.call(this);this.before=before;this.after=after}TreeTransformer.prototype=new TreeWalker;(function(DEF){function do_list(list,tw){return MAP(list,function(node){return node.transform(tw,true)})}DEF(AST_Node,noop);DEF(AST_LabeledStatement,function(self,tw){self.label=self.label.transform(tw);self.body=self.body.transform(tw)});DEF(AST_SimpleStatement,function(self,tw){self.body=self.body.transform(tw)});DEF(AST_Block,function(self,tw){self.body=do_list(self.body,tw)});DEF(AST_Do,function(self,tw){self.body=self.body.transform(tw);self.condition=self.condition.transform(tw)});DEF(AST_While,function(self,tw){self.condition=self.condition.transform(tw);self.body=self.body.transform(tw)});DEF(AST_For,function(self,tw){if(self.init)self.init=self.init.transform(tw);if(self.condition)self.condition=self.condition.transform(tw);if(self.step)self.step=self.step.transform(tw);self.body=self.body.transform(tw)});DEF(AST_ForIn,function(self,tw){self.init=self.init.transform(tw);self.object=self.object.transform(tw);self.body=self.body.transform(tw)});DEF(AST_With,function(self,tw){self.expression=self.expression.transform(tw);self.body=self.body.transform(tw)});DEF(AST_Exit,function(self,tw){if(self.value)self.value=self.value.transform(tw)});DEF(AST_LoopControl,function(self,tw){if(self.label)self.label=self.label.transform(tw)});DEF(AST_If,function(self,tw){self.condition=self.condition.transform(tw);self.body=self.body.transform(tw);if(self.alternative)self.alternative=self.alternative.transform(tw)});DEF(AST_Switch,function(self,tw){self.expression=self.expression.transform(tw);self.body=do_list(self.body,tw)});DEF(AST_Case,function(self,tw){self.expression=self.expression.transform(tw);self.body=do_list(self.body,tw)});DEF(AST_Try,function(self,tw){self.body=do_list(self.body,tw);if(self.bcatch)self.bcatch=self.bcatch.transform(tw);if(self.bfinally)self.bfinally=self.bfinally.transform(tw)});DEF(AST_Catch,function(self,tw){self.argname=self.argname.transform(tw);self.body=do_list(self.body,tw)});DEF(AST_Definitions,function(self,tw){self.definitions=do_list(self.definitions,tw)});DEF(AST_VarDef,function(self,tw){self.name=self.name.transform(tw);if(self.value)self.value=self.value.transform(tw)});DEF(AST_Lambda,function(self,tw){if(self.name)self.name=self.name.transform(tw);self.argnames=do_list(self.argnames,tw);self.body=do_list(self.body,tw)});DEF(AST_Call,function(self,tw){self.expression=self.expression.transform(tw);self.args=do_list(self.args,tw)});DEF(AST_Sequence,function(self,tw){self.expressions=do_list(self.expressions,tw)});DEF(AST_Dot,function(self,tw){self.expression=self.expression.transform(tw)});DEF(AST_Sub,function(self,tw){self.expression=self.expression.transform(tw);self.property=self.property.transform(tw)});DEF(AST_Unary,function(self,tw){self.expression=self.expression.transform(tw)});DEF(AST_Binary,function(self,tw){self.left=self.left.transform(tw);self.right=self.right.transform(tw)});DEF(AST_Conditional,function(self,tw){self.condition=self.condition.transform(tw);self.consequent=self.consequent.transform(tw);self.alternative=self.alternative.transform(tw)});DEF(AST_Array,function(self,tw){self.elements=do_list(self.elements,tw)});DEF(AST_Object,function(self,tw){self.properties=do_list(self.properties,tw)});DEF(AST_ObjectProperty,function(self,tw){self.value=self.value.transform(tw)})})(function(node,descend){node.DEFMETHOD("transform",function(tw,in_list){var x,y;tw.push(this);if(tw.before)x=tw.before(this,descend,in_list);if(typeof x==="undefined"){x=this;descend(x,tw);if(tw.after){y=tw.after(x,in_list);if(typeof y!=="undefined")x=y}}tw.pop();return x})});"use strict";function SymbolDef(scope,orig,init){this.name=orig.name;this.orig=[orig];this.init=init;this.eliminated=0;this.scope=scope;this.references=[];this.replaced=0;this.global=false;this.mangled_name=null;this.undeclared=false;this.id=SymbolDef.next_id++}SymbolDef.next_id=1;SymbolDef.prototype={unmangleable:function(options){if(!options)options={};return this.global&&!options.toplevel||this.undeclared||!options.eval&&this.scope.pinned()||options.keep_fnames&&(this.orig[0]instanceof AST_SymbolLambda||this.orig[0]instanceof AST_SymbolDefun)},mangle:function(options){var cache=options.cache&&options.cache.props;if(this.global&&cache&&cache.has(this.name)){this.mangled_name=cache.get(this.name)}else if(!this.mangled_name&&!this.unmangleable(options)){var def;if(def=this.redefined()){this.mangled_name=def.mangled_name||def.name}else{this.mangled_name=next_mangled_name(this.scope,options,this)}if(this.global&&cache){cache.set(this.name,this.mangled_name)}}},redefined:function(){return this.defun&&this.defun.variables.get(this.name)}};AST_Toplevel.DEFMETHOD("figure_out_scope",function(options){options=defaults(options,{cache:null,ie8:false});var self=this;var scope=self.parent_scope=null;var defun=null;var tw=new TreeWalker(function(node,descend){if(node instanceof AST_Catch){var save_scope=scope;scope=new AST_Scope(node);scope.init_scope_vars(save_scope);descend();scope=save_scope;return true}if(node instanceof AST_Scope){node.init_scope_vars(scope);var save_scope=scope;var save_defun=defun;defun=scope=node;descend();scope=save_scope;defun=save_defun;return true}if(node instanceof AST_With){for(var s=scope;s;s=s.parent_scope)s.uses_with=true;return}if(node instanceof AST_Symbol){node.scope=scope}if(node instanceof AST_Label){node.thedef=node;node.references=[]}if(node instanceof AST_SymbolDefun){(node.scope=defun.parent_scope.resolve()).def_function(node,defun)}else if(node instanceof AST_SymbolLambda){var def=defun.def_function(node,node.name=="arguments"?undefined:defun);if(options.ie8)def.defun=defun.parent_scope.resolve()}else if(node instanceof AST_SymbolVar){defun.def_variable(node,node.TYPE=="SymbolVar"?null:undefined);if(defun!==scope){node.mark_enclosed(options);var def=scope.find_variable(node);if(node.thedef!==def){node.thedef=def}node.reference(options)}}else if(node instanceof AST_SymbolCatch){scope.def_variable(node).defun=defun}});self.walk(tw);self.globals=new Dictionary;var tw=new TreeWalker(function(node){if(node instanceof AST_LoopControl){if(node.label)node.label.thedef.references.push(node);return true}if(node instanceof AST_SymbolRef){var name=node.name;if(name=="eval"&&tw.parent()instanceof AST_Call){for(var s=node.scope;s&&!s.uses_eval;s=s.parent_scope){s.uses_eval=true}}var sym=node.scope.find_variable(name);if(!sym){sym=self.def_global(node)}else if(sym.scope instanceof AST_Lambda&&name=="arguments"){sym.scope.uses_arguments=true}node.thedef=sym;node.reference(options);return true}if(node instanceof AST_SymbolCatch){var def=node.definition().redefined();if(def)for(var s=node.scope;s;s=s.parent_scope){push_uniq(s.enclosed,def);if(s===def.scope)break}return true}});self.walk(tw);if(options.ie8)self.walk(new TreeWalker(function(node){if(node instanceof AST_SymbolCatch){redefine(node,node.thedef.defun);return true}if(node instanceof AST_SymbolLambda){var def=node.thedef;redefine(node,node.scope.parent_scope);node.thedef.init=def.init;return true}}));function redefine(node,scope){var name=node.name;var old_def=node.thedef;var new_def=scope.find_variable(name)||self.globals.get(name)||scope.def_variable(node);old_def.orig.concat(old_def.references).forEach(function(node){node.thedef=new_def;node.reference(options)})}});AST_Toplevel.DEFMETHOD("def_global",function(node){var globals=this.globals,name=node.name;if(globals.has(name)){return globals.get(name)}else{var g=new SymbolDef(this,node);g.undeclared=true;g.global=true;globals.set(name,g);return g}});AST_Scope.DEFMETHOD("init_scope_vars",function(parent_scope){this.variables=new Dictionary;this.functions=new Dictionary;this.uses_with=false;this.uses_eval=false;this.parent_scope=parent_scope;this.enclosed=[];this.cname=-1});AST_Lambda.DEFMETHOD("init_scope_vars",function(){AST_Scope.prototype.init_scope_vars.apply(this,arguments);this.uses_arguments=false;this.def_variable(new AST_SymbolFunarg({name:"arguments",start:this.start,end:this.end}))});AST_Symbol.DEFMETHOD("mark_enclosed",function(options){var def=this.definition();for(var s=this.scope;s;s=s.parent_scope){push_uniq(s.enclosed,def);if(options.keep_fnames){s.functions.each(function(d){push_uniq(def.scope.enclosed,d)})}if(s===def.scope)break}});AST_Symbol.DEFMETHOD("reference",function(options){this.definition().references.push(this);this.mark_enclosed(options)});AST_Scope.DEFMETHOD("find_variable",function(name){if(name instanceof AST_Symbol)name=name.name;return this.variables.get(name)||this.parent_scope&&this.parent_scope.find_variable(name)});AST_Scope.DEFMETHOD("def_function",function(symbol,init){var def=this.def_variable(symbol,init);if(!def.init||def.init instanceof AST_Defun)def.init=init;this.functions.set(symbol.name,def);return def});AST_Scope.DEFMETHOD("def_variable",function(symbol,init){var def=this.variables.get(symbol.name);if(def){def.orig.push(symbol);if(def.init&&(def.scope!==symbol.scope||def.init instanceof AST_Function)){def.init=init}}else{def=new SymbolDef(this,symbol,init);this.variables.set(symbol.name,def);def.global=!this.parent_scope}return symbol.thedef=def});AST_Lambda.DEFMETHOD("resolve",return_this);AST_Scope.DEFMETHOD("resolve",function(){return this.parent_scope});AST_Toplevel.DEFMETHOD("resolve",return_this);function names_in_use(scope,options){var names=scope.names_in_use;if(!names){scope.names_in_use=names=Object.create(scope.mangled_names||null);scope.cname_holes=[];var cache=options.cache&&options.cache.props;scope.enclosed.forEach(function(def){if(def.unmangleable(options))names[def.name]=true;if(def.global&&cache&&cache.has(def.name)){names[cache.get(def.name)]=true}})}return names}function next_mangled_name(scope,options,def){var in_use=names_in_use(scope,options);var holes=scope.cname_holes;var names=Object.create(null);var scopes=[scope];def.references.forEach(function(sym){var scope=sym.scope;do{if(scopes.indexOf(scope)<0){for(var name in names_in_use(scope,options)){names[name]=true}scopes.push(scope)}else break}while(scope=scope.parent_scope)});var name;for(var i=0,len=holes.length;i<len;i++){name=base54(holes[i]);if(names[name])continue;holes.splice(i,1);scope.names_in_use[name]=true;return name}while(true){name=base54(++scope.cname);if(in_use[name]||!is_identifier(name)||options.reserved.has[name])continue;if(!names[name])break;holes.push(scope.cname)}scope.names_in_use[name]=true;return name}AST_Symbol.DEFMETHOD("unmangleable",function(options){var def=this.definition();return!def||def.unmangleable(options)});AST_Label.DEFMETHOD("unmangleable",return_false);AST_Symbol.DEFMETHOD("unreferenced",function(){return!this.definition().references.length&&!this.scope.pinned()});AST_Symbol.DEFMETHOD("definition",function(){return this.thedef});AST_Symbol.DEFMETHOD("global",function(){return this.definition().global});function _default_mangler_options(options){options=defaults(options,{eval:false,ie8:false,keep_fnames:false,reserved:[],toplevel:false});if(!Array.isArray(options.reserved))options.reserved=[];push_uniq(options.reserved,"arguments");options.reserved.has=makePredicate(options.reserved);return options}AST_Toplevel.DEFMETHOD("mangle_names",function(options){options=_default_mangler_options(options);var lname=-1;if(options.cache&&options.cache.props){var mangled_names=this.mangled_names=Object.create(null);options.cache.props.each(function(mangled_name){mangled_names[mangled_name]=true})}var redefined=[];var tw=new TreeWalker(function(node,descend){if(node instanceof AST_LabeledStatement){var save_nesting=lname;descend();lname=save_nesting;return true}if(node instanceof AST_Scope){descend();if(options.cache&&node instanceof AST_Toplevel){node.globals.each(mangle)}node.variables.each(mangle);return true}if(node instanceof AST_Label){var name;do{name=base54(++lname)}while(!is_identifier(name));node.mangled_name=name;return true}if(!options.ie8&&node instanceof AST_Catch){var def=node.argname.definition();var redef=def.redefined();if(redef){redefined.push(def);reference(node.argname);def.references.forEach(reference)}descend();if(!redef)mangle(def);return true}function reference(sym){sym.thedef=redef;sym.reference(options);sym.thedef=def}});this.walk(tw);redefined.forEach(mangle);function mangle(def){if(options.reserved.has[def.name])return;def.mangle(options)}});AST_Toplevel.DEFMETHOD("find_colliding_names",function(options){var cache=options.cache&&options.cache.props;var avoid=Object.create(null);options.reserved.forEach(to_avoid);this.globals.each(add_def);this.walk(new TreeWalker(function(node){if(node instanceof AST_Scope)node.variables.each(add_def);if(node instanceof AST_SymbolCatch)add_def(node.definition())}));return avoid;function to_avoid(name){avoid[name]=true}function add_def(def){var name=def.name;if(def.global&&cache&&cache.has(name))name=cache.get(name);else if(!def.unmangleable(options))return;to_avoid(name)}});AST_Toplevel.DEFMETHOD("expand_names",function(options){base54.reset();base54.sort();options=_default_mangler_options(options);var avoid=this.find_colliding_names(options);var cname=0;this.globals.each(rename);this.walk(new TreeWalker(function(node){if(node instanceof AST_Scope)node.variables.each(rename);if(node instanceof AST_SymbolCatch)rename(node.definition())}));function next_name(){var name;do{name=base54(cname++)}while(avoid[name]||!is_identifier(name));return name}function rename(def){if(def.global&&options.cache)return;if(def.unmangleable(options))return;if(options.reserved.has[def.name])return;var d=def.redefined();def.name=d?d.name:next_name();def.orig.forEach(function(sym){sym.name=def.name});def.references.forEach(function(sym){sym.name=def.name})}});AST_Node.DEFMETHOD("tail_node",return_this);AST_Sequence.DEFMETHOD("tail_node",function(){return this.expressions[this.expressions.length-1]});AST_Toplevel.DEFMETHOD("compute_char_frequency",function(options){options=_default_mangler_options(options);base54.reset();try{AST_Node.prototype.print=function(stream,force_parens){this._print(stream,force_parens);if(this instanceof AST_Symbol&&!this.unmangleable(options)){base54.consider(this.name,-1)}else if(options.properties){if(this instanceof AST_Dot){base54.consider(this.property,-1)}else if(this instanceof AST_Sub){skip_string(this.property)}}};base54.consider(this.print_to_string(),1)}finally{AST_Node.prototype.print=AST_Node.prototype._print}base54.sort();function skip_string(node){if(node instanceof AST_String){base54.consider(node.value,-1)}else if(node instanceof AST_Conditional){skip_string(node.consequent);skip_string(node.alternative)}else if(node instanceof AST_Sequence){skip_string(node.tail_node())}}});var base54=function(){var freq=Object.create(null);function init(chars){var array=[];for(var i=0,len=chars.length;i<len;i++){var ch=chars[i];array.push(ch);freq[ch]=-.01*i}return array}var digits=init("0123456789");var leading=init("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$_");var chars,frequency;function reset(){frequency=Object.create(freq)}base54.consider=function(str,delta){for(var i=str.length;--i>=0;){frequency[str[i]]+=delta}};function compare(a,b){return frequency[b]-frequency[a]}base54.sort=function(){chars=leading.sort(compare).concat(digits.sort(compare))};base54.reset=reset;reset();function base54(num){var ret="",base=54;num++;do{num--;ret+=chars[num%base];num=Math.floor(num/base);base=64}while(num>0);return ret}return base54}();"use strict";var EXPECT_DIRECTIVE=/^$|[;{][\s\n]*$/;function is_some_comments(comment){return comment.type=="comment2"&&/@preserve|@license|@cc_on/i.test(comment.value)}function OutputStream(options){var readonly=!options;options=defaults(options,{ascii_only:false,beautify:false,braces:false,comments:false,ie8:false,indent_level:4,indent_start:0,inline_script:true,keep_quoted_props:false,max_line_len:false,preamble:null,preserve_line:false,quote_keys:false,quote_style:0,semicolons:true,shebang:true,source_map:null,webkit:false,width:80,wrap_iife:false},true);var comment_filter=return_false;if(options.comments){var comments=options.comments;if(typeof options.comments==="string"&&/^\/.*\/[a-zA-Z]*$/.test(options.comments)){var regex_pos=options.comments.lastIndexOf("/");comments=new RegExp(options.comments.substr(1,regex_pos-1),options.comments.substr(regex_pos+1))}if(comments instanceof RegExp){comment_filter=function(comment){return comment.type!="comment5"&&comments.test(comment.value)}}else if(typeof comments==="function"){comment_filter=function(comment){return comment.type!="comment5"&&comments(this,comment)}}else if(comments==="some"){comment_filter=is_some_comments}else{comment_filter=return_true}}var indentation=0;var current_col=0;var current_line=1;var current_pos=0;var OUTPUT="";var to_utf8=options.ascii_only?function(str,identifier){return str.replace(/[\u0000-\u001f\u007f-\uffff]/g,function(ch){var code=ch.charCodeAt(0).toString(16);if(code.length<=2&&!identifier){while(code.length<2)code="0"+code;return"\\x"+code}else{while(code.length<4)code="0"+code;return"\\u"+code}})}:function(str){var s="";for(var i=0,len=str.length;i<len;i++){if(is_surrogate_pair_head(str[i])&&!is_surrogate_pair_tail(str[i+1])||is_surrogate_pair_tail(str[i])&&!is_surrogate_pair_head(str[i-1])){s+="\\u"+str.charCodeAt(i).toString(16)}else{s+=str[i]}}return s};function make_string(str,quote){var dq=0,sq=0;str=str.replace(/[\\\b\f\n\r\v\t\x22\x27\u2028\u2029\0\ufeff]/g,function(s,i){switch(s){case'"':++dq;return'"';case"'":++sq;return"'";case"\\":return"\\\\";case"\n":return"\\n";case"\r":return"\\r";case"\t":return"\\t";case"\b":return"\\b";case"\f":return"\\f";case"\v":return options.ie8?"\\x0B":"\\v";case"\u2028":return"\\u2028";case"\u2029":return"\\u2029";case"\ufeff":return"\\ufeff";case"\0":return/[0-9]/.test(str.charAt(i+1))?"\\x00":"\\0"}return s});function quote_single(){return"'"+str.replace(/\x27/g,"\\'")+"'"}function quote_double(){return'"'+str.replace(/\x22/g,'\\"')+'"'}str=to_utf8(str);switch(options.quote_style){case 1:return quote_single();case 2:return quote_double();case 3:return quote=="'"?quote_single():quote_double();default:return dq>sq?quote_single():quote_double()}}function encode_string(str,quote){var ret=make_string(str,quote);if(options.inline_script){ret=ret.replace(/<\x2f(script)([>\/\t\n\f\r ])/gi,"<\\/$1$2");ret=ret.replace(/\x3c!--/g,"\\x3c!--");ret=ret.replace(/--\x3e/g,"--\\x3e")}return ret}function make_name(name){name=name.toString();name=to_utf8(name,true);return name}function make_indent(back){return repeat_string(" ",options.indent_start+indentation-back*options.indent_level)}var has_parens=false;var line_end=0;var line_fixed=true;var might_need_space=false;var might_need_semicolon=false;var need_newline_indented=false;var need_space=false;var newline_insert=-1;var last="";var mapping_token,mapping_name,mappings=options.source_map&&[];var adjust_mappings=mappings?function(line,col){mappings.forEach(function(mapping){mapping.line+=line;mapping.col+=col})}:noop;var flush_mappings=mappings?function(){mappings.forEach(function(mapping){try{options.source_map.add(mapping.token.file,mapping.line,mapping.col,mapping.token.line,mapping.token.col,!mapping.name&&mapping.token.type=="name"?mapping.token.value:mapping.name)}catch(ex){AST_Node.warn("Couldn't figure out mapping for {file}:{line},{col} → {cline},{ccol} [{name}]",{file:mapping.token.file,line:mapping.token.line,col:mapping.token.col,cline:mapping.line,ccol:mapping.col,name:mapping.name||""})}});mappings=[]}:noop;function insert_newlines(count){var index=OUTPUT.lastIndexOf("\n");if(line_end<index)line_end=index;var left=OUTPUT.slice(0,line_end);var right=OUTPUT.slice(line_end);adjust_mappings(count,right.length-current_col);current_line+=count;current_pos+=count;current_col=right.length;OUTPUT=left;while(count--)OUTPUT+="\n";OUTPUT+=right}var fix_line=options.max_line_len?function(){if(line_fixed){if(current_col>options.max_line_len){AST_Node.warn("Output exceeds {max_line_len} characters",options)}return}if(current_col>options.max_line_len)insert_newlines(1);line_fixed=true;flush_mappings()}:noop;var requireSemicolonChars=makePredicate("( [ + * / - , .");function print(str){str=String(str);var ch=str.charAt(0);if(need_newline_indented&&ch){need_newline_indented=false;if(ch!="\n"){print("\n");indent()}}if(need_space&&ch){need_space=false;if(!/[\s;})]/.test(ch)){space()}}newline_insert=-1;var prev=last.charAt(last.length-1);if(might_need_semicolon){might_need_semicolon=false;if(prev==":"&&ch=="}"||(!ch||";}".indexOf(ch)<0)&&prev!=";"){if(options.semicolons||requireSemicolonChars[ch]){OUTPUT+=";";current_col++;current_pos++}else{fix_line();OUTPUT+="\n";current_pos++;current_line++;current_col=0;if(/^\s+$/.test(str)){might_need_semicolon=true}}if(!options.beautify)might_need_space=false}}if(might_need_space){if(is_identifier_char(prev)&&(is_identifier_char(ch)||ch=="\\")||ch=="/"&&ch==prev||(ch=="+"||ch=="-")&&ch==last){OUTPUT+=" ";current_col++;current_pos++}might_need_space=false}if(mapping_token){mappings.push({token:mapping_token,name:mapping_name,line:current_line,col:current_col});mapping_token=false;if(line_fixed)flush_mappings()}OUTPUT+=str;has_parens=str[str.length-1]=="(";current_pos+=str.length;var a=str.split(/\r?\n/),n=a.length-1;current_line+=n;current_col+=a[0].length;if(n>0){fix_line();current_col=a[n].length}last=str}var space=options.beautify?function(){print(" ")}:function(){might_need_space=true};var indent=options.beautify?function(half){if(options.beautify){print(make_indent(half?.5:0))}}:noop;var with_indent=options.beautify?function(col,cont){if(col===true)col=next_indent();var save_indentation=indentation;indentation=col;var ret=cont();indentation=save_indentation;return ret}:function(col,cont){return cont()};var may_add_newline=options.max_line_len||options.preserve_line?function(){fix_line();line_end=OUTPUT.length;line_fixed=false}:noop;var newline=options.beautify?function(){if(newline_insert<0)return print("\n");if(OUTPUT[newline_insert]!="\n"){OUTPUT=OUTPUT.slice(0,newline_insert)+"\n"+OUTPUT.slice(newline_insert);current_pos++;current_line++}newline_insert++}:may_add_newline;var semicolon=options.beautify?function(){print(";")}:function(){might_need_semicolon=true};function force_semicolon(){might_need_semicolon=false;print(";")}function next_indent(){return indentation+options.indent_level}function with_block(cont){var ret;print("{");newline();with_indent(next_indent(),function(){ret=cont()});indent();print("}");return ret}function with_parens(cont){print("(");may_add_newline();var ret=cont();may_add_newline();print(")");return ret}function with_square(cont){print("[");may_add_newline();var ret=cont();may_add_newline();print("]");return ret}function comma(){may_add_newline();print(",");may_add_newline();space()}function colon(){print(":");space()}var add_mapping=mappings?function(token,name){mapping_token=token;mapping_name=name}:noop;function get(){if(!line_fixed)fix_line();return OUTPUT}function has_nlb(){var index=OUTPUT.lastIndexOf("\n");return/^ *$/.test(OUTPUT.slice(index+1))}function prepend_comments(node){var self=this;var start=node.start;if(!start)return;if(start.comments_before&&start.comments_before._dumped===self)return;var comments=start.comments_before;if(!comments){comments=start.comments_before=[]}comments._dumped=self;if(node instanceof AST_Exit&&node.value){var tw=new TreeWalker(function(node){var parent=tw.parent();if(parent instanceof AST_Exit||parent instanceof AST_Binary&&parent.left===node||parent.TYPE=="Call"&&parent.expression===node||parent instanceof AST_Conditional&&parent.condition===node||parent instanceof AST_Dot&&parent.expression===node||parent instanceof AST_Sequence&&parent.expressions[0]===node||parent instanceof AST_Sub&&parent.expression===node||parent instanceof AST_UnaryPostfix){var text=node.start.comments_before;if(text&&text._dumped!==self){text._dumped=self;comments=comments.concat(text)}}else{return true}});tw.push(node);node.value.walk(tw)}if(current_pos==0){if(comments.length>0&&options.shebang&&comments[0].type=="comment5"){print("#!"+comments.shift().value+"\n");indent()}var preamble=options.preamble;if(preamble){print(preamble.replace(/\r\n?|[\n\u2028\u2029]|\s*$/g,"\n"))}}comments=comments.filter(comment_filter,node);if(comments.length==0)return;var last_nlb=has_nlb();comments.forEach(function(c,i){if(!last_nlb){if(c.nlb){print("\n");indent();last_nlb=true}else if(i>0){space()}}if(/comment[134]/.test(c.type)){print("//"+c.value.replace(/[@#]__PURE__/g," ")+"\n");indent();last_nlb=true}else if(c.type=="comment2"){print("/*"+c.value.replace(/[@#]__PURE__/g," ")+"*/");last_nlb=false}});if(!last_nlb){if(start.nlb){print("\n");indent()}else{space()}}}function append_comments(node,tail){var self=this;var token=node.end;if(!token)return;var comments=token[tail?"comments_before":"comments_after"];if(!comments||comments._dumped===self)return;if(!(node instanceof AST_Statement||all(comments,function(c){return!/comment[134]/.test(c.type)})))return;comments._dumped=self;var insert=OUTPUT.length;comments.filter(comment_filter,node).forEach(function(c,i){need_space=false;if(need_newline_indented){print("\n");indent();need_newline_indented=false}else if(c.nlb&&(i>0||!has_nlb())){print("\n");indent()}else if(i>0||!tail){space()}if(/comment[134]/.test(c.type)){print("//"+c.value.replace(/[@#]__PURE__/g," "));need_newline_indented=true}else if(c.type=="comment2"){print("/*"+c.value.replace(/[@#]__PURE__/g," ")+"*/");need_space=true}});if(OUTPUT.length>insert)newline_insert=insert}var stack=[];return{get:get,toString:get,indent:indent,indentation:function(){return indentation},current_width:function(){return current_col-indentation},should_break:function(){return options.width&&this.current_width()>=options.width},has_parens:function(){return has_parens},newline:newline,print:print,space:space,comma:comma,colon:colon,last:function(){return last},semicolon:semicolon,force_semicolon:force_semicolon,to_utf8:to_utf8,print_name:function(name){print(make_name(name))},print_string:function(str,quote,escape_directive){var encoded=encode_string(str,quote);if(escape_directive===true&&encoded.indexOf("\\")===-1){if(!EXPECT_DIRECTIVE.test(OUTPUT)){force_semicolon()}force_semicolon()}print(encoded)},encode_string:encode_string,next_indent:next_indent,with_indent:with_indent,with_block:with_block,with_parens:with_parens,with_square:with_square,add_mapping:add_mapping,option:function(opt){return options[opt]},prepend_comments:readonly?noop:prepend_comments,append_comments:readonly||comment_filter===return_false?noop:append_comments,line:function(){return current_line},col:function(){return current_col},pos:function(){return current_pos},push_node:function(node){stack.push(node)},pop_node:options.preserve_line?function(){var node=stack.pop();if(node.start&&node.start.line>current_line){insert_newlines(node.start.line-current_line)}}:function(){stack.pop()},parent:function(n){return stack[stack.length-2-(n||0)]}}}(function(){function DEFPRINT(nodetype,generator){nodetype.DEFMETHOD("_codegen",generator)}var in_directive=false;var active_scope=null;var use_asm=null;AST_Node.DEFMETHOD("print",function(stream,force_parens){var self=this,generator=self._codegen;if(self instanceof AST_Scope){active_scope=self}else if(!use_asm&&self instanceof AST_Directive&&self.value=="use asm"){use_asm=active_scope}function doit(){stream.prepend_comments(self);self.add_source_map(stream);generator(self,stream);stream.append_comments(self)}stream.push_node(self);if(force_parens||self.needs_parens(stream)){stream.with_parens(doit)}else{doit()}stream.pop_node();if(self===use_asm){use_asm=null}});AST_Node.DEFMETHOD("_print",AST_Node.prototype.print);AST_Node.DEFMETHOD("print_to_string",function(options){var s=OutputStream(options);this.print(s);return s.get()});function PARENS(nodetype,func){if(Array.isArray(nodetype)){nodetype.forEach(function(nodetype){PARENS(nodetype,func)})}else{nodetype.DEFMETHOD("needs_parens",func)}}PARENS(AST_Node,return_false);PARENS(AST_Function,function(output){if(!output.has_parens()&&first_in_statement(output))return true;if(output.option("webkit")){var p=output.parent();if(p instanceof AST_PropAccess&&p.expression===this)return true}if(output.option("wrap_iife")){var p=output.parent();if(p instanceof AST_Call&&p.expression===this)return true}});PARENS(AST_Object,function(output){return!output.has_parens()&&first_in_statement(output)});PARENS(AST_Unary,function(output){var p=output.parent();return p instanceof AST_PropAccess&&p.expression===this||p instanceof AST_Call&&p.expression===this});PARENS(AST_Sequence,function(output){var p=output.parent();return p instanceof AST_Call||p instanceof AST_Unary||p instanceof AST_Binary||p instanceof AST_VarDef||p instanceof AST_PropAccess||p instanceof AST_Array||p instanceof AST_ObjectProperty||p instanceof AST_Conditional});PARENS(AST_Binary,function(output){var p=output.parent();if(p instanceof AST_Call&&p.expression===this)return true;if(p instanceof AST_Unary)return true;if(p instanceof AST_PropAccess&&p.expression===this)return true;if(p instanceof AST_Binary){var po=p.operator,pp=PRECEDENCE[po];var so=this.operator,sp=PRECEDENCE[so];if(pp>sp||pp==sp&&this===p.right){return true}}});PARENS(AST_PropAccess,function(output){var p=output.parent();if(p instanceof AST_New&&p.expression===this){var parens=false;this.walk(new TreeWalker(function(node){if(parens||node instanceof AST_Scope)return true;if(node instanceof AST_Call){parens=true;return true}}));return parens}});PARENS(AST_Call,function(output){var p=output.parent();if(p instanceof AST_New&&p.expression===this)return true;if(output.option("webkit")){var g=output.parent(1);return this.expression instanceof AST_Function&&p instanceof AST_PropAccess&&p.expression===this&&g instanceof AST_Assign&&g.left===p}});PARENS(AST_New,function(output){var p=output.parent();if(!need_constructor_parens(this,output)&&(p instanceof AST_PropAccess||p instanceof AST_Call&&p.expression===this))return true});PARENS(AST_Number,function(output){var p=output.parent();if(p instanceof AST_PropAccess&&p.expression===this){var value=this.getValue();if(value<0||/^0/.test(make_num(value))){return true}}});PARENS([AST_Assign,AST_Conditional],function(output){var p=output.parent();if(p instanceof AST_Unary)return true;if(p instanceof AST_Binary&&!(p instanceof AST_Assign))return true;if(p instanceof AST_Call&&p.expression===this)return true;if(p instanceof AST_Conditional&&p.condition===this)return true;if(p instanceof AST_PropAccess&&p.expression===this)return true});DEFPRINT(AST_Directive,function(self,output){output.print_string(self.value,self.quote);output.semicolon()});DEFPRINT(AST_Debugger,function(self,output){output.print("debugger");output.semicolon()});function display_body(body,is_toplevel,output,allow_directives){var last=body.length-1;in_directive=allow_directives;body.forEach(function(stmt,i){if(in_directive===true&&!(stmt instanceof AST_Directive||stmt instanceof AST_EmptyStatement||stmt instanceof AST_SimpleStatement&&stmt.body instanceof AST_String)){in_directive=false}if(!(stmt instanceof AST_EmptyStatement)){output.indent();stmt.print(output);if(!(i==last&&is_toplevel)){output.newline();if(is_toplevel)output.newline()}}if(in_directive===true&&stmt instanceof AST_SimpleStatement&&stmt.body instanceof AST_String){in_directive=false}});in_directive=false}AST_StatementWithBody.DEFMETHOD("_do_print_body",function(output){force_statement(this.body,output)});DEFPRINT(AST_Statement,function(self,output){self.body.print(output);output.semicolon()});DEFPRINT(AST_Toplevel,function(self,output){display_body(self.body,true,output,true);output.print("")});DEFPRINT(AST_LabeledStatement,function(self,output){self.label.print(output);output.colon();self.body.print(output)});DEFPRINT(AST_SimpleStatement,function(self,output){self.body.print(output);output.semicolon()});function print_braced_empty(self,output){output.print("{");output.with_indent(output.next_indent(),function(){output.append_comments(self,true)});output.print("}")}function print_braced(self,output,allow_directives){if(self.body.length>0){output.with_block(function(){display_body(self.body,false,output,allow_directives)})}else print_braced_empty(self,output)}DEFPRINT(AST_BlockStatement,function(self,output){print_braced(self,output)});DEFPRINT(AST_EmptyStatement,function(self,output){output.semicolon()});DEFPRINT(AST_Do,function(self,output){output.print("do");output.space();make_block(self.body,output);output.space();output.print("while");output.space();output.with_parens(function(){self.condition.print(output)});output.semicolon()});DEFPRINT(AST_While,function(self,output){output.print("while");output.space();output.with_parens(function(){self.condition.print(output)});output.space();self._do_print_body(output)});DEFPRINT(AST_For,function(self,output){output.print("for");output.space();output.with_parens(function(){if(self.init){if(self.init instanceof AST_Definitions){self.init.print(output)}else{parenthesize_for_noin(self.init,output,true)}output.print(";");output.space()}else{output.print(";")}if(self.condition){self.condition.print(output);output.print(";");output.space()}else{output.print(";")}if(self.step){self.step.print(output)}});output.space();self._do_print_body(output)});DEFPRINT(AST_ForIn,function(self,output){output.print("for");output.space();output.with_parens(function(){self.init.print(output);output.space();output.print("in");output.space();self.object.print(output)});output.space();self._do_print_body(output)});DEFPRINT(AST_With,function(self,output){output.print("with");output.space();output.with_parens(function(){self.expression.print(output)});output.space();self._do_print_body(output)});AST_Lambda.DEFMETHOD("_do_print",function(output,nokeyword){var self=this;if(!nokeyword){output.print("function")}if(self.name){output.space();self.name.print(output)}output.with_parens(function(){self.argnames.forEach(function(arg,i){if(i)output.comma();arg.print(output)})});output.space();print_braced(self,output,true)});DEFPRINT(AST_Lambda,function(self,output){self._do_print(output)});function print_jump(output,kind,target){output.print(kind);if(target){output.space();target.print(output)}output.semicolon()}DEFPRINT(AST_Return,function(self,output){print_jump(output,"return",self.value)});DEFPRINT(AST_Throw,function(self,output){print_jump(output,"throw",self.value)});DEFPRINT(AST_Break,function(self,output){print_jump(output,"break",self.label)});DEFPRINT(AST_Continue,function(self,output){print_jump(output,"continue",self.label)});function make_then(self,output){var b=self.body;if(output.option("braces")||output.option("ie8")&&b instanceof AST_Do)return make_block(b,output);if(!b)return output.force_semicolon();while(true){if(b instanceof AST_If){if(!b.alternative){make_block(self.body,output);return}b=b.alternative}else if(b instanceof AST_StatementWithBody){b=b.body}else break}force_statement(self.body,output)}DEFPRINT(AST_If,function(self,output){output.print("if");output.space();output.with_parens(function(){self.condition.print(output)});output.space();if(self.alternative){make_then(self,output);output.space();output.print("else");output.space();if(self.alternative instanceof AST_If)self.alternative.print(output);else force_statement(self.alternative,output)}else{self._do_print_body(output)}});DEFPRINT(AST_Switch,function(self,output){output.print("switch");output.space();output.with_parens(function(){self.expression.print(output)});output.space();var last=self.body.length-1;if(last<0)print_braced_empty(self,output);else output.with_block(function(){self.body.forEach(function(branch,i){output.indent(true);branch.print(output);if(i<last&&branch.body.length>0)output.newline()})})});AST_SwitchBranch.DEFMETHOD("_do_print_body",function(output){output.newline();this.body.forEach(function(stmt){output.indent();stmt.print(output);output.newline()})});DEFPRINT(AST_Default,function(self,output){output.print("default:");self._do_print_body(output)});DEFPRINT(AST_Case,function(self,output){output.print("case");output.space();self.expression.print(output);output.print(":");self._do_print_body(output)});DEFPRINT(AST_Try,function(self,output){output.print("try");output.space();print_braced(self,output);if(self.bcatch){output.space();self.bcatch.print(output)}if(self.bfinally){output.space();self.bfinally.print(output)}});DEFPRINT(AST_Catch,function(self,output){output.print("catch");output.space();output.with_parens(function(){self.argname.print(output)});output.space();print_braced(self,output)});DEFPRINT(AST_Finally,function(self,output){output.print("finally");output.space();print_braced(self,output)});DEFPRINT(AST_Var,function(self,output){output.print("var");output.space();self.definitions.forEach(function(def,i){if(i)output.comma();def.print(output)});var p=output.parent();if(p&&p.init!==self||!(p instanceof AST_For||p instanceof AST_ForIn))output.semicolon()});function parenthesize_for_noin(node,output,noin){var parens=false;if(noin)node.walk(new TreeWalker(function(node){if(parens||node instanceof AST_Scope)return true;if(node instanceof AST_Binary&&node.operator=="in"){parens=true;return true}}));node.print(output,parens)}DEFPRINT(AST_VarDef,function(self,output){self.name.print(output);if(self.value){output.space();output.print("=");output.space();var p=output.parent(1);var noin=p instanceof AST_For||p instanceof AST_ForIn;parenthesize_for_noin(self.value,output,noin)}});DEFPRINT(AST_Call,function(self,output){self.expression.print(output);if(self instanceof AST_New&&!need_constructor_parens(self,output))return;if(self.expression instanceof AST_Call||self.expression instanceof AST_Lambda){output.add_mapping(self.start)}output.with_parens(function(){self.args.forEach(function(expr,i){if(i)output.comma();expr.print(output)})})});DEFPRINT(AST_New,function(self,output){output.print("new");output.space();AST_Call.prototype._codegen(self,output)});DEFPRINT(AST_Sequence,function(self,output){self.expressions.forEach(function(node,index){if(index>0){output.comma();if(output.should_break()){output.newline();output.indent()}}node.print(output)})});DEFPRINT(AST_Dot,function(self,output){var expr=self.expression;expr.print(output);var prop=self.property;if(output.option("ie8")&&RESERVED_WORDS[prop]){output.print("[");output.add_mapping(self.end);output.print_string(prop);output.print("]")}else{if(expr instanceof AST_Number&&expr.getValue()>=0){if(!/[xa-f.)]/i.test(output.last())){output.print(".")}}output.print(".");output.add_mapping(self.end);output.print_name(prop)}});DEFPRINT(AST_Sub,function(self,output){self.expression.print(output);output.print("[");self.property.print(output);output.print("]")});DEFPRINT(AST_UnaryPrefix,function(self,output){var op=self.operator;output.print(op);if(/^[a-z]/i.test(op)||/[+-]$/.test(op)&&self.expression instanceof AST_UnaryPrefix&&/^[+-]/.test(self.expression.operator)){output.space()}self.expression.print(output)});DEFPRINT(AST_UnaryPostfix,function(self,output){self.expression.print(output);output.print(self.operator)});DEFPRINT(AST_Binary,function(self,output){var op=self.operator;self.left.print(output);if(op[0]==">"&&self.left instanceof AST_UnaryPostfix&&self.left.operator=="--"){output.print(" ")}else{output.space()}output.print(op);if((op=="<"||op=="<<")&&self.right instanceof AST_UnaryPrefix&&self.right.operator=="!"&&self.right.expression instanceof AST_UnaryPrefix&&self.right.expression.operator=="--"){output.print(" ")}else{output.space()}self.right.print(output)});DEFPRINT(AST_Conditional,function(self,output){self.condition.print(output);output.space();output.print("?");output.space();self.consequent.print(output);output.space();output.colon();self.alternative.print(output)});DEFPRINT(AST_Array,function(self,output){output.with_square(function(){var a=self.elements,len=a.length;if(len>0)output.space();a.forEach(function(exp,i){if(i)output.comma();exp.print(output);if(i===len-1&&exp instanceof AST_Hole)output.comma()});if(len>0)output.space()})});DEFPRINT(AST_Object,function(self,output){if(self.properties.length>0)output.with_block(function(){self.properties.forEach(function(prop,i){if(i){output.print(",");output.newline()}output.indent();prop.print(output)});output.newline()});else print_braced_empty(self,output)});function print_property_name(key,quote,output){if(output.option("quote_keys")){output.print_string(key)}else if(""+ +key==key&&key>=0){output.print(make_num(key))}else if(RESERVED_WORDS[key]?!output.option("ie8"):is_identifier_string(key)){if(quote&&output.option("keep_quoted_props")){output.print_string(key,quote)}else{output.print_name(key)}}else{output.print_string(key,quote)}}DEFPRINT(AST_ObjectKeyVal,function(self,output){print_property_name(self.key,self.quote,output);output.colon();self.value.print(output)});AST_ObjectProperty.DEFMETHOD("_print_getter_setter",function(type,output){output.print(type);output.space();print_property_name(this.key.name,this.quote,output);this.value._do_print(output,true)});DEFPRINT(AST_ObjectSetter,function(self,output){self._print_getter_setter("set",output)});DEFPRINT(AST_ObjectGetter,function(self,output){self._print_getter_setter("get",output)});DEFPRINT(AST_Symbol,function(self,output){var def=self.definition();output.print_name(def?def.mangled_name||def.name:self.name)});DEFPRINT(AST_Hole,noop);DEFPRINT(AST_This,function(self,output){output.print("this")});DEFPRINT(AST_Constant,function(self,output){output.print(self.getValue())});DEFPRINT(AST_String,function(self,output){output.print_string(self.getValue(),self.quote,in_directive)});DEFPRINT(AST_Number,function(self,output){if(use_asm&&self.start&&self.start.raw!=null){output.print(self.start.raw)}else{output.print(make_num(self.getValue()))}});DEFPRINT(AST_RegExp,function(self,output){var regexp=self.getValue();var str=regexp.toString();if(regexp.raw_source){str="/"+regexp.raw_source+str.slice(str.lastIndexOf("/"))}str=output.to_utf8(str);output.print(str);var p=output.parent();if(p instanceof AST_Binary&&/^in/.test(p.operator)&&p.left===self)output.print(" ")});function force_statement(stat,output){if(output.option("braces")){make_block(stat,output)}else{if(!stat||stat instanceof AST_EmptyStatement)output.force_semicolon();else stat.print(output)}}function need_constructor_parens(self,output){if(self.args.length>0)return true;return output.option("beautify")}function best_of(a){var best=a[0],len=best.length;for(var i=1;i<a.length;++i){if(a[i].length<len){best=a[i];len=best.length}}return best}function make_num(num){var str=num.toString(10).replace(/^0\./,".").replace("e+","e");var candidates=[str];if(Math.floor(num)===num){if(num<0){candidates.push("-0x"+(-num).toString(16).toLowerCase())}else{candidates.push("0x"+num.toString(16).toLowerCase())}}var match,len,digits;if(match=/^\.0+/.exec(str)){len=match[0].length;digits=str.slice(len);candidates.push(digits+"e-"+(digits.length+len-1))}else if(match=/0+$/.exec(str)){len=match[0].length;candidates.push(str.slice(0,-len)+"e"+len)}else if(match=/^(\d)\.(\d+)e(-?\d+)$/.exec(str)){candidates.push(match[1]+match[2]+"e"+(match[3]-match[2].length))}return best_of(candidates)}function make_block(stmt,output){if(!stmt||stmt instanceof AST_EmptyStatement)output.print("{}");else if(stmt instanceof AST_BlockStatement)stmt.print(output);else output.with_block(function(){output.indent();stmt.print(output);output.newline()})}function DEFMAP(nodetype,generator){nodetype.forEach(function(nodetype){nodetype.DEFMETHOD("add_source_map",generator)})}DEFMAP([AST_Node,AST_LabeledStatement,AST_Toplevel],noop);DEFMAP([AST_Array,AST_BlockStatement,AST_Catch,AST_Constant,AST_Debugger,AST_Definitions,AST_Directive,AST_Finally,AST_Jump,AST_Lambda,AST_New,AST_Object,AST_StatementWithBody,AST_Symbol,AST_Switch,AST_SwitchBranch,AST_Try],function(output){output.add_mapping(this.start)});DEFMAP([AST_ObjectGetter,AST_ObjectSetter],function(output){output.add_mapping(this.start,this.key.name)});DEFMAP([AST_ObjectProperty],function(output){output.add_mapping(this.start,this.key)})})();"use strict";function Compressor(options,false_by_default){if(!(this instanceof Compressor))return new Compressor(options,false_by_default);TreeTransformer.call(this,this.before,this.after);this.options=defaults(options,{arguments:!false_by_default,assignments:!false_by_default,booleans:!false_by_default,collapse_vars:!false_by_default,comparisons:!false_by_default,conditionals:!false_by_default,dead_code:!false_by_default,directives:!false_by_default,drop_console:false,drop_debugger:!false_by_default,evaluate:!false_by_default,expression:false,global_defs:false,hoist_funs:false,hoist_props:!false_by_default,hoist_vars:false,ie8:false,if_return:!false_by_default,inline:!false_by_default,join_vars:!false_by_default,keep_fargs:true,keep_fnames:false,keep_infinity:false,loops:!false_by_default,negate_iife:!false_by_default,passes:1,properties:!false_by_default,pure_getters:!false_by_default&&"strict",pure_funcs:null,reduce_funcs:!false_by_default,reduce_vars:!false_by_default,sequences:!false_by_default,side_effects:!false_by_default,switches:!false_by_default,top_retain:null,toplevel:!!(options&&options["top_retain"]),typeofs:!false_by_default,unsafe:false,unsafe_comps:false,unsafe_Function:false,unsafe_math:false,unsafe_proto:false,unsafe_regexp:false,unsafe_undefined:false,unused:!false_by_default,warnings:false},true);var global_defs=this.options["global_defs"];if(typeof global_defs=="object")for(var key in global_defs){if(/^@/.test(key)&&HOP(global_defs,key)){global_defs[key.slice(1)]=parse(global_defs[key],{expression:true})}}if(this.options["inline"]===true)this.options["inline"]=3;var pure_funcs=this.options["pure_funcs"];if(typeof pure_funcs=="function"){this.pure_funcs=pure_funcs}else if(typeof pure_funcs=="string"){this.pure_funcs=function(node){return pure_funcs!==node.expression.print_to_string()}}else if(Array.isArray(pure_funcs)){this.pure_funcs=function(node){return pure_funcs.indexOf(node.expression.print_to_string())<0}}else{this.pure_funcs=return_true}var top_retain=this.options["top_retain"];if(top_retain instanceof RegExp){this.top_retain=function(def){return top_retain.test(def.name)}}else if(typeof top_retain=="function"){this.top_retain=top_retain}else if(top_retain){if(typeof top_retain=="string"){top_retain=top_retain.split(/,/)}this.top_retain=function(def){return top_retain.indexOf(def.name)>=0}}var toplevel=this.options["toplevel"];this.toplevel=typeof toplevel=="string"?{funcs:/funcs/.test(toplevel),vars:/vars/.test(toplevel)}:{funcs:toplevel,vars:toplevel};var sequences=this.options["sequences"];this.sequences_limit=sequences==1?800:sequences|0;this.warnings_produced={}}Compressor.prototype=new TreeTransformer;merge(Compressor.prototype,{option:function(key){return this.options[key]},exposed:function(def){if(def.global)for(var i=0,len=def.orig.length;i<len;i++)if(!this.toplevel[def.orig[i]instanceof AST_SymbolDefun?"funcs":"vars"])return true;return false},compress:function(node){node=node.resolve_defines(this);if(this.option("expression")){node.process_expression(true)}var passes=+this.options.passes||1;var min_count=1/0;var stopping=false;var mangle={ie8:this.option("ie8")};for(var pass=0;pass<passes;pass++){node.figure_out_scope(mangle);if(pass>0||this.option("reduce_vars"))node.reset_opt_flags(this);node=node.transform(this);if(passes>1){var count=0;node.walk(new TreeWalker(function(){count++}));this.info("pass "+pass+": last_count: "+min_count+", count: "+count);if(count<min_count){min_count=count;stopping=false}else if(stopping){break}else{stopping=true}}}if(this.option("expression")){node.process_expression(false)}return node},info:function(){if(this.options.warnings=="verbose"){AST_Node.warn.apply(AST_Node,arguments)}},warn:function(text,props){if(this.options.warnings){var message=string_template(text,props);if(!(message in this.warnings_produced)){this.warnings_produced[message]=true;AST_Node.warn.apply(AST_Node,arguments)}}},clear_warnings:function(){this.warnings_produced={}},before:function(node,descend,in_list){if(node._squeezed)return node;var is_scope=node instanceof AST_Scope;if(is_scope){node.hoist_properties(this);node.hoist_declarations(this)}descend(node,this);descend(node,this);var opt=node.optimize(this);if(is_scope){opt.drop_unused(this);descend(opt,this)}if(opt===node)opt._squeezed=true;return opt}});(function(OPT){OPT(AST_Node,function(self,compressor){return self});AST_Node.DEFMETHOD("equivalent_to",function(node){return this.TYPE==node.TYPE&&this.print_to_string()==node.print_to_string()});AST_Scope.DEFMETHOD("process_expression",function(insert,compressor){var self=this;var tt=new TreeTransformer(function(node){if(insert&&node instanceof AST_SimpleStatement){return make_node(AST_Return,node,{value:node.body})}if(!insert&&node instanceof AST_Return){if(compressor){var value=node.value&&node.value.drop_side_effect_free(compressor,true);return value?make_node(AST_SimpleStatement,node,{body:value}):make_node(AST_EmptyStatement,node)}return make_node(AST_SimpleStatement,node,{body:node.value||make_node(AST_UnaryPrefix,node,{operator:"void",expression:make_node(AST_Number,node,{value:0})})})}if(node instanceof AST_Lambda&&node!==self){return node}if(node instanceof AST_Block){var index=node.body.length-1;if(index>=0){node.body[index]=node.body[index].transform(tt)}}else if(node instanceof AST_If){node.body=node.body.transform(tt);if(node.alternative){node.alternative=node.alternative.transform(tt)}}else if(node instanceof AST_With){node.body=node.body.transform(tt)}return node});self.transform(tt)});function read_property(obj,key){key=get_value(key);if(key instanceof AST_Node)return;var value;if(obj instanceof AST_Array){var elements=obj.elements;if(key=="length")return make_node_from_constant(elements.length,obj);if(typeof key=="number"&&key in elements)value=elements[key]}else if(obj instanceof AST_Object){key=""+key;var props=obj.properties;for(var i=props.length;--i>=0;){var prop=props[i];if(!(prop instanceof AST_ObjectKeyVal))return;if(!value&&props[i].key===key)value=props[i].value}}return value instanceof AST_SymbolRef&&value.fixed_value()||value}function is_modified(compressor,tw,node,value,level,immutable){var parent=tw.parent(level);var lhs=is_lhs(node,parent);if(lhs)return lhs;if(!immutable&&parent instanceof AST_Call&&parent.expression===node&&!parent.is_expr_pure(compressor)&&(!(value instanceof AST_Function)||!(parent instanceof AST_New)&&value.contains_this())){return true}if(parent instanceof AST_Array){return is_modified(compressor,tw,parent,parent,level+1)}if(parent instanceof AST_ObjectKeyVal&&node===parent.value){var obj=tw.parent(level+1);return is_modified(compressor,tw,obj,obj,level+2)}if(parent instanceof AST_PropAccess&&parent.expression===node){var prop=read_property(value,parent.property);return!immutable&&is_modified(compressor,tw,parent,prop,level+1)}}(function(def){def(AST_Node,noop);function reset_def(tw,compressor,def){def.assignments=0;def.chained=false;def.direct_access=false;def.escaped=false;def.fixed=!def.scope.pinned()&&!compressor.exposed(def)&&!(def.init instanceof AST_Function&&def.init!==def.scope)&&def.init;if(def.fixed instanceof AST_Defun&&!all(def.references,function(ref){var scope=ref.scope;do{if(def.scope===scope)return true}while(scope instanceof AST_Function&&(scope=scope.parent_scope))})){tw.defun_ids[def.id]=false}def.recursive_refs=0;def.references=[];def.should_replace=undefined;def.single_use=undefined}function reset_variables(tw,compressor,scope){scope.variables.each(function(def){reset_def(tw,compressor,def);if(def.fixed===null){def.safe_ids=tw.safe_ids;mark(tw,def,true)}else if(def.fixed){tw.loop_ids[def.id]=tw.in_loop;mark(tw,def,true)}});scope.may_call_this=function(){scope.may_call_this=noop;if(!scope.contains_this())return;scope.functions.each(function(def){if(def.init instanceof AST_Defun&&!(def.id in tw.defun_ids)){tw.defun_ids[def.id]=false}})}}function mark_defun(tw,def){if(def.id in tw.defun_ids){var marker=tw.defun_ids[def.id];if(!marker)return;var visited=tw.defun_visited[def.id];if(marker===tw.safe_ids){if(!visited)return def.fixed}else if(visited){def.init.enclosed.forEach(function(d){if(def.init.variables.get(d.name)===d)return;if(!safe_to_read(tw,d))d.fixed=false})}else{tw.defun_ids[def.id]=false}}else{if(!tw.in_loop){tw.defun_ids[def.id]=tw.safe_ids;return def.fixed}tw.defun_ids[def.id]=false}}function walk_defuns(tw,scope){scope.functions.each(function(def){if(def.init instanceof AST_Defun&&!tw.defun_visited[def.id]){tw.defun_ids[def.id]=tw.safe_ids;def.init.walk(tw)}})}function push(tw){tw.safe_ids=Object.create(tw.safe_ids)}function pop(tw){tw.safe_ids=Object.getPrototypeOf(tw.safe_ids)}function mark(tw,def,safe){tw.safe_ids[def.id]=safe}function safe_to_read(tw,def){if(def.single_use=="m")return false;if(tw.safe_ids[def.id]){if(def.fixed==null){var orig=def.orig[0];if(orig instanceof AST_SymbolFunarg||orig.name=="arguments")return false;def.fixed=make_node(AST_Undefined,orig)}return true}return def.fixed instanceof AST_Defun}function safe_to_assign(tw,def,scope,value){if(def.fixed===undefined)return true;if(def.fixed===null&&def.safe_ids){def.safe_ids[def.id]=false;delete def.safe_ids;return true}if(!HOP(tw.safe_ids,def.id))return false;if(!safe_to_read(tw,def))return false;if(def.fixed===false)return false;if(def.fixed!=null&&(!value||def.references.length>def.assignments))return false;if(def.fixed instanceof AST_Defun){return value instanceof AST_Node&&def.fixed.parent_scope===scope}return all(def.orig,function(sym){return!(sym instanceof AST_SymbolDefun||sym instanceof AST_SymbolLambda)})}function ref_once(tw,compressor,def){return compressor.option("unused")&&!def.scope.pinned()&&def.references.length-def.recursive_refs==1&&tw.loop_ids[def.id]===tw.in_loop}function is_immutable(value){if(!value)return false;return value.is_constant()||value instanceof AST_Lambda||value instanceof AST_This}function mark_escaped(tw,d,scope,node,value,level,depth){var parent=tw.parent(level);if(value&&value.is_constant())return;if(parent instanceof AST_Assign&&parent.operator=="="&&node===parent.right||parent instanceof AST_Call&&(node!==parent.expression||parent instanceof AST_New)||parent instanceof AST_Exit&&node===parent.value&&node.scope!==d.scope||parent instanceof AST_VarDef&&node===parent.value){if(depth>1&&!(value&&value.is_constant_expression(scope)))depth=1;if(!d.escaped||d.escaped>depth)d.escaped=depth;return}else if(parent instanceof AST_Array||parent instanceof AST_Binary&&lazy_op[parent.operator]||parent instanceof AST_Conditional&&node!==parent.condition||parent instanceof AST_Sequence&&node===parent.tail_node()){mark_escaped(tw,d,scope,parent,parent,level+1,depth)}else if(parent instanceof AST_ObjectKeyVal&&node===parent.value){var obj=tw.parent(level+1);mark_escaped(tw,d,scope,obj,obj,level+2,depth)}else if(parent instanceof AST_PropAccess&&node===parent.expression){value=read_property(value,parent.property);mark_escaped(tw,d,scope,parent,value,level+1,depth+1);if(value)return}if(level>0)return;if(parent instanceof AST_Sequence&&node!==parent.tail_node())return;if(parent instanceof AST_SimpleStatement)return;d.direct_access=true}function mark_assignment_to_arguments(node){if(!(node instanceof AST_Sub))return;var expr=node.expression;var prop=node.property;if(expr instanceof AST_SymbolRef&&expr.name=="arguments"&&prop instanceof AST_Number){expr.definition().reassigned=true}}var suppressor=new TreeWalker(function(node){if(!(node instanceof AST_Symbol))return;var d=node.definition();if(!d)return;if(node instanceof AST_SymbolRef)d.references.push(node);d.fixed=false});def(AST_Accessor,function(tw,descend,compressor){push(tw);reset_variables(tw,compressor,this);descend();pop(tw);walk_defuns(tw,this);return true});def(AST_Assign,function(tw,descend,compressor){var node=this;var sym=node.left;if(!(sym instanceof AST_SymbolRef)){mark_assignment_to_arguments(sym);return}var d=sym.definition();var safe=safe_to_assign(tw,d,sym.scope,node.right);d.assignments++;var fixed=d.fixed;if(!fixed&&node.operator!="=")return;var eq=node.operator=="=";var value=eq?node.right:node;if(is_modified(compressor,tw,node,value,0))return;if(!eq)d.chained=true;d.fixed=eq?function(){return node.right}:function(){return make_node(AST_Binary,node,{operator:node.operator.slice(0,-1),left:fixed instanceof AST_Node?fixed:fixed(),right:node.right})};if(!safe)return;d.references.push(sym);mark(tw,d,false);node.right.walk(tw);mark(tw,d,true);mark_escaped(tw,d,sym.scope,node,value,0,1);return true});def(AST_Binary,function(tw){if(!lazy_op[this.operator])return;this.left.walk(tw);push(tw);this.right.walk(tw);pop(tw);return true});def(AST_Call,function(tw,descend){tw.find_parent(AST_Scope).may_call_this();var exp=this.expression;if(!(exp instanceof AST_SymbolRef))return;var def=exp.definition();if(!(def.fixed instanceof AST_Defun))return;var defun=mark_defun(tw,def);if(!defun)return;descend();defun.walk(tw);return true});def(AST_Case,function(tw){push(tw);this.expression.walk(tw);pop(tw);push(tw);walk_body(this,tw);pop(tw);return true});def(AST_Conditional,function(tw){this.condition.walk(tw);push(tw);this.consequent.walk(tw);pop(tw);push(tw);this.alternative.walk(tw);pop(tw);return true});def(AST_Default,function(tw,descend){push(tw);descend();pop(tw);return true});def(AST_Defun,function(tw,descend,compressor){var id=this.name.definition().id;if(tw.defun_visited[id])return true;if(tw.defun_ids[id]!==tw.safe_ids)return true;tw.defun_visited[id]=true;this.inlined=false;push(tw);reset_variables(tw,compressor,this);descend();pop(tw);walk_defuns(tw,this);return true});def(AST_Do,function(tw){var saved_loop=tw.in_loop;tw.in_loop=this;push(tw);this.body.walk(tw);if(has_break_or_continue(this)){pop(tw);push(tw)}this.condition.walk(tw);pop(tw);tw.in_loop=saved_loop;return true});def(AST_For,function(tw){if(this.init)this.init.walk(tw);var saved_loop=tw.in_loop;tw.in_loop=this;push(tw);if(this.condition)this.condition.walk(tw);this.body.walk(tw);if(this.step){if(has_break_or_continue(this)){pop(tw);push(tw)}this.step.walk(tw)}pop(tw);tw.in_loop=saved_loop;return true});def(AST_ForIn,function(tw){this.init.walk(suppressor);this.object.walk(tw);var saved_loop=tw.in_loop;tw.in_loop=this;push(tw);this.body.walk(tw);pop(tw);tw.in_loop=saved_loop;return true});def(AST_Function,function(tw,descend,compressor){var node=this;node.inlined=false;push(tw);reset_variables(tw,compressor,node);var iife;if(!node.name&&(iife=tw.parent())instanceof AST_Call&&iife.expression===node){node.argnames.forEach(function(arg,i){var d=arg.definition();if(d.fixed===undefined&&(!node.uses_arguments||tw.has_directive("use strict"))){d.fixed=function(){return iife.args[i]||make_node(AST_Undefined,iife)};tw.loop_ids[d.id]=tw.in_loop;mark(tw,d,true)}else{d.fixed=false}})}descend();pop(tw);walk_defuns(tw,node);return true});def(AST_If,function(tw){this.condition.walk(tw);push(tw);this.body.walk(tw);pop(tw);if(this.alternative){push(tw);this.alternative.walk(tw);pop(tw)}return true});def(AST_LabeledStatement,function(tw){push(tw);this.body.walk(tw);pop(tw);return true});def(AST_SymbolCatch,function(){this.definition().fixed=false});def(AST_SymbolRef,function(tw,descend,compressor){var d=this.definition();d.references.push(this);if(d.references.length==1&&!d.fixed&&d.orig[0]instanceof AST_SymbolDefun){tw.loop_ids[d.id]=tw.in_loop}var value;if(d.fixed===undefined||!safe_to_read(tw,d)){d.fixed=false}else if(d.fixed){value=this.fixed_value();if(value instanceof AST_Lambda&&recursive_ref(tw,d)){d.recursive_refs++}else if(value&&ref_once(tw,compressor,d)){d.single_use=value instanceof AST_Lambda&&!value.pinned()||d.scope===this.scope&&value.is_constant_expression()}else{d.single_use=false}if(is_modified(compressor,tw,this,value,0,is_immutable(value))){if(d.single_use){d.single_use="m"}else{d.fixed=false}}}mark_escaped(tw,d,this.scope,this,value,0,1);var parent;if(d.fixed instanceof AST_Defun&&!((parent=tw.parent())instanceof AST_Call&&parent.expression===this)){var defun=mark_defun(tw,d);if(defun)defun.walk(tw)}});def(AST_Toplevel,function(tw,descend,compressor){this.globals.each(function(def){reset_def(tw,compressor,def)});push(tw);reset_variables(tw,compressor,this);descend();pop(tw);walk_defuns(tw,this);return true});def(AST_Try,function(tw){push(tw);walk_body(this,tw);pop(tw);if(this.bcatch){push(tw);this.bcatch.walk(tw);pop(tw)}if(this.bfinally)this.bfinally.walk(tw);return true});def(AST_Unary,function(tw,descend){var node=this;if(node.operator!="++"&&node.operator!="--")return;var exp=node.expression;if(!(exp instanceof AST_SymbolRef)){mark_assignment_to_arguments(exp);return}var d=exp.definition();var safe=safe_to_assign(tw,d,exp.scope,true);d.assignments++;var fixed=d.fixed;if(!fixed)return;d.chained=true;d.fixed=function(){return make_node(AST_Binary,node,{operator:node.operator.slice(0,-1),left:make_node(AST_UnaryPrefix,node,{operator:"+",expression:fixed instanceof AST_Node?fixed:fixed()}),right:make_node(AST_Number,node,{value:1})})};if(!safe)return;d.references.push(exp);mark(tw,d,true);return true});def(AST_VarDef,function(tw,descend){var node=this;var d=node.name.definition();if(node.value){if(safe_to_assign(tw,d,node.name.scope,node.value)){d.fixed=function(){return node.value};tw.loop_ids[d.id]=tw.in_loop;mark(tw,d,false);descend();mark(tw,d,true);return true}else{d.fixed=false}}});def(AST_While,function(tw,descend){var saved_loop=tw.in_loop;tw.in_loop=this;push(tw);descend();pop(tw);tw.in_loop=saved_loop;return true})})(function(node,func){node.DEFMETHOD("reduce_vars",func)});AST_Toplevel.DEFMETHOD("reset_opt_flags",function(compressor){var tw=new TreeWalker(compressor.option("reduce_vars")?function(node,descend){node._squeezed=false;node._optimized=false;return node.reduce_vars(tw,descend,compressor)}:function(node){node._squeezed=false;node._optimized=false});tw.defun_ids=Object.create(null);tw.defun_visited=Object.create(null);tw.in_loop=null;tw.loop_ids=Object.create(null);tw.safe_ids=Object.create(null);this.walk(tw)});AST_Symbol.DEFMETHOD("fixed_value",function(){var fixed=this.definition().fixed;if(!fixed||fixed instanceof AST_Node)return fixed;return fixed()});AST_SymbolRef.DEFMETHOD("is_immutable",function(){var orig=this.definition().orig;return orig.length==1&&orig[0]instanceof AST_SymbolLambda});function is_lhs_read_only(lhs){if(lhs instanceof AST_This)return true;if(lhs instanceof AST_SymbolRef)return lhs.definition().orig[0]instanceof AST_SymbolLambda;if(lhs instanceof AST_PropAccess){lhs=lhs.expression;if(lhs instanceof AST_SymbolRef){if(lhs.is_immutable())return false;lhs=lhs.fixed_value()}if(!lhs)return true;if(lhs.is_constant())return true;return is_lhs_read_only(lhs)}return false}function find_variable(compressor,name){var scope,i=0;while(scope=compressor.parent(i++)){if(scope instanceof AST_Scope)break;if(scope instanceof AST_Catch){scope=scope.argname.definition().scope;break}}return scope.find_variable(name)}function make_node(ctor,orig,props){if(!props)props={};if(orig){if(!props.start)props.start=orig.start;if(!props.end)props.end=orig.end}return new ctor(props)}function make_sequence(orig,expressions){if(expressions.length==1)return expressions[0];return make_node(AST_Sequence,orig,{expressions:expressions.reduce(merge_sequence,[])})}function make_node_from_constant(val,orig){switch(typeof val){case"string":return make_node(AST_String,orig,{value:val});case"number":if(isNaN(val))return make_node(AST_NaN,orig);if(isFinite(val)){return 1/val<0?make_node(AST_UnaryPrefix,orig,{operator:"-",expression:make_node(AST_Number,orig,{value:-val})}):make_node(AST_Number,orig,{value:val})}return val<0?make_node(AST_UnaryPrefix,orig,{operator:"-",expression:make_node(AST_Infinity,orig)}):make_node(AST_Infinity,orig);case"boolean":return make_node(val?AST_True:AST_False,orig);case"undefined":return make_node(AST_Undefined,orig);default:if(val===null){return make_node(AST_Null,orig,{value:null})}if(val instanceof RegExp){return make_node(AST_RegExp,orig,{value:val})}throw new Error(string_template("Can't handle constant of type: {type}",{type:typeof val}))}}function needs_unbinding(compressor,val){return val instanceof AST_PropAccess||compressor.has_directive("use strict")&&is_undeclared_ref(val)&&val.name=="eval"}function maintain_this_binding(compressor,parent,orig,val){if(parent instanceof AST_UnaryPrefix&&parent.operator=="delete"||parent.TYPE=="Call"&&parent.expression===orig&&needs_unbinding(compressor,val)){return make_sequence(orig,[make_node(AST_Number,orig,{value:0}),val])}return val}function merge_sequence(array,node){if(node instanceof AST_Sequence){array.push.apply(array,node.expressions)}else{array.push(node)}return array}function as_statement_array(thing){if(thing===null)return[];if(thing instanceof AST_BlockStatement)return thing.body;if(thing instanceof AST_EmptyStatement)return[];if(thing instanceof AST_Statement)return[thing];throw new Error("Can't convert thing to statement array")}function is_empty(thing){if(thing===null)return true;if(thing instanceof AST_EmptyStatement)return true;if(thing instanceof AST_BlockStatement)return thing.body.length==0;return false}function loop_body(x){if(x instanceof AST_IterationStatement){return x.body instanceof AST_BlockStatement?x.body:x}return x}function root_expr(prop){while(prop instanceof AST_PropAccess)prop=prop.expression;return prop}function is_iife_call(node){if(node.TYPE!="Call")return false;return node.expression instanceof AST_Function||is_iife_call(node.expression)}function is_undeclared_ref(node){return node instanceof AST_SymbolRef&&node.definition().undeclared}var global_names=makePredicate("Array Boolean clearInterval clearTimeout console Date decodeURI decodeURIComponent encodeURI encodeURIComponent Error escape eval EvalError Function isFinite isNaN JSON Math Number parseFloat parseInt RangeError ReferenceError RegExp Object setInterval setTimeout String SyntaxError TypeError unescape URIError");AST_SymbolRef.DEFMETHOD("is_declared",function(compressor){return!this.definition().undeclared||compressor.option("unsafe")&&global_names[this.name]});var identifier_atom=makePredicate("Infinity NaN undefined");function is_identifier_atom(node){return node instanceof AST_Infinity||node instanceof AST_NaN||node instanceof AST_Undefined}function tighten_body(statements,compressor){var in_loop,in_try,scope;find_loop_scope_try();var CHANGED,max_iter=10;do{CHANGED=false;eliminate_spurious_blocks(statements);if(compressor.option("dead_code")){eliminate_dead_code(statements,compressor)}if(compressor.option("if_return")){handle_if_return(statements,compressor)}if(compressor.sequences_limit>0){sequencesize(statements,compressor);sequencesize_2(statements,compressor)}if(compressor.option("join_vars")){join_consecutive_vars(statements)}if(compressor.option("collapse_vars")){collapse(statements,compressor)}}while(CHANGED&&max_iter-- >0);function find_loop_scope_try(){var node=compressor.self(),level=0;do{if(node instanceof AST_Catch||node instanceof AST_Finally){level++}else if(node instanceof AST_IterationStatement){in_loop=true}else if(node instanceof AST_Scope){scope=node;break}else if(node instanceof AST_Try){in_try=true}}while(node=compressor.parent(level++))}function collapse(statements,compressor){if(scope.pinned())return statements;var args;var candidates=[];var stat_index=statements.length;var scanner=new TreeTransformer(function(node){if(abort)return node;if(!hit){if(node!==hit_stack[hit_index])return node;hit_index++;if(hit_index<hit_stack.length)return handle_custom_scan_order(node);hit=true;stop_after=find_stop(node,0);if(stop_after===node)abort=true;return node}var parent=scanner.parent();if(should_stop(node,parent)){abort=true;return node}if(!stop_if_hit&&in_conditional(node,parent)){stop_if_hit=parent}var hit_rhs;if(can_replace&&!(node instanceof AST_SymbolDeclaration)&&(scan_lhs&&lhs.equivalent_to(node)||scan_rhs&&(hit_rhs=scan_rhs(node,this)))){if(stop_if_hit&&(hit_rhs||!lhs_local||!replace_all)){abort=true;return node}if(is_lhs(node,parent)){if(value_def)replaced++;return node}else{replaced++;if(value_def&&candidate instanceof AST_VarDef)return node}CHANGED=abort=true;compressor.info("Collapsing {name} [{file}:{line},{col}]",{name:node.print_to_string(),file:node.start.file,line:node.start.line,col:node.start.col});if(candidate instanceof AST_UnaryPostfix){return make_node(AST_UnaryPrefix,candidate,candidate)}if(candidate instanceof AST_VarDef){var def=candidate.name.definition();if(def.references.length-def.replaced==1&&!compressor.exposed(def)){def.replaced++;return maintain_this_binding(compressor,parent,node,candidate.value)}return make_node(AST_Assign,candidate,{operator:"=",left:make_node(AST_SymbolRef,candidate.name,candidate.name),right:candidate.value})}candidate.write_only=false;return candidate}var sym;if(is_last_node(node,parent)||may_throw(node)){stop_after=node;if(node instanceof AST_Scope)abort=true}return handle_custom_scan_order(node)},function(node){if(abort)return;if(stop_after===node)abort=true;if(stop_if_hit===node)stop_if_hit=null});var multi_replacer=new TreeTransformer(function(node){if(abort)return node;if(!hit){if(node!==hit_stack[hit_index])return node;hit_index++;if(hit_index<hit_stack.length)return;hit=true;return node}if(node instanceof AST_SymbolRef&&node.name==def.name){if(!--replaced)abort=true;if(is_lhs(node,multi_replacer.parent()))return node;def.replaced++;value_def.replaced--;return candidate.value.clone()}if(node instanceof AST_Default||node instanceof AST_Scope)return node});while(--stat_index>=0){if(stat_index==0&&compressor.option("unused"))extract_args();var hit_stack=[];extract_candidates(statements[stat_index]);while(candidates.length>0){hit_stack=candidates.pop();var hit_index=0;var candidate=hit_stack[hit_stack.length-1];var value_def=null;var stop_after=null;var stop_if_hit=null;var lhs=get_lhs(candidate);var side_effects=lhs&&lhs.has_side_effects(compressor);var scan_lhs=lhs&&!side_effects&&!is_lhs_read_only(lhs);var scan_rhs=foldable(get_rhs(candidate));if(!scan_lhs&&!scan_rhs)continue;var lvalues=get_lvalues(candidate);var lhs_local=is_lhs_local(lhs);if(!side_effects)side_effects=value_has_side_effects(candidate);var replace_all=replace_all_symbols();var may_throw=candidate.may_throw(compressor)?in_try?function(node){return node.has_side_effects(compressor)}:side_effects_external:return_false;var funarg=candidate.name instanceof AST_SymbolFunarg;var hit=funarg;var abort=false,replaced=0,can_replace=!args||!hit;if(!can_replace){for(var j=compressor.self().argnames.lastIndexOf(candidate.name)+1;!abort&&j<args.length;j++){args[j].transform(scanner)}can_replace=true}for(var i=stat_index;!abort&&i<statements.length;i++){statements[i].transform(scanner)}if(value_def){var def=candidate.name.definition();if(abort&&def.references.length-def.replaced>replaced)replaced=false;else{abort=false;hit_index=0;hit=funarg;for(var i=stat_index;!abort&&i<statements.length;i++){statements[i].transform(multi_replacer)}value_def.single_use=false}}if(replaced&&!remove_candidate(candidate))statements.splice(stat_index,1)}}function handle_custom_scan_order(node){if(node instanceof AST_Scope)return node;if(node instanceof AST_Switch){node.expression=node.expression.transform(scanner);for(var i=0,len=node.body.length;!abort&&i<len;i++){var branch=node.body[i];if(branch instanceof AST_Case){if(!hit){if(branch!==hit_stack[hit_index])continue;hit_index++}branch.expression=branch.expression.transform(scanner);if(!replace_all)break}}abort=true;return node}}function should_stop(node,parent){if(parent instanceof AST_For)return node!==parent.init;if(node instanceof AST_Assign){return node.operator!="="&&lhs.equivalent_to(node.left)}if(node instanceof AST_Call){return lhs instanceof AST_PropAccess&&lhs.equivalent_to(node.expression)}if(node instanceof AST_Debugger)return true;if(node instanceof AST_IterationStatement)return!(node instanceof AST_For);if(node instanceof AST_LoopControl)return true;if(node instanceof AST_Try)return true;if(node instanceof AST_With)return true;if(replace_all)return false;return node instanceof AST_SymbolRef&&!node.is_declared(compressor)}function in_conditional(node,parent){if(parent instanceof AST_Binary)return lazy_op[parent.operator]&&parent.left!==node;if(parent instanceof AST_Conditional)return parent.condition!==node;return parent instanceof AST_If&&parent.condition!==node}function is_last_node(node,parent){if(node instanceof AST_Call)return true;if(node instanceof AST_Exit){return side_effects||lhs instanceof AST_PropAccess||may_modify(lhs)}if(node instanceof AST_Function){return compressor.option("ie8")&&node.name&&node.name.name in lvalues}if(node instanceof AST_PropAccess){return side_effects||node.expression.may_throw_on_access(compressor)}if(node instanceof AST_SymbolRef){if(symbol_in_lvalues(node,parent)){return!parent||parent.operator!="="||parent.left!==node}return side_effects&&may_modify(node)}if(node instanceof AST_This)return symbol_in_lvalues(node,parent);if(node instanceof AST_VarDef){if(!node.value)return false;return node.name.name in lvalues||side_effects&&may_modify(node.name)}var sym=is_lhs(node.left,node);if(sym&&sym.name in lvalues)return true;if(sym instanceof AST_PropAccess)return true}function extract_args(){var iife,fn=compressor.self();if(fn instanceof AST_Function&&!fn.name&&!fn.uses_arguments&&!fn.pinned()&&(iife=compressor.parent())instanceof AST_Call&&iife.expression===fn){var fn_strict=compressor.has_directive("use strict");if(fn_strict&&!member(fn_strict,fn.body))fn_strict=false;var len=fn.argnames.length;args=iife.args.slice(len);var names=Object.create(null);for(var i=len;--i>=0;){var sym=fn.argnames[i];var arg=iife.args[i];args.unshift(make_node(AST_VarDef,sym,{name:sym,value:arg}));if(sym.name in names)continue;names[sym.name]=true;if(!arg){arg=make_node(AST_Undefined,sym).transform(compressor)}else if(arg instanceof AST_Lambda&&arg.pinned()){arg=null}else{arg.walk(new TreeWalker(function(node){if(!arg)return true;if(node instanceof AST_SymbolRef&&fn.variables.has(node.name)){var s=node.definition().scope;if(s!==scope)while(s=s.parent_scope){if(s===scope)return true}arg=null}if(node instanceof AST_This&&(fn_strict||!this.find_parent(AST_Scope))){arg=null;return true}}))}if(arg)candidates.unshift([make_node(AST_VarDef,sym,{name:sym,value:arg})])}}}function extract_candidates(expr){hit_stack.push(expr);if(expr instanceof AST_Assign){candidates.push(hit_stack.slice());extract_candidates(expr.left);extract_candidates(expr.right)}else if(expr instanceof AST_Binary){extract_candidates(expr.left);extract_candidates(expr.right)}else if(expr instanceof AST_Call){extract_candidates(expr.expression);expr.args.forEach(extract_candidates)}else if(expr instanceof AST_Case){extract_candidates(expr.expression)}else if(expr instanceof AST_Conditional){extract_candidates(expr.condition);extract_candidates(expr.consequent);extract_candidates(expr.alternative)}else if(expr instanceof AST_Definitions){expr.definitions.forEach(extract_candidates)}else if(expr instanceof AST_Dot){extract_candidates(expr.expression)}else if(expr instanceof AST_DWLoop){extract_candidates(expr.condition);if(!(expr.body instanceof AST_Block)){extract_candidates(expr.body)}}else if(expr instanceof AST_Exit){if(expr.value)extract_candidates(expr.value)}else if(expr instanceof AST_For){if(expr.init)extract_candidates(expr.init);if(expr.condition)extract_candidates(expr.condition);if(expr.step)extract_candidates(expr.step);if(!(expr.body instanceof AST_Block)){extract_candidates(expr.body)}}else if(expr instanceof AST_ForIn){extract_candidates(expr.object);if(!(expr.body instanceof AST_Block)){extract_candidates(expr.body)}}else if(expr instanceof AST_If){extract_candidates(expr.condition);if(!(expr.body instanceof AST_Block)){extract_candidates(expr.body)}if(expr.alternative&&!(expr.alternative instanceof AST_Block)){extract_candidates(expr.alternative)}}else if(expr instanceof AST_Sequence){expr.expressions.forEach(extract_candidates)}else if(expr instanceof AST_SimpleStatement){extract_candidates(expr.body)}else if(expr instanceof AST_Sub){extract_candidates(expr.expression);extract_candidates(expr.property)}else if(expr instanceof AST_Switch){extract_candidates(expr.expression);expr.body.forEach(extract_candidates)}else if(expr instanceof AST_Unary){if(expr.operator=="++"||expr.operator=="--"){candidates.push(hit_stack.slice())}else{extract_candidates(expr.expression)}}else if(expr instanceof AST_VarDef){if(expr.value){var def=expr.name.definition();if(def.references.length>def.replaced){candidates.push(hit_stack.slice())}extract_candidates(expr.value)}}hit_stack.pop()}function find_stop(node,level,write_only){var parent=scanner.parent(level);if(parent instanceof AST_Assign){if(write_only&&!(parent.left instanceof AST_PropAccess||parent.left.name in lvalues)){return find_stop(parent,level+1,write_only)}return node}if(parent instanceof AST_Binary){if(write_only&&(!lazy_op[parent.operator]||parent.left===node)){return find_stop(parent,level+1,write_only)}return node}if(parent instanceof AST_Call)return node;if(parent instanceof AST_Case)return node;if(parent instanceof AST_Conditional){if(write_only&&parent.condition===node){return find_stop(parent,level+1,write_only)}return node}if(parent instanceof AST_Definitions){return find_stop(parent,level+1,true)}if(parent instanceof AST_Exit){return write_only?find_stop(parent,level+1,write_only):node}if(parent instanceof AST_If){if(write_only&&parent.condition===node){return find_stop(parent,level+1,write_only)}return node}if(parent instanceof AST_IterationStatement)return node;if(parent instanceof AST_PropAccess)return node;if(parent instanceof AST_Sequence){return find_stop(parent,level+1,parent.tail_node()!==node)}if(parent instanceof AST_SimpleStatement){return find_stop(parent,level+1,true)}if(parent instanceof AST_Switch)return node;if(parent instanceof AST_Unary)return node;if(parent instanceof AST_VarDef)return node;return null}function mangleable_var(var_def){var value=var_def.value;if(!(value instanceof AST_SymbolRef))return;if(value.name=="arguments")return;var def=value.definition();if(def.undeclared)return;return value_def=def}function get_lhs(expr){if(expr instanceof AST_VarDef){var def=expr.name.definition();if(!member(expr.name,def.orig))return;var referenced=def.references.length-def.replaced;var declared=def.orig.length-def.eliminated;if(declared>1&&!(expr.name instanceof AST_SymbolFunarg)||(referenced>1?mangleable_var(expr):!compressor.exposed(def))){return make_node(AST_SymbolRef,expr.name,expr.name)}}else{return expr[expr instanceof AST_Assign?"left":"expression"]}}function get_rhs(expr){return candidate instanceof AST_Assign&&candidate.operator=="="&&candidate.right}function get_rvalue(expr){return expr[expr instanceof AST_Assign?"right":"value"]}function invariant(expr){if(expr instanceof AST_Array)return false;if(expr instanceof AST_Binary&&lazy_op[expr.operator]){return invariant(expr.left)&&invariant(expr.right)}if(expr instanceof AST_Call)return false;if(expr instanceof AST_Conditional){return invariant(expr.consequent)&&invariant(expr.alternative)}if(expr instanceof AST_Object)return false;return!expr.has_side_effects(compressor)}function foldable(expr){if(!expr)return false;if(expr instanceof AST_SymbolRef){var value=expr.evaluate(compressor);if(value===expr)return rhs_exact_match;return rhs_fuzzy_match(value,rhs_exact_match)}if(expr instanceof AST_This)return rhs_exact_match;if(expr.is_truthy())return rhs_fuzzy_match(true,return_false);if(expr.is_constant()){return rhs_fuzzy_match(expr.evaluate(compressor),rhs_exact_match)}if(!(lhs instanceof AST_SymbolRef))return false;if(!invariant(expr))return false;var circular;var def=lhs.definition();expr.walk(new TreeWalker(function(node){if(circular)return true;if(node instanceof AST_SymbolRef&&node.definition()===def){circular=true}}));return!circular&&rhs_exact_match;function rhs_exact_match(node){return expr.equivalent_to(node)}}function rhs_fuzzy_match(value,fallback){return function(node,tw){if(tw.in_boolean_context()){if(value&&node.is_truthy()&&!node.has_side_effects(compressor)){return true}if(node.is_constant()){return!node.evaluate(compressor)==!value}}return fallback(node)}}function get_lvalues(expr){var lvalues=Object.create(null);if(candidate instanceof AST_VarDef){lvalues[candidate.name.name]=lhs}var tw=new TreeWalker(function(node){var sym=root_expr(node);if(sym instanceof AST_SymbolRef||sym instanceof AST_This){lvalues[sym.name]=lvalues[sym.name]||is_modified(compressor,tw,node,node,0)}});expr.walk(tw);return lvalues}function remove_candidate(expr){if(expr.name instanceof AST_SymbolFunarg){var index=compressor.self().argnames.indexOf(expr.name);var args=compressor.parent().args;if(args[index])args[index]=make_node(AST_Number,args[index],{value:0});return true}var found=false;return statements[stat_index].transform(new TreeTransformer(function(node,descend,in_list){if(found)return node;if(node!==expr&&node.body!==expr)return;if(node instanceof AST_VarDef){found=true;node.value=null;return node}if(in_list){found=true;return MAP.skip}if(!this.parent()){found=true;return null}},function(node){if(node instanceof AST_Sequence)switch(node.expressions.length){case 0:return null;case 1:return node.expressions[0]}}))}function is_lhs_local(lhs){var sym=root_expr(lhs);return sym instanceof AST_SymbolRef&&sym.definition().scope===scope&&!(in_loop&&(sym.name in lvalues&&lvalues[sym.name]!==lhs||candidate instanceof AST_Unary||candidate instanceof AST_Assign&&candidate.operator!="="))}function value_has_side_effects(expr){if(expr instanceof AST_Unary)return false;return get_rvalue(expr).has_side_effects(compressor)}function replace_all_symbols(){if(side_effects)return false;if(value_def)return true;if(lhs instanceof AST_SymbolRef){var def=lhs.definition();if(def.references.length-def.replaced==(candidate instanceof AST_VarDef?1:2)){return true}}return false}function symbol_in_lvalues(sym,parent){var lvalue=lvalues[sym.name];if(!lvalue)return;if(lvalue!==lhs)return!(parent instanceof AST_Call&&parent.expression===sym);scan_rhs=false}function may_modify(sym){var def=sym.definition();if(def.orig.length==1&&def.orig[0]instanceof AST_SymbolDefun)return false;if(def.scope!==scope)return true;return!all(def.references,function(ref){return ref.scope.resolve()===scope})}function side_effects_external(node,lhs){if(node instanceof AST_Assign)return side_effects_external(node.left,true);if(node instanceof AST_Unary)return side_effects_external(node.expression,true);if(node instanceof AST_VarDef)return node.value&&side_effects_external(node.value);if(lhs){if(node instanceof AST_Dot)return side_effects_external(node.expression,true);if(node instanceof AST_Sub)return side_effects_external(node.expression,true);if(node instanceof AST_SymbolRef)return node.definition().scope!==scope}return false}}function eliminate_spurious_blocks(statements){var seen_dirs=[];for(var i=0;i<statements.length;){var stat=statements[i];if(stat instanceof AST_BlockStatement){CHANGED=true;eliminate_spurious_blocks(stat.body);[].splice.apply(statements,[i,1].concat(stat.body));i+=stat.body.length}else if(stat instanceof AST_EmptyStatement){CHANGED=true;statements.splice(i,1)}else if(stat instanceof AST_Directive){if(seen_dirs.indexOf(stat.value)<0){i++;seen_dirs.push(stat.value)}else{CHANGED=true;statements.splice(i,1)}}else i++}}function handle_if_return(statements,compressor){var self=compressor.self();var multiple_if_returns=has_multiple_if_returns(statements);var in_lambda=self instanceof AST_Lambda;for(var i=statements.length;--i>=0;){var stat=statements[i];var j=next_index(i);var next=statements[j];if(in_lambda&&!next&&stat instanceof AST_Return){if(!stat.value){CHANGED=true;statements.splice(i,1);continue}if(stat.value instanceof AST_UnaryPrefix&&stat.value.operator=="void"){CHANGED=true;statements[i]=make_node(AST_SimpleStatement,stat,{body:stat.value.expression});continue}}if(stat instanceof AST_If){var ab=aborts(stat.body);if(can_merge_flow(ab)){if(ab.label){remove(ab.label.thedef.references,ab)}CHANGED=true;stat=stat.clone();stat.condition=stat.condition.negate(compressor);var body=as_statement_array_with_return(stat.body,ab);stat.body=make_node(AST_BlockStatement,stat,{body:as_statement_array(stat.alternative).concat(extract_functions())});stat.alternative=make_node(AST_BlockStatement,stat,{body:body});statements[i]=stat.transform(compressor);continue}if(ab&&!stat.alternative&&stat.body instanceof AST_BlockStatement&&next instanceof AST_Jump){var negated=stat.condition.negate(compressor);if(negated.print_to_string().length<=stat.condition.print_to_string().length){CHANGED=true;stat=stat.clone();stat.condition=negated;statements[j]=stat.body;stat.body=next;statements[i]=stat.transform(compressor);continue}}var ab=aborts(stat.alternative);if(can_merge_flow(ab)){if(ab.label){remove(ab.label.thedef.references,ab)}CHANGED=true;stat=stat.clone();stat.body=make_node(AST_BlockStatement,stat.body,{body:as_statement_array(stat.body).concat(extract_functions())});var body=as_statement_array_with_return(stat.alternative,ab);stat.alternative=make_node(AST_BlockStatement,stat.alternative,{body:body});statements[i]=stat.transform(compressor);continue}}if(stat instanceof AST_If&&stat.body instanceof AST_Return){var value=stat.body.value;if(!value&&!stat.alternative&&(in_lambda&&!next||next instanceof AST_Return&&!next.value)){CHANGED=true;statements[i]=make_node(AST_SimpleStatement,stat.condition,{body:stat.condition});continue}if(value&&!stat.alternative&&next instanceof AST_Return&&next.value){CHANGED=true;stat=stat.clone();stat.alternative=next;statements.splice(i,1,stat.transform(compressor));statements.splice(j,1);continue}if(value&&!stat.alternative&&(!next&&in_lambda&&multiple_if_returns||next instanceof AST_Return)){CHANGED=true;stat=stat.clone();stat.alternative=next||make_node(AST_Return,stat,{value:null});statements.splice(i,1,stat.transform(compressor));if(next)statements.splice(j,1);continue}var prev=statements[prev_index(i)];if(compressor.option("sequences")&&in_lambda&&!stat.alternative&&prev instanceof AST_If&&prev.body instanceof AST_Return&&next_index(j)==statements.length&&next instanceof AST_SimpleStatement){CHANGED=true;stat=stat.clone();stat.alternative=make_node(AST_BlockStatement,next,{body:[next,make_node(AST_Return,next,{value:null})]});statements.splice(i,1,stat.transform(compressor));statements.splice(j,1);continue}}}function has_multiple_if_returns(statements){var n=0;for(var i=statements.length;--i>=0;){var stat=statements[i];if(stat instanceof AST_If&&stat.body instanceof AST_Return){if(++n>1)return true}}return false}function is_return_void(value){return!value||value instanceof AST_UnaryPrefix&&value.operator=="void"}function can_merge_flow(ab){if(!ab)return false;var lct=ab instanceof AST_LoopControl?compressor.loopcontrol_target(ab):null;return ab instanceof AST_Return&&in_lambda&&is_return_void(ab.value)||ab instanceof AST_Continue&&self===loop_body(lct)||ab instanceof AST_Break&&lct instanceof AST_BlockStatement&&self===lct}function extract_functions(){var tail=statements.slice(i+1);statements.length=i+1;return tail.filter(function(stat){if(stat instanceof AST_Defun){statements.push(stat);return false}return true})}function as_statement_array_with_return(node,ab){var body=as_statement_array(node).slice(0,-1);if(ab.value){body.push(make_node(AST_SimpleStatement,ab.value,{body:ab.value.expression}))}return body}function next_index(i){for(var j=i+1,len=statements.length;j<len;j++){var stat=statements[j];if(!(stat instanceof AST_Var&&declarations_only(stat))){break}}return j}function prev_index(i){for(var j=i;--j>=0;){var stat=statements[j];if(!(stat instanceof AST_Var&&declarations_only(stat))){break}}return j}}function eliminate_dead_code(statements,compressor){var has_quit;var self=compressor.self();for(var i=0,n=0,len=statements.length;i<len;i++){var stat=statements[i];if(stat instanceof AST_LoopControl){var lct=compressor.loopcontrol_target(stat);if(stat instanceof AST_Break&&!(lct instanceof AST_IterationStatement)&&loop_body(lct)===self||stat instanceof AST_Continue&&loop_body(lct)===self){if(stat.label){remove(stat.label.thedef.references,stat)}}else{statements[n++]=stat}}else{statements[n++]=stat}if(aborts(stat)){has_quit=statements.slice(i+1);break}}statements.length=n;CHANGED=n!=len;if(has_quit)has_quit.forEach(function(stat){extract_declarations_from_unreachable_code(compressor,stat,statements)})}function declarations_only(node){return all(node.definitions,function(var_def){return!var_def.value})}function sequencesize(statements,compressor){if(statements.length<2)return;var seq=[],n=0;function push_seq(){if(!seq.length)return;var body=make_sequence(seq[0],seq);statements[n++]=make_node(AST_SimpleStatement,body,{body:body});seq=[]}for(var i=0,len=statements.length;i<len;i++){var stat=statements[i];if(stat instanceof AST_SimpleStatement){if(seq.length>=compressor.sequences_limit)push_seq();var body=stat.body;if(seq.length>0)body=body.drop_side_effect_free(compressor);if(body)merge_sequence(seq,body)}else if(stat instanceof AST_Definitions&&declarations_only(stat)||stat instanceof AST_Defun){statements[n++]=stat}else{push_seq();statements[n++]=stat}}push_seq();statements.length=n;if(n!=len)CHANGED=true}function to_simple_statement(block,decls){if(!(block instanceof AST_BlockStatement))return block;var stat=null;for(var i=0,len=block.body.length;i<len;i++){var line=block.body[i];if(line instanceof AST_Var&&declarations_only(line)){decls.push(line)}else if(stat){return false}else{stat=line}}return stat}function sequencesize_2(statements,compressor){function cons_seq(right){n--;CHANGED=true;var left=prev.body;return make_sequence(left,[left,right]).transform(compressor)}var n=0,prev;for(var i=0;i<statements.length;i++){var stat=statements[i];if(prev){if(stat instanceof AST_Exit){stat.value=cons_seq(stat.value||make_node(AST_Undefined,stat).transform(compressor))}else if(stat instanceof AST_For){if(!(stat.init instanceof AST_Definitions)){var abort=false;prev.body.walk(new TreeWalker(function(node){if(abort||node instanceof AST_Scope)return true;if(node instanceof AST_Binary&&node.operator=="in"){abort=true;return true}}));if(!abort){if(stat.init)stat.init=cons_seq(stat.init);else{stat.init=prev.body;n--;CHANGED=true}}}}else if(stat instanceof AST_ForIn){stat.object=cons_seq(stat.object)}else if(stat instanceof AST_If){stat.condition=cons_seq(stat.condition)}else if(stat instanceof AST_Switch){stat.expression=cons_seq(stat.expression)}else if(stat instanceof AST_With){stat.expression=cons_seq(stat.expression)}}if(compressor.option("conditionals")&&stat instanceof AST_If){var decls=[];var body=to_simple_statement(stat.body,decls);var alt=to_simple_statement(stat.alternative,decls);if(body!==false&&alt!==false&&decls.length>0){var len=decls.length;decls.push(make_node(AST_If,stat,{condition:stat.condition,body:body||make_node(AST_EmptyStatement,stat.body),alternative:alt}));decls.unshift(n,1);[].splice.apply(statements,decls);i+=len;n+=len+1;prev=null;CHANGED=true;continue}}statements[n++]=stat;prev=stat instanceof AST_SimpleStatement?stat:null}statements.length=n}function join_assigns(defn,body){var exprs;if(body instanceof AST_Assign){exprs=[body]}else if(body instanceof AST_Sequence){exprs=body.expressions.slice()}if(!exprs)return;if(defn instanceof AST_Definitions){var def=defn.definitions[defn.definitions.length-1];if(trim_assigns(def.name,def.value,exprs))return exprs}for(var i=exprs.length-1;--i>=0;){var expr=exprs[i];if(!(expr instanceof AST_Assign))continue;if(expr.operator!="=")continue;if(!(expr.left instanceof AST_SymbolRef))continue;var tail=exprs.slice(i+1);if(!trim_assigns(expr.left,expr.right,tail))continue;return exprs.slice(0,i+1).concat(tail)}}function trim_assigns(name,value,exprs){if(!(value instanceof AST_Object))return;var trimmed=false;do{var node=exprs[0];if(!(node instanceof AST_Assign))break;if(node.operator!="=")break;if(!(node.left instanceof AST_PropAccess))break;var sym=node.left.expression;if(!(sym instanceof AST_SymbolRef))break;if(name.name!=sym.name)break;if(!node.right.is_constant_expression(scope))break;var prop=node.left.property;if(prop instanceof AST_Node){prop=prop.evaluate(compressor)}if(prop instanceof AST_Node)break;prop=""+prop;var diff=compressor.has_directive("use strict")?function(node){return node.key!=prop&&node.key.name!=prop}:function(node){return node.key.name!=prop};if(!all(value.properties,diff))break;value.properties.push(make_node(AST_ObjectKeyVal,node,{key:prop,value:node.right}));exprs.shift();trimmed=true}while(exprs.length);return trimmed}function join_consecutive_vars(statements){var defs;for(var i=0,j=-1,len=statements.length;i<len;i++){var stat=statements[i];var prev=statements[j];if(stat instanceof AST_Definitions){if(prev&&prev.TYPE==stat.TYPE){prev.definitions=prev.definitions.concat(stat.definitions);CHANGED=true}else if(defs&&defs.TYPE==stat.TYPE&&declarations_only(stat)){defs.definitions=defs.definitions.concat(stat.definitions);CHANGED=true}else{statements[++j]=stat;defs=stat}}else if(stat instanceof AST_Exit){stat.value=join_assigns_expr(stat.value)}else if(stat instanceof AST_For){var exprs=join_assigns(prev,stat.init);if(exprs){CHANGED=true;stat.init=exprs.length?make_sequence(stat.init,exprs):null;statements[++j]=stat}else if(prev instanceof AST_Var&&(!stat.init||stat.init.TYPE==prev.TYPE)){if(stat.init){prev.definitions=prev.definitions.concat(stat.init.definitions)}stat.init=prev;statements[j]=stat;CHANGED=true}else if(defs&&stat.init&&defs.TYPE==stat.init.TYPE&&declarations_only(stat.init)){defs.definitions=defs.definitions.concat(stat.init.definitions);stat.init=null;statements[++j]=stat;CHANGED=true}else{statements[++j]=stat}}else if(stat instanceof AST_ForIn){stat.object=join_assigns_expr(stat.object)}else if(stat instanceof AST_If){stat.condition=join_assigns_expr(stat.condition)}else if(stat instanceof AST_SimpleStatement){var exprs=join_assigns(prev,stat.body);if(exprs){CHANGED=true;if(!exprs.length)continue;stat.body=make_sequence(stat.body,exprs)}statements[++j]=stat}else if(stat instanceof AST_Switch){stat.expression=join_assigns_expr(stat.expression)}else if(stat instanceof AST_With){stat.expression=join_assigns_expr(stat.expression)}else{statements[++j]=stat}}statements.length=j+1;function join_assigns_expr(value){statements[++j]=stat;var exprs=join_assigns(prev,value);if(!exprs)return value;CHANGED=true;var tail=value.tail_node();if(exprs[exprs.length-1]!==tail)exprs.push(tail.left);return make_sequence(value,exprs)}}}function extract_declarations_from_unreachable_code(compressor,stat,target){if(!(stat instanceof AST_Defun)){compressor.warn("Dropping unreachable code [{file}:{line},{col}]",stat.start)}stat.walk(new TreeWalker(function(node){if(node instanceof AST_Definitions){compressor.warn("Declarations in unreachable code! [{file}:{line},{col}]",node.start);node.remove_initializers();target.push(node);return true}if(node instanceof AST_Defun){target.push(node);return true}if(node instanceof AST_Scope){return true}}))}function get_value(key){if(key instanceof AST_Constant){return key.getValue()}if(key instanceof AST_UnaryPrefix&&key.operator=="void"&&key.expression instanceof AST_Constant){return}return key}function is_undefined(node,compressor){return node.is_undefined||node instanceof AST_Undefined||node instanceof AST_UnaryPrefix&&node.operator=="void"&&!node.expression.has_side_effects(compressor)}(function(def){def(AST_Node,return_false);def(AST_Array,return_true);def(AST_Assign,function(){return this.operator=="="&&this.right.is_truthy()});def(AST_Lambda,return_true);def(AST_Object,return_true);def(AST_RegExp,return_true);def(AST_Sequence,function(){return this.tail_node().is_truthy()});def(AST_SymbolRef,function(){var fixed=this.fixed_value();if(!fixed)return false;this.is_truthy=return_false;var result=fixed.is_truthy();delete this.is_truthy;return result})})(function(node,func){node.DEFMETHOD("is_truthy",func)});(function(def){AST_Node.DEFMETHOD("may_throw_on_access",function(compressor){return!compressor.option("pure_getters")||this._dot_throw(compressor)});function is_strict(compressor){return/strict/.test(compressor.option("pure_getters"))}def(AST_Node,is_strict);def(AST_Array,return_false);def(AST_Assign,function(compressor){return this.operator=="="&&this.right._dot_throw(compressor)});def(AST_Binary,function(compressor){return(this.operator=="&&"||this.operator=="||")&&(this.left._dot_throw(compressor)||this.right._dot_throw(compressor))});def(AST_Conditional,function(compressor){return this.consequent._dot_throw(compressor)||this.alternative._dot_throw(compressor)});def(AST_Constant,return_false);def(AST_Dot,function(compressor){if(!is_strict(compressor))return false;var exp=this.expression;if(exp instanceof AST_SymbolRef)exp=exp.fixed_value();return!(exp instanceof AST_Lambda&&this.property=="prototype")});def(AST_Lambda,return_false);def(AST_Null,return_true);def(AST_Object,function(compressor){if(!is_strict(compressor))return false;for(var i=this.properties.length;--i>=0;)if(this.properties[i].value instanceof AST_Accessor)return true;return false});def(AST_Sequence,function(compressor){return this.tail_node()._dot_throw(compressor)});def(AST_SymbolRef,function(compressor){if(this.is_undefined)return true;if(!is_strict(compressor))return false;if(is_undeclared_ref(this)&&this.is_declared(compressor))return false;if(this.is_immutable())return false;var fixed=this.fixed_value();if(!fixed)return true;this._dot_throw=return_true;var result=fixed._dot_throw(compressor);delete this._dot_throw;return result});def(AST_UnaryPrefix,function(){return this.operator=="void"});def(AST_UnaryPostfix,return_false);def(AST_Undefined,return_true)})(function(node,func){node.DEFMETHOD("_dot_throw",func)});(function(def){def(AST_Node,return_false);def(AST_Assign,function(compressor){return this.operator=="="&&this.right.is_boolean(compressor)});var binary=makePredicate("in instanceof == != === !== < <= >= >");def(AST_Binary,function(compressor){return binary[this.operator]||lazy_op[this.operator]&&this.left.is_boolean(compressor)&&this.right.is_boolean(compressor)});def(AST_Boolean,return_true);var fn=makePredicate("every hasOwnProperty isPrototypeOf propertyIsEnumerable some");def(AST_Call,function(compressor){if(!compressor.option("unsafe"))return false;var exp=this.expression;return exp instanceof AST_Dot&&(fn[exp.property]||exp.property=="test"&&exp.expression instanceof AST_RegExp)});def(AST_Conditional,function(compressor){return this.consequent.is_boolean(compressor)&&this.alternative.is_boolean(compressor)});def(AST_New,return_false);def(AST_Sequence,function(compressor){return this.tail_node().is_boolean(compressor)});def(AST_SymbolRef,function(compressor){var fixed=this.fixed_value();if(!fixed)return false;this.is_boolean=return_false;var result=fixed.is_boolean(compressor);delete this.is_boolean;return result});var unary=makePredicate("! delete");def(AST_UnaryPrefix,function(){return unary[this.operator]})})(function(node,func){node.DEFMETHOD("is_boolean",func)});(function(def){def(AST_Node,return_false);var binary=makePredicate("- * / % & | ^ << >> >>>");def(AST_Assign,function(compressor){return binary[this.operator.slice(0,-1)]||this.operator=="="&&this.right.is_number(compressor)});def(AST_Binary,function(compressor){return binary[this.operator]||this.operator=="+"&&this.left.is_number(compressor)&&this.right.is_number(compressor)});var fn=makePredicate(["charCodeAt","getDate","getDay","getFullYear","getHours","getMilliseconds","getMinutes","getMonth","getSeconds","getTime","getTimezoneOffset","getUTCDate","getUTCDay","getUTCFullYear","getUTCHours","getUTCMilliseconds","getUTCMinutes","getUTCMonth","getUTCSeconds","getYear","indexOf","lastIndexOf","localeCompare","push","search","setDate","setFullYear","setHours","setMilliseconds","setMinutes","setMonth","setSeconds","setTime","setUTCDate","setUTCFullYear","setUTCHours","setUTCMilliseconds","setUTCMinutes","setUTCMonth","setUTCSeconds","setYear","toExponential","toFixed","toPrecision"]);def(AST_Call,function(compressor){if(!compressor.option("unsafe"))return false;var exp=this.expression;return exp instanceof AST_Dot&&(fn[exp.property]||is_undeclared_ref(exp.expression)&&exp.expression.name=="Math")});def(AST_Conditional,function(compressor){return this.consequent.is_number(compressor)&&this.alternative.is_number(compressor)});def(AST_New,return_false);def(AST_Number,return_true);def(AST_Sequence,function(compressor){return this.tail_node().is_number(compressor)});def(AST_SymbolRef,function(compressor){var fixed=this.fixed_value();if(!fixed)return false;this.is_number=return_false;var result=fixed.is_number(compressor);delete this.is_number;return result});var unary=makePredicate("+ - ~ ++ --");def(AST_Unary,function(){return unary[this.operator]})})(function(node,func){node.DEFMETHOD("is_number",func)});(function(def){def(AST_Node,return_false);def(AST_Assign,function(compressor){return(this.operator=="="||this.operator=="+=")&&this.right.is_string(compressor)});def(AST_Binary,function(compressor){return this.operator=="+"&&(this.left.is_string(compressor)||this.right.is_string(compressor))});def(AST_Conditional,function(compressor){return this.consequent.is_string(compressor)&&this.alternative.is_string(compressor)});def(AST_Sequence,function(compressor){return this.tail_node().is_string(compressor)});def(AST_String,return_true);def(AST_SymbolRef,function(compressor){var fixed=this.fixed_value();if(!fixed)return false;this.is_string=return_false;var result=fixed.is_string(compressor);delete this.is_string;return result});def(AST_UnaryPrefix,function(){return this.operator=="typeof"})})(function(node,func){node.DEFMETHOD("is_string",func)});var lazy_op=makePredicate("&& ||");var unary_side_effects=makePredicate("delete ++ --");function is_lhs(node,parent){if(parent instanceof AST_Unary&&unary_side_effects[parent.operator])return parent.expression;if(parent instanceof AST_Assign&&parent.left===node)return node}(function(def){function to_node(value,orig){if(value instanceof AST_Node)return make_node(value.CTOR,orig,value);if(Array.isArray(value))return make_node(AST_Array,orig,{elements:value.map(function(value){return to_node(value,orig)})});if(value&&typeof value=="object"){var props=[];for(var key in value)if(HOP(value,key)){props.push(make_node(AST_ObjectKeyVal,orig,{key:key,value:to_node(value[key],orig)}))}return make_node(AST_Object,orig,{properties:props})}return make_node_from_constant(value,orig)}function warn(compressor,node){compressor.warn("global_defs "+node.print_to_string()+" redefined [{file}:{line},{col}]",node.start)}AST_Toplevel.DEFMETHOD("resolve_defines",function(compressor){if(!compressor.option("global_defs"))return this;this.figure_out_scope({ie8:compressor.option("ie8")});return this.transform(new TreeTransformer(function(node){var def=node._find_defs(compressor,"");if(!def)return;var level=0,child=node,parent;while(parent=this.parent(level++)){if(!(parent instanceof AST_PropAccess))break;if(parent.expression!==child)break;child=parent}if(is_lhs(child,parent)){warn(compressor,node);return}return def}))});def(AST_Node,noop);def(AST_Dot,function(compressor,suffix){return this.expression._find_defs(compressor,"."+this.property+suffix)});def(AST_SymbolDeclaration,function(compressor){if(!this.global())return;if(HOP(compressor.option("global_defs"),this.name))warn(compressor,this)});def(AST_SymbolRef,function(compressor,suffix){if(!this.global())return;var defines=compressor.option("global_defs");var name=this.name+suffix;if(HOP(defines,name))return to_node(defines[name],this)})})(function(node,func){node.DEFMETHOD("_find_defs",func)});function best_of_expression(ast1,ast2){return ast1.print_to_string().length>ast2.print_to_string().length?ast2:ast1}function best_of_statement(ast1,ast2){return best_of_expression(make_node(AST_SimpleStatement,ast1,{body:ast1}),make_node(AST_SimpleStatement,ast2,{body:ast2})).body}function best_of(compressor,ast1,ast2){return(first_in_statement(compressor)?best_of_statement:best_of_expression)(ast1,ast2)}function convert_to_predicate(obj){for(var key in obj){obj[key]=makePredicate(obj[key])}}var object_fns=["constructor","toString","valueOf"];var native_fns={Array:["indexOf","join","lastIndexOf","slice"].concat(object_fns),Boolean:object_fns,Function:object_fns,Number:["toExponential","toFixed","toPrecision"].concat(object_fns),Object:object_fns,RegExp:["test"].concat(object_fns),String:["charAt","charCodeAt","concat","indexOf","italics","lastIndexOf","match","replace","search","slice","split","substr","substring","toLowerCase","toUpperCase","trim"].concat(object_fns)};convert_to_predicate(native_fns);var static_fns={Array:["isArray"],Math:["abs","acos","asin","atan","ceil","cos","exp","floor","log","round","sin","sqrt","tan","atan2","pow","max","min"],Number:["isFinite","isNaN"],Object:["create","getOwnPropertyDescriptor","getOwnPropertyNames","getPrototypeOf","isExtensible","isFrozen","isSealed","keys"],String:["fromCharCode"]};convert_to_predicate(static_fns);(function(def){AST_Node.DEFMETHOD("evaluate",function(compressor){if(!compressor.option("evaluate"))return this;var cached=[];var val=this._eval(compressor,cached,1);cached.forEach(function(node){delete node._eval});if(!val||val instanceof RegExp)return val;if(typeof val=="function"||typeof val=="object")return this;return val});var unaryPrefix=makePredicate("! ~ - + void");AST_Node.DEFMETHOD("is_constant",function(){if(this instanceof AST_Constant){return!(this instanceof AST_RegExp)}else{return this instanceof AST_UnaryPrefix&&this.expression instanceof AST_Constant&&unaryPrefix[this.operator]}});def(AST_Statement,function(){throw new Error(string_template("Cannot evaluate a statement [{file}:{line},{col}]",this.start))});def(AST_Lambda,return_this);def(AST_Node,return_this);def(AST_Constant,function(){return this.getValue()});def(AST_Function,function(compressor){if(compressor.option("unsafe")){var fn=function(){};fn.node=this;fn.toString=function(){return"function(){}"};return fn}return this});def(AST_Array,function(compressor,cached,depth){if(compressor.option("unsafe")){var elements=[];for(var i=0,len=this.elements.length;i<len;i++){var element=this.elements[i];var value=element._eval(compressor,cached,depth);if(element===value)return this;elements.push(value)}return elements}return this});def(AST_Object,function(compressor,cached,depth){if(compressor.option("unsafe")){var val={};for(var i=0,len=this.properties.length;i<len;i++){var prop=this.properties[i];var key=prop.key;if(key instanceof AST_Symbol){key=key.name}else if(key instanceof AST_Node){key=key._eval(compressor,cached,depth);if(key===prop.key)return this}if(typeof Object.prototype[key]==="function"){return this}if(prop.value instanceof AST_Function)continue;val[key]=prop.value._eval(compressor,cached,depth);if(val[key]===prop.value)return this}return val}return this});var non_converting_unary=makePredicate("! typeof void");def(AST_UnaryPrefix,function(compressor,cached,depth){var e=this.expression;if(compressor.option("typeofs")&&this.operator=="typeof"&&(e instanceof AST_Lambda||e instanceof AST_SymbolRef&&e.fixed_value()instanceof AST_Lambda)){return typeof function(){}}if(!non_converting_unary[this.operator])depth++;var v=e._eval(compressor,cached,depth);if(v===this.expression)return this;switch(this.operator){case"!":return!v;case"typeof":if(v instanceof RegExp)return this;return typeof v;case"void":return void v;case"~":return~v;case"-":return-v;case"+":return+v;case"++":case"--":if(e instanceof AST_SymbolRef){var refs=e.definition().references;if(refs[refs.length-1]===e)return v}}return this});var non_converting_binary=makePredicate("&& || === !==");def(AST_Binary,function(compressor,cached,depth){if(!non_converting_binary[this.operator])depth++;var left=this.left._eval(compressor,cached,depth);if(left===this.left)return this;var right=this.right._eval(compressor,cached,depth);if(right===this.right)return this;var result;switch(this.operator){case"&&":result=left&&right;break;case"||":result=left||right;break;case"|":result=left|right;break;case"&":result=left&right;break;case"^":result=left^right;break;case"+":result=left+right;break;case"*":result=left*right;break;case"/":result=left/right;break;case"%":result=left%right;break;case"-":result=left-right;break;case"<<":result=left<<right;break;case">>":result=left>>right;break;case">>>":result=left>>>right;break;case"==":result=left==right;break;case"===":result=left===right;break;case"!=":result=left!=right;break;case"!==":result=left!==right;break;case"<":result=left<right;break;case"<=":result=left<=right;break;case">":result=left>right;break;case">=":result=left>=right;break;default:return this}return isNaN(result)&&compressor.find_parent(AST_With)?this:result});def(AST_Conditional,function(compressor,cached,depth){var condition=this.condition._eval(compressor,cached,depth);if(condition===this.condition)return this;var node=condition?this.consequent:this.alternative;var value=node._eval(compressor,cached,depth);return value===node?this:value});def(AST_SymbolRef,function(compressor,cached,depth){var fixed=this.fixed_value();if(!fixed)return this;var value;if(cached.indexOf(fixed)>=0){value=fixed._eval()}else{this._eval=return_this;value=fixed._eval(compressor,cached,depth);delete this._eval;if(value===fixed)return this;fixed._eval=function(){return value};cached.push(fixed)}if(value&&typeof value=="object"){var escaped=this.definition().escaped;if(escaped&&depth>escaped)return this}return value});var global_objs={Array:Array,Math:Math,Number:Number,Object:Object,String:String};var static_values={Math:["E","LN10","LN2","LOG2E","LOG10E","PI","SQRT1_2","SQRT2"],Number:["MAX_VALUE","MIN_VALUE","NaN","NEGATIVE_INFINITY","POSITIVE_INFINITY"]};convert_to_predicate(static_values);def(AST_PropAccess,function(compressor,cached,depth){if(compressor.option("unsafe")){var key=this.property;if(key instanceof AST_Node){key=key._eval(compressor,cached,depth);if(key===this.property)return this}var exp=this.expression;var val;if(is_undeclared_ref(exp)){var static_value=static_values[exp.name];if(!static_value||!static_value[key])return this;val=global_objs[exp.name]}else{val=exp._eval(compressor,cached,depth+1);if(!val||val===exp||!HOP(val,key))return this;if(typeof val=="function")switch(key){case"name":return val.node.name?val.node.name.name:"";case"length":return val.node.argnames.length;default:return this}}return val[key]}return this});def(AST_Call,function(compressor,cached,depth){var exp=this.expression;if(compressor.option("unsafe")&&exp instanceof AST_PropAccess){var key=exp.property;if(key instanceof AST_Node){key=key._eval(compressor,cached,depth);if(key===exp.property)return this}var val;var e=exp.expression;if(is_undeclared_ref(e)){var static_fn=static_fns[e.name];if(!static_fn||!static_fn[key])return this;val=global_objs[e.name]}else{val=e._eval(compressor,cached,depth+1);if(val===e||!val)return this;var native_fn=native_fns[val.constructor.name];if(!native_fn||!native_fn[key])return this}var args=[];for(var i=0,len=this.args.length;i<len;i++){var arg=this.args[i];var value=arg._eval(compressor,cached,depth);if(arg===value)return this;args.push(value)}try{return val[key].apply(val,args)}catch(ex){compressor.warn("Error evaluating {code} [{file}:{line},{col}]",{code:this.print_to_string(),file:this.start.file,line:this.start.line,col:this.start.col})}}return this});def(AST_New,return_this)})(function(node,func){node.DEFMETHOD("_eval",func)});(function(def){function basic_negation(exp){return make_node(AST_UnaryPrefix,exp,{operator:"!",expression:exp})}function best(orig,alt,first_in_statement){var negated=basic_negation(orig);if(first_in_statement){var stat=make_node(AST_SimpleStatement,alt,{body:alt});return best_of_expression(negated,stat)===stat?alt:negated}return best_of_expression(negated,alt)}def(AST_Node,function(){return basic_negation(this)});def(AST_Statement,function(){throw new Error("Cannot negate a statement")});def(AST_Function,function(){return basic_negation(this)});def(AST_UnaryPrefix,function(){if(this.operator=="!")return this.expression;return basic_negation(this)});def(AST_Sequence,function(compressor){var expressions=this.expressions.slice();expressions.push(expressions.pop().negate(compressor));return make_sequence(this,expressions)});def(AST_Conditional,function(compressor,first_in_statement){var self=this.clone();self.consequent=self.consequent.negate(compressor);self.alternative=self.alternative.negate(compressor);return best(this,self,first_in_statement)});def(AST_Binary,function(compressor,first_in_statement){var self=this.clone(),op=this.operator;if(compressor.option("unsafe_comps")){switch(op){case"<=":self.operator=">";return self;case"<":self.operator=">=";return self;case">=":self.operator="<";return self;case">":self.operator="<=";return self}}switch(op){case"==":self.operator="!=";return self;case"!=":self.operator="==";return self;case"===":self.operator="!==";return self;case"!==":self.operator="===";return self;case"&&":self.operator="||";self.left=self.left.negate(compressor,first_in_statement);self.right=self.right.negate(compressor);return best(this,self,first_in_statement);case"||":self.operator="&&";self.left=self.left.negate(compressor,first_in_statement);self.right=self.right.negate(compressor);return best(this,self,first_in_statement)}return basic_negation(this)})})(function(node,func){node.DEFMETHOD("negate",function(compressor,first_in_statement){return func.call(this,compressor,first_in_statement)})});var global_pure_fns=makePredicate("Boolean decodeURI decodeURIComponent Date encodeURI encodeURIComponent Error escape EvalError isFinite isNaN Number Object parseFloat parseInt RangeError ReferenceError String SyntaxError TypeError unescape URIError");AST_Call.DEFMETHOD("is_expr_pure",function(compressor){if(compressor.option("unsafe")){var expr=this.expression;if(is_undeclared_ref(expr)&&global_pure_fns[expr.name])return true;if(expr instanceof AST_Dot&&is_undeclared_ref(expr.expression)){var static_fn=static_fns[expr.expression.name];return static_fn&&static_fn[expr.property]}}return this.pure||!compressor.pure_funcs(this)});AST_Node.DEFMETHOD("is_call_pure",return_false);AST_Dot.DEFMETHOD("is_call_pure",function(compressor){if(!compressor.option("unsafe"))return;var expr=this.expression;var map;if(expr instanceof AST_Array){map=native_fns.Array}else if(expr.is_boolean(compressor)){map=native_fns.Boolean}else if(expr.is_number(compressor)){map=native_fns.Number}else if(expr instanceof AST_RegExp){map=native_fns.RegExp}else if(expr.is_string(compressor)){map=native_fns.String}else if(!this.may_throw_on_access(compressor)){map=native_fns.Object}return map&&map[this.property]});(function(def){function any(list,compressor){for(var i=list.length;--i>=0;)if(list[i].has_side_effects(compressor))return true;return false}def(AST_Node,return_true);def(AST_Array,function(compressor){return any(this.elements,compressor)});def(AST_Assign,return_true);def(AST_Binary,function(compressor){return this.left.has_side_effects(compressor)||this.right.has_side_effects(compressor)});def(AST_Block,function(compressor){return any(this.body,compressor)});def(AST_Call,function(compressor){if(!this.is_expr_pure(compressor)&&(!this.expression.is_call_pure(compressor)||this.expression.has_side_effects(compressor))){return true}return any(this.args,compressor)});def(AST_Case,function(compressor){return this.expression.has_side_effects(compressor)||any(this.body,compressor)});def(AST_Conditional,function(compressor){return this.condition.has_side_effects(compressor)||this.consequent.has_side_effects(compressor)||this.alternative.has_side_effects(compressor)});def(AST_Constant,return_false);def(AST_Definitions,function(compressor){return any(this.definitions,compressor)});def(AST_Dot,function(compressor){return this.expression.may_throw_on_access(compressor)||this.expression.has_side_effects(compressor)});def(AST_EmptyStatement,return_false);def(AST_If,function(compressor){return this.condition.has_side_effects(compressor)||this.body&&this.body.has_side_effects(compressor)||this.alternative&&this.alternative.has_side_effects(compressor)});def(AST_LabeledStatement,function(compressor){return this.body.has_side_effects(compressor)});def(AST_Lambda,return_false);def(AST_Object,function(compressor){return any(this.properties,compressor)});def(AST_ObjectProperty,function(compressor){return this.value.has_side_effects(compressor)});def(AST_Sub,function(compressor){return this.expression.may_throw_on_access(compressor)||this.expression.has_side_effects(compressor)||this.property.has_side_effects(compressor)});def(AST_Sequence,function(compressor){return any(this.expressions,compressor)});def(AST_SimpleStatement,function(compressor){return this.body.has_side_effects(compressor)});def(AST_Switch,function(compressor){return this.expression.has_side_effects(compressor)||any(this.body,compressor)});def(AST_SymbolDeclaration,return_false);def(AST_SymbolRef,function(compressor){return!this.is_declared(compressor)});def(AST_This,return_false);def(AST_Try,function(compressor){return any(this.body,compressor)||this.bcatch&&this.bcatch.has_side_effects(compressor)||this.bfinally&&this.bfinally.has_side_effects(compressor)});def(AST_Unary,function(compressor){return unary_side_effects[this.operator]||this.expression.has_side_effects(compressor)});def(AST_VarDef,function(compressor){return this.value})})(function(node,func){node.DEFMETHOD("has_side_effects",func)});(function(def){def(AST_Node,return_true);def(AST_Constant,return_false);def(AST_EmptyStatement,return_false);def(AST_Lambda,return_false);def(AST_SymbolDeclaration,return_false);def(AST_This,return_false);function any(list,compressor){for(var i=list.length;--i>=0;)if(list[i].may_throw(compressor))return true;return false}def(AST_Array,function(compressor){return any(this.elements,compressor)});def(AST_Assign,function(compressor){if(this.right.may_throw(compressor))return true;if(!compressor.has_directive("use strict")&&this.operator=="="&&this.left instanceof AST_SymbolRef){return false}return this.left.may_throw(compressor)});def(AST_Binary,function(compressor){return this.left.may_throw(compressor)||this.right.may_throw(compressor)});def(AST_Block,function(compressor){return any(this.body,compressor)});def(AST_Call,function(compressor){if(any(this.args,compressor))return true;if(this.is_expr_pure(compressor))return false;if(this.expression.may_throw(compressor))return true;return!(this.expression instanceof AST_Lambda)||any(this.expression.body,compressor)});def(AST_Case,function(compressor){return this.expression.may_throw(compressor)||any(this.body,compressor)});def(AST_Conditional,function(compressor){return this.condition.may_throw(compressor)||this.consequent.may_throw(compressor)||this.alternative.may_throw(compressor)});def(AST_Definitions,function(compressor){return any(this.definitions,compressor)});def(AST_Dot,function(compressor){return this.expression.may_throw_on_access(compressor)||this.expression.may_throw(compressor)});def(AST_If,function(compressor){return this.condition.may_throw(compressor)||this.body&&this.body.may_throw(compressor)||this.alternative&&this.alternative.may_throw(compressor)});def(AST_LabeledStatement,function(compressor){return this.body.may_throw(compressor)});def(AST_Object,function(compressor){return any(this.properties,compressor)});def(AST_ObjectProperty,function(compressor){return this.value.may_throw(compressor)});def(AST_Return,function(compressor){return this.value&&this.value.may_throw(compressor)});def(AST_Sequence,function(compressor){return any(this.expressions,compressor)});def(AST_SimpleStatement,function(compressor){return this.body.may_throw(compressor)});def(AST_Sub,function(compressor){return this.expression.may_throw_on_access(compressor)||this.expression.may_throw(compressor)||this.property.may_throw(compressor)});def(AST_Switch,function(compressor){return this.expression.may_throw(compressor)||any(this.body,compressor)});def(AST_SymbolRef,function(compressor){return!this.is_declared(compressor)});def(AST_Try,function(compressor){return this.bcatch?this.bcatch.may_throw(compressor):any(this.body,compressor)||this.bfinally&&this.bfinally.may_throw(compressor)});def(AST_Unary,function(compressor){if(this.operator=="typeof"&&this.expression instanceof AST_SymbolRef)return false;return this.expression.may_throw(compressor)});def(AST_VarDef,function(compressor){if(!this.value)return false;return this.value.may_throw(compressor)})})(function(node,func){node.DEFMETHOD("may_throw",func)});(function(def){function all(list){for(var i=list.length;--i>=0;)if(!list[i].is_constant_expression())return false;return true}def(AST_Node,return_false);def(AST_Array,function(){return all(this.elements)});def(AST_Binary,function(){return this.left.is_constant_expression()&&this.right.is_constant_expression()});def(AST_Constant,return_true);def(AST_Lambda,function(scope){var self=this;var result=true;self.walk(new TreeWalker(function(node){if(!result)return true;if(node instanceof AST_SymbolRef){if(self.inlined){result=false;return true}var def=node.definition();if(member(def,self.enclosed)&&!self.variables.has(def.name)){if(scope){var scope_def=scope.find_variable(node);if(def.undeclared?!scope_def:scope_def===def){result="f";return true}}result=false}return true}}));return result});def(AST_Object,function(){return all(this.properties)});def(AST_ObjectProperty,function(){return this.value.is_constant_expression()});def(AST_Unary,function(){return this.expression.is_constant_expression()})})(function(node,func){node.DEFMETHOD("is_constant_expression",func)});function aborts(thing){return thing&&thing.aborts()}(function(def){def(AST_Statement,return_null);def(AST_Jump,return_this);function block_aborts(){var n=this.body.length;return n>0&&aborts(this.body[n-1])}def(AST_BlockStatement,block_aborts);def(AST_SwitchBranch,block_aborts);def(AST_If,function(){return this.alternative&&aborts(this.body)&&aborts(this.alternative)&&this})})(function(node,func){node.DEFMETHOD("aborts",func)});var directives=makePredicate(["use asm","use strict"]);OPT(AST_Directive,function(self,compressor){if(compressor.option("directives")&&(!directives[self.value]||compressor.has_directive(self.value)!==self)){return make_node(AST_EmptyStatement,self)}return self});OPT(AST_Debugger,function(self,compressor){if(compressor.option("drop_debugger"))return make_node(AST_EmptyStatement,self);return self});OPT(AST_LabeledStatement,function(self,compressor){if(self.body instanceof AST_Break&&compressor.loopcontrol_target(self.body)===self.body){return make_node(AST_EmptyStatement,self)}return self.label.references.length==0?self.body:self});OPT(AST_Block,function(self,compressor){tighten_body(self.body,compressor);return self});OPT(AST_BlockStatement,function(self,compressor){tighten_body(self.body,compressor);switch(self.body.length){case 1:return self.body[0];case 0:return make_node(AST_EmptyStatement,self)}return self});OPT(AST_Lambda,function(self,compressor){tighten_body(self.body,compressor);if(compressor.option("side_effects")&&self.body.length==1&&self.body[0]===compressor.has_directive("use strict")){self.body.length=0}return self});AST_Scope.DEFMETHOD("drop_unused",function(compressor){if(!compressor.option("unused"))return;if(compressor.has_directive("use asm"))return;var self=this;if(self.pinned())return;var drop_funcs=!(self instanceof AST_Toplevel)||compressor.toplevel.funcs;var drop_vars=!(self instanceof AST_Toplevel)||compressor.toplevel.vars;var assign_as_unused=/keep_assign/.test(compressor.option("unused"))?return_false:function(node,props){var sym;if(node instanceof AST_Assign&&(node.write_only||node.operator=="=")){sym=node.left}else if(node instanceof AST_Unary&&node.write_only){sym=node.expression}if(!/strict/.test(compressor.option("pure_getters")))return sym instanceof AST_SymbolRef&&sym;while(sym instanceof AST_PropAccess&&!sym.expression.may_throw_on_access(compressor)){if(sym instanceof AST_Sub)props.unshift(sym.property);sym=sym.expression}return sym instanceof AST_SymbolRef&&all(sym.definition().orig,function(sym){return!(sym instanceof AST_SymbolLambda)})&&sym};var in_use=[];var in_use_ids=Object.create(null);var fixed_ids=Object.create(null);var value_read=Object.create(null);var value_modified=Object.create(null);if(self instanceof AST_Toplevel&&compressor.top_retain){self.variables.each(function(def){if(compressor.top_retain(def)&&!(def.id in in_use_ids)){in_use_ids[def.id]=true;in_use.push(def)}})}var var_defs_by_id=new Dictionary;var initializations=new Dictionary;var scope=this;var tw=new TreeWalker(function(node,descend){if(node instanceof AST_Lambda&&node.uses_arguments&&!tw.has_directive("use strict")){node.argnames.forEach(function(argname){var def=argname.definition();if(!(def.id in in_use_ids)){in_use_ids[def.id]=true;in_use.push(def)}})}if(node===self)return;if(node instanceof AST_Defun){var node_def=node.name.definition();if(!drop_funcs&&scope===self){if(!(node_def.id in in_use_ids)){in_use_ids[node_def.id]=true;in_use.push(node_def)}}initializations.add(node_def.id,node);return true}if(node instanceof AST_SymbolFunarg&&scope===self){var_defs_by_id.add(node.definition().id,node)}if(node instanceof AST_Definitions&&scope===self){node.definitions.forEach(function(def){var node_def=def.name.definition();if(def.name instanceof AST_SymbolVar){var_defs_by_id.add(node_def.id,def)}if(!drop_vars){if(!(node_def.id in in_use_ids)){in_use_ids[node_def.id]=true;in_use.push(node_def)}}if(def.value){initializations.add(node_def.id,def.value);if(def.value.has_side_effects(compressor)){def.value.walk(tw)}if(!node_def.chained&&def.name.fixed_value()===def.value){fixed_ids[node_def.id]=def}}});return true}return scan_ref_scoped(node,descend)});self.walk(tw);tw=new TreeWalker(scan_ref_scoped);for(var i=0;i<in_use.length;i++){var init=initializations.get(in_use[i].id);if(init)init.forEach(function(init){init.walk(tw)})}var drop_fn_name=compressor.option("keep_fnames")?return_false:compressor.option("ie8")?function(def){return!compressor.exposed(def)&&!def.references.length}:function(def){return!(def.id in in_use_ids)||def.orig.length>1};var tt=new TreeTransformer(function(node,descend,in_list){var parent=tt.parent();if(drop_vars){var props=[],sym=assign_as_unused(node,props);if(sym){var def=sym.definition();var in_use=def.id in in_use_ids;var value=null;if(node instanceof AST_Assign){if(!in_use||node.left===sym&&def.id in fixed_ids&&fixed_ids[def.id]!==node){value=node.right}}else if(!in_use){value=make_node(AST_Number,node,{value:0})}if(value){props.push(value);return maintain_this_binding(compressor,parent,node,make_sequence(node,props.map(function(prop){return prop.transform(tt)})))}}}if(scope!==self)return;if(node instanceof AST_Function&&node.name&&drop_fn_name(node.name.definition())){node.name=null}if(node instanceof AST_Lambda&&!(node instanceof AST_Accessor)){var trim=!compressor.option("keep_fargs");for(var a=node.argnames,i=a.length;--i>=0;){var sym=a[i];if(!(sym.definition().id in in_use_ids)){sym.__unused=true;if(trim){a.pop();compressor[sym.unreferenced()?"warn":"info"]("Dropping unused function argument {name} [{file}:{line},{col}]",template(sym))}}else{trim=false}}}if(drop_funcs&&node instanceof AST_Defun&&node!==self){var def=node.name.definition();if(!(def.id in in_use_ids)){compressor[node.name.unreferenced()?"warn":"info"]("Dropping unused function {name} [{file}:{line},{col}]",template(node.name));def.eliminated++;return make_node(AST_EmptyStatement,node)}}if(node instanceof AST_Definitions&&!(parent instanceof AST_ForIn&&parent.init===node)){var body=[],head=[],tail=[];var side_effects=[];node.definitions.forEach(function(def){if(def.value)def.value=def.value.transform(tt);var sym=def.name.definition();if(!drop_vars||sym.id in in_use_ids){if(def.value&&sym.id in fixed_ids&&fixed_ids[sym.id]!==def){def.value=def.value.drop_side_effect_free(compressor)}if(def.name instanceof AST_SymbolVar){var var_defs=var_defs_by_id.get(sym.id);if(var_defs.length>1&&(!def.value||sym.orig.indexOf(def.name)>sym.eliminated)){compressor.warn("Dropping duplicated definition of variable {name} [{file}:{line},{col}]",template(def.name));if(def.value){var ref=make_node(AST_SymbolRef,def.name,def.name);sym.references.push(ref);var assign=make_node(AST_Assign,def,{operator:"=",left:ref,right:def.value});if(fixed_ids[sym.id]===def){fixed_ids[sym.id]=assign}side_effects.push(assign.transform(tt))}remove(var_defs,def);sym.eliminated++;return}}if(def.value){if(side_effects.length>0){if(tail.length>0){side_effects.push(def.value);def.value=make_sequence(def.value,side_effects)}else{body.push(make_node(AST_SimpleStatement,node,{body:make_sequence(node,side_effects)}))}side_effects=[]}tail.push(def)}else{head.push(def)}}else if(sym.orig[0]instanceof AST_SymbolCatch){var value=def.value&&def.value.drop_side_effect_free(compressor);if(value)side_effects.push(value);def.value=null;head.push(def)}else{var value=def.value&&def.value.drop_side_effect_free(compressor);if(value){compressor.warn("Side effects in initialization of unused variable {name} [{file}:{line},{col}]",template(def.name));side_effects.push(value)}else{compressor[def.name.unreferenced()?"warn":"info"]("Dropping unused variable {name} [{file}:{line},{col}]",template(def.name))}sym.eliminated++}});if(head.length>0||tail.length>0){node.definitions=head.concat(tail);body.push(node)}if(side_effects.length>0){body.push(make_node(AST_SimpleStatement,node,{body:make_sequence(node,side_effects)}))}switch(body.length){case 0:return in_list?MAP.skip:make_node(AST_EmptyStatement,node);case 1:return body[0];default:return in_list?MAP.splice(body):make_node(AST_BlockStatement,node,{body:body})}}if(node instanceof AST_For){descend(node,this);var block;if(node.init instanceof AST_BlockStatement){block=node.init;node.init=block.body.pop();block.body.push(node)}if(node.init instanceof AST_SimpleStatement){node.init=node.init.body}else if(is_empty(node.init)){node.init=null}return!block?node:in_list?MAP.splice(block.body):block}if(node instanceof AST_LabeledStatement&&node.body instanceof AST_For){descend(node,this);if(node.body instanceof AST_BlockStatement){var block=node.body;node.body=block.body.pop();block.body.push(node);return in_list?MAP.splice(block.body):block}return node}if(node instanceof AST_Scope){var save_scope=scope;scope=node;descend(node,this);scope=save_scope;return node}function template(sym){return{name:sym.name,file:sym.start.file,line:sym.start.line,col:sym.start.col}}});self.transform(tt);function verify_safe_usage(def,read,modified){if(def.id in in_use_ids)return;if(read&&modified){in_use_ids[def.id]=true;in_use.push(def)}else{value_read[def.id]=read;value_modified[def.id]=modified}}function scan_ref_scoped(node,descend){var node_def,props=[],sym=assign_as_unused(node,props);if(sym&&self.variables.get(sym.name)===(node_def=sym.definition())){props.forEach(function(prop){prop.walk(tw)});if(node instanceof AST_Assign){node.right.walk(tw);if(node.left===sym){if(!node_def.chained&&sym.fixed_value()===node.right){fixed_ids[node_def.id]=node}if(!node.write_only){verify_safe_usage(node_def,true,value_modified[node_def.id])}}else{var fixed=sym.fixed_value();if(!fixed||!fixed.is_constant()){verify_safe_usage(node_def,value_read[node_def.id],true)}}}return true}if(node instanceof AST_SymbolRef){node_def=node.definition();if(!(node_def.id in in_use_ids)){in_use_ids[node_def.id]=true;in_use.push(node_def)}return true}if(node instanceof AST_Scope){var save_scope=scope;scope=node;descend();scope=save_scope;return true}}});AST_Scope.DEFMETHOD("hoist_declarations",function(compressor){if(compressor.has_directive("use asm"))return;var hoist_funs=compressor.option("hoist_funs");var hoist_vars=compressor.option("hoist_vars");var self=this;if(hoist_vars){var var_decl=0;self.walk(new TreeWalker(function(node){if(var_decl>1)return true;if(node instanceof AST_Scope&&node!==self)return true;if(node instanceof AST_Var){var_decl++;return true}}));if(var_decl<=1)hoist_vars=false}if(!hoist_funs&&!hoist_vars)return;var dirs=[];var hoisted=[];var vars=new Dictionary,vars_found=0;var tt=new TreeTransformer(function(node){if(node===self)return;if(node instanceof AST_Directive){dirs.push(node);return make_node(AST_EmptyStatement,node)}if(hoist_funs&&node instanceof AST_Defun&&(tt.parent()===self||!compressor.has_directive("use strict"))){hoisted.push(node);return make_node(AST_EmptyStatement,node)}if(hoist_vars&&node instanceof AST_Var){node.definitions.forEach(function(def){vars.set(def.name.name,def);++vars_found});var seq=node.to_assignments(compressor);var p=tt.parent();if(p instanceof AST_ForIn&&p.init===node){if(seq)return seq;var def=node.definitions[0].name;return make_node(AST_SymbolRef,def,def)}if(p instanceof AST_For&&p.init===node)return seq;if(!seq)return make_node(AST_EmptyStatement,node);return make_node(AST_SimpleStatement,node,{body:seq})}if(node instanceof AST_Scope)return node});self.transform(tt);if(vars_found>0){var defs=[];vars.each(function(def,name){if(self instanceof AST_Lambda&&!all(self.argnames,function(argname){return argname.name!=name})){vars.del(name)}else{def=def.clone();def.value=null;defs.push(def);vars.set(name,def)}});if(defs.length>0){for(var i=0;i<self.body.length;){if(self.body[i]instanceof AST_SimpleStatement){var expr=self.body[i].body,sym,assign;if(expr instanceof AST_Assign&&expr.operator=="="&&(sym=expr.left)instanceof AST_Symbol&&vars.has(sym.name)){var def=vars.get(sym.name);if(def.value)break;def.value=expr.right;remove(defs,def);defs.push(def);self.body.splice(i,1);continue}if(expr instanceof AST_Sequence&&(assign=expr.expressions[0])instanceof AST_Assign&&assign.operator=="="&&(sym=assign.left)instanceof AST_Symbol&&vars.has(sym.name)){var def=vars.get(sym.name);if(def.value)break;def.value=assign.right;remove(defs,def);defs.push(def);self.body[i].body=make_sequence(expr,expr.expressions.slice(1));continue}}if(self.body[i]instanceof AST_EmptyStatement){self.body.splice(i,1);continue}if(self.body[i]instanceof AST_BlockStatement){var tmp=[i,1].concat(self.body[i].body);self.body.splice.apply(self.body,tmp);continue}break}defs=make_node(AST_Var,self,{definitions:defs});hoisted.push(defs)}}self.body=dirs.concat(hoisted,self.body)});AST_Scope.DEFMETHOD("var_names",function(){var var_names=this._var_names;if(!var_names){this._var_names=var_names=Object.create(null);this.enclosed.forEach(function(def){var_names[def.name]=true});this.variables.each(function(def,name){var_names[name]=true})}return var_names});AST_Scope.DEFMETHOD("make_var_name",function(prefix){var var_names=this.var_names();prefix=prefix.replace(/(?:^[^a-z_$]|[^a-z0-9_$])/gi,"_");var name=prefix;for(var i=0;var_names[name];i++)name=prefix+"$"+i;var_names[name]=true;return name});AST_Scope.DEFMETHOD("hoist_properties",function(compressor){if(!compressor.option("hoist_props")||compressor.has_directive("use asm"))return;var self=this;var top_retain=self instanceof AST_Toplevel&&compressor.top_retain||return_false;var defs_by_id=Object.create(null);self.transform(new TreeTransformer(function(node,descend){if(node instanceof AST_Assign&&node.operator=="="&&node.write_only&&can_hoist(node.left,node.right,1)){descend(node,this);var defs=new Dictionary;var assignments=[];var decls=[];node.right.properties.forEach(function(prop){var decl=make_sym(node.left,prop.key);decls.push(make_node(AST_VarDef,node,{name:decl,value:null}));var sym=make_node(AST_SymbolRef,node,{name:decl.name,scope:self,thedef:decl.definition()});sym.reference({});assignments.push(make_node(AST_Assign,node,{operator:"=",left:sym,right:prop.value}))});defs_by_id[node.left.definition().id]=defs;self.body.splice(self.body.indexOf(this.stack[1])+1,0,make_node(AST_Var,node,{definitions:decls}));return make_sequence(node,assignments)}if(node instanceof AST_VarDef&&can_hoist(node.name,node.value,0)){descend(node,this);var defs=new Dictionary;var var_defs=[];node.value.properties.forEach(function(prop){var_defs.push(make_node(AST_VarDef,node,{name:make_sym(node.name,prop.key),value:prop.value}))});defs_by_id[node.name.definition().id]=defs;return MAP.splice(var_defs)}if(node instanceof AST_PropAccess&&node.expression instanceof AST_SymbolRef){var defs=defs_by_id[node.expression.definition().id];if(defs){var def=defs.get(get_value(node.property));var sym=make_node(AST_SymbolRef,node,{name:def.name,scope:node.expression.scope,thedef:def});sym.reference({});return sym}}function can_hoist(sym,right,count){if(sym.scope!==self)return;var def=sym.definition();if(def.assignments!=count)return;if(def.direct_access)return;if(def.escaped==1)return;if(def.references.length==count)return;if(def.single_use)return;if(top_retain(def))return;if(sym.fixed_value()!==right)return;return right instanceof AST_Object}function make_sym(sym,key){var new_var=make_node(AST_SymbolVar,sym,{name:self.make_var_name(sym.name+"_"+key),scope:self});var def=self.def_variable(new_var);defs.set(key,def);self.enclosed.push(def);return new_var}}))});(function(def){function trim(nodes,compressor,first_in_statement){var len=nodes.length;if(!len)return null;var ret=[],changed=false;for(var i=0;i<len;i++){var node=nodes[i].drop_side_effect_free(compressor,first_in_statement);changed|=node!==nodes[i];if(node){ret.push(node);first_in_statement=false}}return changed?ret.length?ret:null:nodes}def(AST_Node,return_this);def(AST_Accessor,return_null);def(AST_Array,function(compressor,first_in_statement){var values=trim(this.elements,compressor,first_in_statement);return values&&make_sequence(this,values)});def(AST_Assign,function(compressor){var left=this.left;if(left.has_side_effects(compressor)||compressor.has_directive("use strict")&&left instanceof AST_PropAccess&&left.expression.is_constant()){return this}this.write_only=true;if(root_expr(left).is_constant_expression(compressor.find_parent(AST_Scope))){return this.right.drop_side_effect_free(compressor)}return this});def(AST_Binary,function(compressor,first_in_statement){var right=this.right.drop_side_effect_free(compressor,first_in_statement);if(!right)return this.left.drop_side_effect_free(compressor,first_in_statement);if(lazy_op[this.operator]){if(right===this.right)return this;var node=this.clone();node.right=right.drop_side_effect_free(compressor);return node}else{var left=this.left.drop_side_effect_free(compressor,first_in_statement);if(!left)return right;return make_sequence(this,[left,right.drop_side_effect_free(compressor)])}});def(AST_Call,function(compressor,first_in_statement){if(!this.is_expr_pure(compressor)){if(this.expression.is_call_pure(compressor)){var exprs=this.args.slice();exprs.unshift(this.expression.expression);exprs=trim(exprs,compressor,first_in_statement);return exprs&&make_sequence(this,exprs)}if(this.expression instanceof AST_Function&&(!this.expression.name||!this.expression.name.definition().references.length)){var node=this.clone();var exp=node.expression;exp.process_expression(false,compressor);exp.walk(new TreeWalker(function(node){if(node instanceof AST_Return&&node.value){node.value=node.value.drop_side_effect_free(compressor);return true}if(node instanceof AST_Scope&&node!==exp)return true}));return node}return this}if(this.pure){compressor.warn("Dropping __PURE__ call [{file}:{line},{col}]",this.start)}var args=trim(this.args,compressor,first_in_statement);return args&&make_sequence(this,args)});def(AST_Conditional,function(compressor){var consequent=this.consequent.drop_side_effect_free(compressor);var alternative=this.alternative.drop_side_effect_free(compressor);if(consequent===this.consequent&&alternative===this.alternative)return this;if(!consequent)return alternative?make_node(AST_Binary,this,{operator:"||",left:this.condition,right:alternative}):this.condition.drop_side_effect_free(compressor);if(!alternative)return make_node(AST_Binary,this,{operator:"&&",left:this.condition,right:consequent});var node=this.clone();node.consequent=consequent;node.alternative=alternative;return node});def(AST_Constant,return_null);def(AST_Dot,function(compressor,first_in_statement){if(this.expression.may_throw_on_access(compressor))return this;return this.expression.drop_side_effect_free(compressor,first_in_statement)});def(AST_Function,function(compressor){return this.name&&compressor.option("ie8")?this:null});def(AST_Object,function(compressor,first_in_statement){var values=trim(this.properties,compressor,first_in_statement);return values&&make_sequence(this,values)});def(AST_ObjectProperty,function(compressor,first_in_statement){return this.value.drop_side_effect_free(compressor,first_in_statement)});def(AST_Sequence,function(compressor,first_in_statement){var expressions=trim(this.expressions,compressor,first_in_statement);if(expressions===this.expressions)return this;if(!expressions)return null;return make_sequence(this,expressions)});def(AST_Sub,function(compressor,first_in_statement){if(this.expression.may_throw_on_access(compressor))return this;var expression=this.expression.drop_side_effect_free(compressor,first_in_statement);if(!expression)return this.property.drop_side_effect_free(compressor,first_in_statement);var property=this.property.drop_side_effect_free(compressor);if(!property)return expression;return make_sequence(this,[expression,property])});def(AST_SymbolRef,function(compressor){if(!this.is_declared(compressor))return this;this.definition().replaced++;return null});def(AST_This,return_null);def(AST_Unary,function(compressor,first_in_statement){if(unary_side_effects[this.operator]){this.write_only=!this.expression.has_side_effects(compressor);return this}if(this.operator=="typeof"&&this.expression instanceof AST_SymbolRef){this.expression.definition().replaced++;return null}var expression=this.expression.drop_side_effect_free(compressor,first_in_statement);if(first_in_statement&&expression&&is_iife_call(expression)){if(expression===this.expression&&this.operator=="!")return this;return expression.negate(compressor,first_in_statement)}return expression})})(function(node,func){node.DEFMETHOD("drop_side_effect_free",func)});OPT(AST_SimpleStatement,function(self,compressor){if(compressor.option("side_effects")){var body=self.body;var node=body.drop_side_effect_free(compressor,true);if(!node){compressor.warn("Dropping side-effect-free statement [{file}:{line},{col}]",self.start);return make_node(AST_EmptyStatement,self)}if(node!==body){return make_node(AST_SimpleStatement,self,{body:node})}}return self});OPT(AST_While,function(self,compressor){return compressor.option("loops")?make_node(AST_For,self,self).optimize(compressor):self});function has_break_or_continue(loop,parent){var found=false;var tw=new TreeWalker(function(node){if(found||node instanceof AST_Scope)return true;if(node instanceof AST_LoopControl&&tw.loopcontrol_target(node)===loop){return found=true}});if(parent instanceof AST_LabeledStatement)tw.push(parent);tw.push(loop);loop.body.walk(tw);return found}OPT(AST_Do,function(self,compressor){if(!compressor.option("loops"))return self;var cond=self.condition.is_truthy()||self.condition.tail_node().evaluate(compressor);if(!(cond instanceof AST_Node)){if(cond)return make_node(AST_For,self,{body:make_node(AST_BlockStatement,self.body,{body:[self.body,make_node(AST_SimpleStatement,self.condition,{body:self.condition})]})}).optimize(compressor);if(!has_break_or_continue(self,compressor.parent())){return make_node(AST_BlockStatement,self.body,{body:[self.body,make_node(AST_SimpleStatement,self.condition,{body:self.condition})]}).optimize(compressor)}}if(self.body instanceof AST_SimpleStatement)return make_node(AST_For,self,{condition:make_sequence(self.condition,[self.body.body,self.condition]),body:make_node(AST_EmptyStatement,self)}).optimize(compressor);return self});function if_break_in_loop(self,compressor){var first=self.body instanceof AST_BlockStatement?self.body.body[0]:self.body;if(compressor.option("dead_code")&&is_break(first)){var body=[];if(self.init instanceof AST_Statement){body.push(self.init)}else if(self.init){body.push(make_node(AST_SimpleStatement,self.init,{body:self.init}))}if(self.condition){body.push(make_node(AST_SimpleStatement,self.condition,{body:self.condition}))}extract_declarations_from_unreachable_code(compressor,self.body,body);return make_node(AST_BlockStatement,self,{body:body})}if(first instanceof AST_If){if(is_break(first.body)){if(self.condition){self.condition=make_node(AST_Binary,self.condition,{left:self.condition,operator:"&&",right:first.condition.negate(compressor)})}else{self.condition=first.condition.negate(compressor)}drop_it(first.alternative)}else if(is_break(first.alternative)){if(self.condition){self.condition=make_node(AST_Binary,self.condition,{left:self.condition,operator:"&&",right:first.condition})}else{self.condition=first.condition}drop_it(first.body)}}return self;function is_break(node){return node instanceof AST_Break&&compressor.loopcontrol_target(node)===compressor.self()}function drop_it(rest){rest=as_statement_array(rest);if(self.body instanceof AST_BlockStatement){self.body=self.body.clone();self.body.body=rest.concat(self.body.body.slice(1));self.body=self.body.transform(compressor)}else{self.body=make_node(AST_BlockStatement,self.body,{body:rest}).transform(compressor)}self=if_break_in_loop(self,compressor)}}OPT(AST_For,function(self,compressor){if(!compressor.option("loops"))return self;if(compressor.option("side_effects")&&self.init){self.init=self.init.drop_side_effect_free(compressor)}if(self.condition){var cond=self.condition.evaluate(compressor);if(!(cond instanceof AST_Node)){if(cond)self.condition=null;else if(!compressor.option("dead_code")){var orig=self.condition;self.condition=make_node_from_constant(cond,self.condition);self.condition=best_of_expression(self.condition.transform(compressor),orig)}}if(cond instanceof AST_Node){cond=self.condition.is_truthy()||self.condition.tail_node().evaluate(compressor)}if(!cond){if(compressor.option("dead_code")){var body=[];extract_declarations_from_unreachable_code(compressor,self.body,body);if(self.init instanceof AST_Statement){body.push(self.init)}else if(self.init){body.push(make_node(AST_SimpleStatement,self.init,{body:self.init}))}body.push(make_node(AST_SimpleStatement,self.condition,{body:self.condition}));return make_node(AST_BlockStatement,self,{body:body}).optimize(compressor)}}else if(self.condition&&!(cond instanceof AST_Node)){self.body=make_node(AST_BlockStatement,self.body,{body:[make_node(AST_SimpleStatement,self.condition,{body:self.condition}),self.body]});self.condition=null}}return if_break_in_loop(self,compressor)});OPT(AST_If,function(self,compressor){if(is_empty(self.alternative))self.alternative=null;if(!compressor.option("conditionals"))return self;var cond=self.condition.evaluate(compressor);if(!compressor.option("dead_code")&&!(cond instanceof AST_Node)){var orig=self.condition;self.condition=make_node_from_constant(cond,orig);self.condition=best_of_expression(self.condition.transform(compressor),orig)}if(compressor.option("dead_code")){if(cond instanceof AST_Node){cond=self.condition.is_truthy()||self.condition.tail_node().evaluate(compressor)}if(!cond){compressor.warn("Condition always false [{file}:{line},{col}]",self.condition.start);var body=[];extract_declarations_from_unreachable_code(compressor,self.body,body);body.push(make_node(AST_SimpleStatement,self.condition,{body:self.condition}));if(self.alternative)body.push(self.alternative);return make_node(AST_BlockStatement,self,{body:body}).optimize(compressor)}else if(!(cond instanceof AST_Node)){compressor.warn("Condition always true [{file}:{line},{col}]",self.condition.start);var body=[];if(self.alternative){extract_declarations_from_unreachable_code(compressor,self.alternative,body)}body.push(make_node(AST_SimpleStatement,self.condition,{body:self.condition}));body.push(self.body);return make_node(AST_BlockStatement,self,{body:body}).optimize(compressor)}}var negated=self.condition.negate(compressor);var self_condition_length=self.condition.print_to_string().length;var negated_length=negated.print_to_string().length;var negated_is_best=negated_length<self_condition_length;if(self.alternative&&negated_is_best){negated_is_best=false;self.condition=negated;var tmp=self.body;self.body=self.alternative||make_node(AST_EmptyStatement,self);self.alternative=tmp}if(is_empty(self.body)&&is_empty(self.alternative)){return make_node(AST_SimpleStatement,self.condition,{body:self.condition.clone()}).optimize(compressor)}if(self.body instanceof AST_SimpleStatement&&self.alternative instanceof AST_SimpleStatement){return make_node(AST_SimpleStatement,self,{body:make_node(AST_Conditional,self,{condition:self.condition,consequent:self.body.body,alternative:self.alternative.body})}).optimize(compressor)}if(is_empty(self.alternative)&&self.body instanceof AST_SimpleStatement){if(self_condition_length===negated_length&&!negated_is_best&&self.condition instanceof AST_Binary&&self.condition.operator=="||"){negated_is_best=true}if(negated_is_best)return make_node(AST_SimpleStatement,self,{body:make_node(AST_Binary,self,{operator:"||",left:negated,right:self.body.body})}).optimize(compressor);return make_node(AST_SimpleStatement,self,{body:make_node(AST_Binary,self,{operator:"&&",left:self.condition,right:self.body.body})}).optimize(compressor)}if(self.body instanceof AST_EmptyStatement&&self.alternative instanceof AST_SimpleStatement){return make_node(AST_SimpleStatement,self,{body:make_node(AST_Binary,self,{operator:"||",left:self.condition,right:self.alternative.body})}).optimize(compressor)}if(self.body instanceof AST_Exit&&self.alternative instanceof AST_Exit&&self.body.TYPE==self.alternative.TYPE){return make_node(self.body.CTOR,self,{value:make_node(AST_Conditional,self,{condition:self.condition,consequent:self.body.value||make_node(AST_Undefined,self.body),alternative:self.alternative.value||make_node(AST_Undefined,self.alternative)}).transform(compressor)}).optimize(compressor)}if(self.body instanceof AST_If&&!self.body.alternative&&!self.alternative){self=make_node(AST_If,self,{condition:make_node(AST_Binary,self.condition,{operator:"&&",left:self.condition,right:self.body.condition}),body:self.body.body,alternative:null})}if(aborts(self.body)){if(self.alternative){var alt=self.alternative;self.alternative=null;return make_node(AST_BlockStatement,self,{body:[self,alt]}).optimize(compressor)}}if(aborts(self.alternative)){var body=self.body;self.body=self.alternative;self.condition=negated_is_best?negated:self.condition.negate(compressor);self.alternative=null;return make_node(AST_BlockStatement,self,{body:[self,body]}).optimize(compressor)}return self});OPT(AST_Switch,function(self,compressor){if(!compressor.option("switches"))return self;var branch;var value=self.expression.evaluate(compressor);if(!(value instanceof AST_Node)){var orig=self.expression;self.expression=make_node_from_constant(value,orig);self.expression=best_of_expression(self.expression.transform(compressor),orig)}if(!compressor.option("dead_code"))return self;if(value instanceof AST_Node){value=self.expression.tail_node().evaluate(compressor)}var decl=[];var body=[];var default_branch;var exact_match;for(var i=0,len=self.body.length;i<len&&!exact_match;i++){branch=self.body[i];if(branch instanceof AST_Default){if(!default_branch){default_branch=branch}else{eliminate_branch(branch,body[body.length-1])}}else if(!(value instanceof AST_Node)){var exp=branch.expression.evaluate(compressor);if(!(exp instanceof AST_Node)&&exp!==value){eliminate_branch(branch,body[body.length-1]);continue}if(exp instanceof AST_Node)exp=branch.expression.tail_node().evaluate(compressor);if(exp===value){exact_match=branch;if(default_branch){var default_index=body.indexOf(default_branch);body.splice(default_index,1);eliminate_branch(default_branch,body[default_index-1]);default_branch=null}}}if(aborts(branch)){var prev=body[body.length-1];if(aborts(prev)&&prev.body.length==branch.body.length&&make_node(AST_BlockStatement,prev,prev).equivalent_to(make_node(AST_BlockStatement,branch,branch))){prev.body=[]}}body.push(branch)}while(i<len)eliminate_branch(self.body[i++],body[body.length-1]);if(body.length>0){body[0].body=decl.concat(body[0].body)}self.body=body;while(branch=body[body.length-1]){var stat=branch.body[branch.body.length-1];if(stat instanceof AST_Break&&compressor.loopcontrol_target(stat)===self)branch.body.pop();if(branch.body.length||branch instanceof AST_Case&&(default_branch||branch.expression.has_side_effects(compressor)))break;if(body.pop()===default_branch)default_branch=null}if(body.length==0){return make_node(AST_BlockStatement,self,{body:decl.concat(make_node(AST_SimpleStatement,self.expression,{body:self.expression}))}).optimize(compressor)}if(body.length==1&&(body[0]===exact_match||body[0]===default_branch)){var has_break=false;var tw=new TreeWalker(function(node){if(has_break||node instanceof AST_Lambda||node instanceof AST_SimpleStatement)return true;if(node instanceof AST_Break&&tw.loopcontrol_target(node)===self)has_break=true});self.walk(tw);if(!has_break){var statements=body[0].body.slice();var exp=body[0].expression;if(exp)statements.unshift(make_node(AST_SimpleStatement,exp,{body:exp}));statements.unshift(make_node(AST_SimpleStatement,self.expression,{body:self.expression}));return make_node(AST_BlockStatement,self,{body:statements}).optimize(compressor)}}return self;function eliminate_branch(branch,prev){if(prev&&!aborts(prev)){prev.body=prev.body.concat(branch.body)}else{extract_declarations_from_unreachable_code(compressor,branch,decl)}}});OPT(AST_Try,function(self,compressor){tighten_body(self.body,compressor);if(self.bcatch&&self.bfinally&&all(self.bfinally.body,is_empty))self.bfinally=null;if(compressor.option("dead_code")&&all(self.body,is_empty)){var body=[];if(self.bcatch){extract_declarations_from_unreachable_code(compressor,self.bcatch,body);body.forEach(function(stat){if(!(stat instanceof AST_Definitions))return;stat.definitions.forEach(function(var_def){var def=var_def.name.definition().redefined();if(!def)return;var_def.name=var_def.name.clone();var_def.name.thedef=def})})}if(self.bfinally)body=body.concat(self.bfinally.body);return make_node(AST_BlockStatement,self,{body:body}).optimize(compressor)}return self});AST_Definitions.DEFMETHOD("remove_initializers",function(){this.definitions.forEach(function(def){def.value=null})});AST_Definitions.DEFMETHOD("to_assignments",function(compressor){var reduce_vars=compressor.option("reduce_vars");var assignments=this.definitions.reduce(function(a,def){if(def.value){var name=make_node(AST_SymbolRef,def.name,def.name);a.push(make_node(AST_Assign,def,{operator:"=",left:name,right:def.value}));if(reduce_vars)name.definition().fixed=false}def=def.name.definition();def.eliminated++;def.replaced--;return a},[]);if(assignments.length==0)return null;return make_sequence(this,assignments)});OPT(AST_Definitions,function(self,compressor){return self.definitions.length?self:make_node(AST_EmptyStatement,self)});AST_Call.DEFMETHOD("lift_sequences",function(compressor){if(!compressor.option("sequences"))return this;var exp=this.expression;if(!(exp instanceof AST_Sequence))return this;var tail=exp.tail_node();if(needs_unbinding(compressor,tail)&&!(this instanceof AST_New))return this;var expressions=exp.expressions.slice(0,-1);var node=this.clone();node.expression=tail;expressions.push(node);return make_sequence(this,expressions).optimize(compressor)});OPT(AST_Call,function(self,compressor){var seq=self.lift_sequences(compressor);if(seq!==self){return seq}var exp=self.expression;var fn=exp;if(compressor.option("reduce_vars")&&fn instanceof AST_SymbolRef){fn=fn.fixed_value()}var is_func=fn instanceof AST_Lambda;if(compressor.option("unused")&&is_func&&!fn.uses_arguments&&!fn.pinned()){var pos=0,last=0;for(var i=0,len=self.args.length;i<len;i++){var trim=i>=fn.argnames.length;if(trim||fn.argnames[i].__unused){var node=self.args[i].drop_side_effect_free(compressor);if(node){self.args[pos++]=node}else if(!trim){self.args[pos++]=make_node(AST_Number,self.args[i],{value:0});continue}}else{self.args[pos++]=self.args[i]}last=pos}self.args.length=last}if(compressor.option("unsafe")){if(is_undeclared_ref(exp))switch(exp.name){case"Array":if(self.args.length==1){var first=self.args[0];if(first instanceof AST_Number)try{var length=first.getValue();if(length>6)break;var elements=Array(length);for(var i=0;i<length;i++)elements[i]=make_node(AST_Hole,self);return make_node(AST_Array,self,{elements:elements})}catch(ex){compressor.warn("Invalid array length: {length} [{file}:{line},{col}]",{length:length,file:self.start.file,line:self.start.line,col:self.start.col});break}if(!first.is_boolean(compressor)&&!first.is_string(compressor))break}return make_node(AST_Array,self,{elements:self.args});case"Object":if(self.args.length==0){return make_node(AST_Object,self,{properties:[]})}break;case"String":if(self.args.length==0)return make_node(AST_String,self,{value:""});if(self.args.length<=1)return make_node(AST_Binary,self,{left:self.args[0],operator:"+",right:make_node(AST_String,self,{value:""})}).optimize(compressor);break;case"Number":if(self.args.length==0)return make_node(AST_Number,self,{value:0});if(self.args.length==1)return make_node(AST_UnaryPrefix,self,{expression:self.args[0],operator:"+"}).optimize(compressor);case"Boolean":if(self.args.length==0)return make_node(AST_False,self);if(self.args.length==1)return make_node(AST_UnaryPrefix,self,{expression:make_node(AST_UnaryPrefix,self,{expression:self.args[0],operator:"!"}),operator:"!"}).optimize(compressor);break;case"RegExp":var params=[];if(all(self.args,function(arg){var value=arg.evaluate(compressor);params.unshift(value);return arg!==value})){try{return best_of(compressor,self,make_node(AST_RegExp,self,{value:RegExp.apply(RegExp,params)}))}catch(ex){compressor.warn("Error converting {expr} [{file}:{line},{col}]",{expr:self.print_to_string(),file:self.start.file,line:self.start.line,col:self.start.col})}}break}else if(exp instanceof AST_Dot)switch(exp.property){case"toString":if(self.args.length==0&&!exp.expression.may_throw_on_access(compressor)){return make_node(AST_Binary,self,{left:make_node(AST_String,self,{value:""}),operator:"+",right:exp.expression}).optimize(compressor)}break;case"join":if(exp.expression instanceof AST_Array)EXIT:{var separator;if(self.args.length>0){separator=self.args[0].evaluate(compressor);if(separator===self.args[0])break EXIT}var elements=[];var consts=[];exp.expression.elements.forEach(function(el){var value=el.evaluate(compressor);if(value!==el){consts.push(value)}else{if(consts.length>0){elements.push(make_node(AST_String,self,{value:consts.join(separator)}));consts.length=0}elements.push(el)}});if(consts.length>0){elements.push(make_node(AST_String,self,{value:consts.join(separator)}))}if(elements.length==0)return make_node(AST_String,self,{value:""});if(elements.length==1){if(elements[0].is_string(compressor)){return elements[0]}return make_node(AST_Binary,elements[0],{operator:"+",left:make_node(AST_String,self,{value:""}),right:elements[0]})}if(separator==""){var first;if(elements[0].is_string(compressor)||elements[1].is_string(compressor)){first=elements.shift()}else{first=make_node(AST_String,self,{value:""})}return elements.reduce(function(prev,el){return make_node(AST_Binary,el,{operator:"+",left:prev,right:el})},first).optimize(compressor)}var node=self.clone();node.expression=node.expression.clone();node.expression.expression=node.expression.expression.clone();node.expression.expression.elements=elements;return best_of(compressor,self,node)}break;case"charAt":if(exp.expression.is_string(compressor)){var arg=self.args[0];var index=arg?arg.evaluate(compressor):0;if(index!==arg){return make_node(AST_Sub,exp,{expression:exp.expression,property:make_node_from_constant(index|0,arg||exp)}).optimize(compressor)}}break;case"apply":if(self.args.length==2&&self.args[1]instanceof AST_Array){var args=self.args[1].elements.slice();args.unshift(self.args[0]);return make_node(AST_Call,self,{expression:make_node(AST_Dot,exp,{expression:exp.expression,property:"call"}),args:args}).optimize(compressor)}break;case"call":var func=exp.expression;if(func instanceof AST_SymbolRef){func=func.fixed_value()}if(func instanceof AST_Lambda&&!func.contains_this()){return(self.args.length?make_sequence(this,[self.args[0],make_node(AST_Call,self,{expression:exp.expression,args:self.args.slice(1)})]):make_node(AST_Call,self,{expression:exp.expression,args:[]})).optimize(compressor)}break}}if(compressor.option("unsafe_Function")&&is_undeclared_ref(exp)&&exp.name=="Function"){if(self.args.length==0)return make_node(AST_Function,self,{argnames:[],body:[]});if(all(self.args,function(x){return x instanceof AST_String})){try{var code="n(function("+self.args.slice(0,-1).map(function(arg){return arg.value}).join(",")+"){"+self.args[self.args.length-1].value+"})";var ast=parse(code);var mangle={ie8:compressor.option("ie8")};ast.figure_out_scope(mangle);var comp=new Compressor(compressor.options);ast=ast.transform(comp);ast.figure_out_scope(mangle);ast.compute_char_frequency(mangle);ast.mangle_names(mangle);var fun;ast.walk(new TreeWalker(function(node){if(fun)return true;if(node instanceof AST_Lambda){fun=node;return true}}));var code=OutputStream();AST_BlockStatement.prototype._codegen.call(fun,fun,code);self.args=[make_node(AST_String,self,{value:fun.argnames.map(function(arg){return arg.print_to_string()}).join(",")}),make_node(AST_String,self.args[self.args.length-1],{value:code.get().replace(/^\{|\}$/g,"")})];return self}catch(ex){if(ex instanceof JS_Parse_Error){compressor.warn("Error parsing code passed to new Function [{file}:{line},{col}]",self.args[self.args.length-1].start);compressor.warn(ex.toString())}else{throw ex}}}}var stat=is_func&&fn.body[0];var can_inline=compressor.option("inline")&&!self.is_expr_pure(compressor);if(can_inline&&stat instanceof AST_Return){var value=stat.value;if(!value||value.is_constant_expression()){if(value){value=value.clone(true)}else{value=make_node(AST_Undefined,self)}var args=self.args.concat(value);return make_sequence(self,args).optimize(compressor)}}if(is_func){var def,value,scope,in_loop,level=-1;if(can_inline&&!fn.uses_arguments&&!fn.pinned()&&!(fn.name&&fn instanceof AST_Function)&&(value=can_flatten_body(stat))&&(exp===fn||compressor.option("unused")&&(def=exp.definition()).references.length==1&&!recursive_ref(compressor,def)&&fn.is_constant_expression(exp.scope))&&!self.pure&&!fn.contains_this()&&can_inject_symbols()){fn._squeezed=true;return make_sequence(self,flatten_fn()).optimize(compressor)}if(compressor.option("side_effects")&&all(fn.body,is_empty)){var args=self.args.concat(make_node(AST_Undefined,self));return make_sequence(self,args).optimize(compressor)}}if(compressor.option("drop_console")){if(exp instanceof AST_PropAccess){var name=exp.expression;while(name.expression){name=name.expression}if(is_undeclared_ref(name)&&name.name=="console"){return make_node(AST_Undefined,self).optimize(compressor)}}}if(compressor.option("negate_iife")&&compressor.parent()instanceof AST_SimpleStatement&&is_iife_call(self)){return self.negate(compressor,true)}var ev=self.evaluate(compressor);if(ev!==self){ev=make_node_from_constant(ev,self).optimize(compressor);return best_of(compressor,ev,self)}return self;function return_value(stat){if(!stat)return make_node(AST_Undefined,self);if(stat instanceof AST_Return){if(!stat.value)return make_node(AST_Undefined,self);return stat.value.clone(true)}if(stat instanceof AST_SimpleStatement){return make_node(AST_UnaryPrefix,stat,{operator:"void",expression:stat.body.clone(true)})}}function can_flatten_body(stat){var len=fn.body.length;if(compressor.option("inline")<3){return len==1&&return_value(stat)}stat=null;for(var i=0;i<len;i++){var line=fn.body[i];if(line instanceof AST_Var){if(stat&&!all(line.definitions,function(var_def){return!var_def.value})){return false}}else if(line instanceof AST_EmptyStatement){continue}else if(stat){return false}else{stat=line}}return return_value(stat)}function can_inject_args(catches,safe_to_inject){for(var i=0,len=fn.argnames.length;i<len;i++){var arg=fn.argnames[i];if(arg.__unused)continue;if(!safe_to_inject||catches[arg.name]||identifier_atom[arg.name]||scope.var_names()[arg.name]){return false}if(in_loop)in_loop.push(arg.definition())}return true}function can_inject_vars(catches,safe_to_inject){for(var i=0,len=fn.body.length;i<len;i++){var stat=fn.body[i];if(!(stat instanceof AST_Var))continue;if(!safe_to_inject)return false;for(var j=stat.definitions.length;--j>=0;){var name=stat.definitions[j].name;if(catches[name.name]||identifier_atom[name.name]||scope.var_names()[name.name]){return false}if(in_loop)in_loop.push(name.definition())}}return true}function can_inject_symbols(){var catches=Object.create(null);do{scope=compressor.parent(++level);if(scope instanceof AST_Catch){catches[scope.argname.name]=true}else if(scope instanceof AST_IterationStatement){in_loop=[]}else if(scope instanceof AST_SymbolRef){if(scope.fixed_value()instanceof AST_Scope)return false}}while(!(scope instanceof AST_Scope));var safe_to_inject=(!(scope instanceof AST_Toplevel)||compressor.toplevel.vars)&&(exp!==fn||fn.parent_scope===compressor.find_parent(AST_Scope));var inline=compressor.option("inline");if(!can_inject_vars(catches,inline>=3&&safe_to_inject))return false;if(!can_inject_args(catches,inline>=2&&safe_to_inject))return false;return!in_loop||in_loop.length==0||!is_reachable(fn,in_loop)}function append_var(decls,expressions,name,value){var def=name.definition();scope.variables.set(name.name,def);scope.enclosed.push(def);if(!scope.var_names()[name.name]){scope.var_names()[name.name]=true;decls.push(make_node(AST_VarDef,name,{name:name,value:null}))}var sym=make_node(AST_SymbolRef,name,name);def.references.push(sym);if(value)expressions.push(make_node(AST_Assign,self,{operator:"=",left:sym,right:value}))}function flatten_args(decls,expressions){var len=fn.argnames.length;for(var i=self.args.length;--i>=len;){expressions.push(self.args[i])}for(i=len;--i>=0;){var name=fn.argnames[i];var value=self.args[i];if(name.__unused||scope.var_names()[name.name]){if(value)expressions.push(value)}else{var symbol=make_node(AST_SymbolVar,name,name);name.definition().orig.push(symbol);if(!value&&in_loop)value=make_node(AST_Undefined,self);append_var(decls,expressions,symbol,value)}}decls.reverse();expressions.reverse()}function flatten_vars(decls,expressions){var pos=expressions.length;for(var i=0,lines=fn.body.length;i<lines;i++){var stat=fn.body[i];if(!(stat instanceof AST_Var))continue;for(var j=0,defs=stat.definitions.length;j<defs;j++){var var_def=stat.definitions[j];var name=var_def.name;var redef=name.definition().redefined();if(redef){name=name.clone();name.thedef=redef}append_var(decls,expressions,name,var_def.value);if(in_loop&&all(fn.argnames,function(argname){return argname.name!=name.name})){var def=fn.variables.get(name.name);var sym=make_node(AST_SymbolRef,name,name);def.references.push(sym);expressions.splice(pos++,0,make_node(AST_Assign,var_def,{operator:"=",left:sym,right:make_node(AST_Undefined,name)}))}}}}function flatten_fn(){var decls=[];var expressions=[];flatten_args(decls,expressions);flatten_vars(decls,expressions);expressions.push(value);if(decls.length){i=scope.body.indexOf(compressor.parent(level-1))+1;scope.body.splice(i,0,make_node(AST_Var,fn,{definitions:decls}))}return expressions}});OPT(AST_New,function(self,compressor){var seq=self.lift_sequences(compressor);if(seq!==self){return seq}if(compressor.option("unsafe")){var exp=self.expression;if(is_undeclared_ref(exp)){switch(exp.name){case"Object":case"RegExp":case"Function":case"Error":case"Array":return make_node(AST_Call,self,self).transform(compressor)}}}return self});OPT(AST_Sequence,function(self,compressor){if(!compressor.option("side_effects"))return self;var expressions=[];filter_for_side_effects();var end=expressions.length-1;trim_right_for_undefined();if(end==0){self=maintain_this_binding(compressor,compressor.parent(),compressor.self(),expressions[0]);if(!(self instanceof AST_Sequence))self=self.optimize(compressor);return self}self.expressions=expressions;return self;function filter_for_side_effects(){var first=first_in_statement(compressor);var last=self.expressions.length-1;self.expressions.forEach(function(expr,index){if(index<last)expr=expr.drop_side_effect_free(compressor,first);if(expr){merge_sequence(expressions,expr);first=false}})}function trim_right_for_undefined(){while(end>0&&is_undefined(expressions[end],compressor))end--;if(end<expressions.length-1){expressions[end]=make_node(AST_UnaryPrefix,self,{operator:"void",expression:expressions[end]});expressions.length=end+1}}});AST_Unary.DEFMETHOD("lift_sequences",function(compressor){if(compressor.option("sequences")&&this.expression instanceof AST_Sequence){var x=this.expression.expressions.slice();var e=this.clone();e.expression=x.pop();x.push(e);return make_sequence(this,x).optimize(compressor)}return this});OPT(AST_UnaryPostfix,function(self,compressor){return self.lift_sequences(compressor)});OPT(AST_UnaryPrefix,function(self,compressor){var e=self.expression;if(self.operator=="delete"&&!(e instanceof AST_SymbolRef||e instanceof AST_PropAccess||is_identifier_atom(e))){if(e instanceof AST_Sequence){e=e.expressions.slice();e.push(make_node(AST_True,self));return make_sequence(self,e).optimize(compressor)}return make_sequence(self,[e,make_node(AST_True,self)]).optimize(compressor)}var seq=self.lift_sequences(compressor);if(seq!==self){return seq}if(compressor.option("side_effects")&&self.operator=="void"){e=e.drop_side_effect_free(compressor);if(e){self.expression=e;return self}else{return make_node(AST_Undefined,self).optimize(compressor)}}if(compressor.option("booleans")){if(self.operator=="!"&&e.is_truthy()){return make_sequence(self,[e,make_node(AST_False,self)]).optimize(compressor)}else if(compressor.in_boolean_context())switch(self.operator){case"!":if(e instanceof AST_UnaryPrefix&&e.operator=="!"){return e.expression}if(e instanceof AST_Binary){self=best_of(compressor,self,e.negate(compressor,first_in_statement(compressor)))}break;case"typeof":compressor.warn("Boolean expression always true [{file}:{line},{col}]",self.start);return(e instanceof AST_SymbolRef?make_node(AST_True,self):make_sequence(self,[e,make_node(AST_True,self)])).optimize(compressor)}}if(self.operator=="-"&&e instanceof AST_Infinity){e=e.transform(compressor)}if(e instanceof AST_Binary&&(self.operator=="+"||self.operator=="-")&&(e.operator=="*"||e.operator=="/"||e.operator=="%")){return make_node(AST_Binary,self,{operator:e.operator,left:make_node(AST_UnaryPrefix,e.left,{operator:self.operator,expression:e.left}),right:e.right})}if(self.operator!="-"||!(e instanceof AST_Number||e instanceof AST_Infinity)){var ev=self.evaluate(compressor);if(ev!==self){ev=make_node_from_constant(ev,self).optimize(compressor);return best_of(compressor,ev,self)}}return self});AST_Binary.DEFMETHOD("lift_sequences",function(compressor){if(compressor.option("sequences")){if(this.left instanceof AST_Sequence){var x=this.left.expressions.slice();var e=this.clone();e.left=x.pop();x.push(e);return make_sequence(this,x).optimize(compressor)}if(this.right instanceof AST_Sequence&&!this.left.has_side_effects(compressor)){var assign=this.operator=="="&&this.left instanceof AST_SymbolRef;var x=this.right.expressions;var last=x.length-1;for(var i=0;i<last;i++){if(!assign&&x[i].has_side_effects(compressor))break}if(i==last){x=x.slice();var e=this.clone();e.right=x.pop();x.push(e);return make_sequence(this,x).optimize(compressor)}else if(i>0){var e=this.clone();e.right=make_sequence(this.right,x.slice(i));x=x.slice(0,i);x.push(e);return make_sequence(this,x).optimize(compressor)}}}return this});var commutativeOperators=makePredicate("== === != !== * & | ^");function is_object(node){return node instanceof AST_Array||node instanceof AST_Lambda||node instanceof AST_Object}OPT(AST_Binary,function(self,compressor){function reversible(){return self.left.is_constant()||self.right.is_constant()||!self.left.has_side_effects(compressor)&&!self.right.has_side_effects(compressor)}function reverse(op){if(reversible()){if(op)self.operator=op;var tmp=self.left;self.left=self.right;self.right=tmp}}if(commutativeOperators[self.operator]){if(self.right.is_constant()&&!self.left.is_constant()){if(!(self.left instanceof AST_Binary&&PRECEDENCE[self.left.operator]>=PRECEDENCE[self.operator])){reverse()}}}self=self.lift_sequences(compressor);if(compressor.option("comparisons"))switch(self.operator){case"===":case"!==":var is_strict_comparison=true;if(self.left.is_string(compressor)&&self.right.is_string(compressor)||self.left.is_number(compressor)&&self.right.is_number(compressor)||self.left.is_boolean(compressor)&&self.right.is_boolean(compressor)||self.left.equivalent_to(self.right)){self.operator=self.operator.substr(0,2)}case"==":case"!=":if(!is_strict_comparison&&is_undefined(self.left,compressor)){self.left=make_node(AST_Null,self.left)}else if(compressor.option("typeofs")&&self.left instanceof AST_String&&self.left.value=="undefined"&&self.right instanceof AST_UnaryPrefix&&self.right.operator=="typeof"){var expr=self.right.expression;if(expr instanceof AST_SymbolRef?expr.is_declared(compressor):!(expr instanceof AST_PropAccess&&compressor.option("ie8"))){self.right=expr;self.left=make_node(AST_Undefined,self.left).optimize(compressor);if(self.operator.length==2)self.operator+="="}}else if(self.left instanceof AST_SymbolRef&&self.right instanceof AST_SymbolRef&&self.left.definition()===self.right.definition()&&is_object(self.left.fixed_value())){return make_node(self.operator[0]=="="?AST_True:AST_False,self)}break;case"&&":case"||":var lhs=self.left;if(lhs.operator==self.operator){lhs=lhs.right}if(lhs instanceof AST_Binary&&lhs.operator==(self.operator=="&&"?"!==":"===")&&self.right instanceof AST_Binary&&lhs.operator==self.right.operator&&(is_undefined(lhs.left,compressor)&&self.right.left instanceof AST_Null||lhs.left instanceof AST_Null&&is_undefined(self.right.left,compressor))&&!lhs.right.has_side_effects(compressor)&&lhs.right.equivalent_to(self.right.right)){var combined=make_node(AST_Binary,self,{operator:lhs.operator.slice(0,-1),left:make_node(AST_Null,self),right:lhs.right});if(lhs!==self.left){combined=make_node(AST_Binary,self,{operator:self.operator,left:self.left.left,right:combined})}return combined}break}if(compressor.option("booleans")&&self.operator=="+"&&compressor.in_boolean_context()){var ll=self.left.evaluate(compressor);var rr=self.right.evaluate(compressor);if(ll&&typeof ll=="string"){compressor.warn("+ in boolean context always true [{file}:{line},{col}]",self.start);return make_sequence(self,[self.right,make_node(AST_True,self)]).optimize(compressor)}if(rr&&typeof rr=="string"){compressor.warn("+ in boolean context always true [{file}:{line},{col}]",self.start);return make_sequence(self,[self.left,make_node(AST_True,self)]).optimize(compressor)}}if(compressor.option("comparisons")&&self.is_boolean(compressor)){if(!(compressor.parent()instanceof AST_Binary)||compressor.parent()instanceof AST_Assign){var negated=make_node(AST_UnaryPrefix,self,{operator:"!",expression:self.negate(compressor,first_in_statement(compressor))});self=best_of(compressor,self,negated)}switch(self.operator){case">":reverse("<");break;case">=":reverse("<=");break}}if(self.operator=="+"){if(self.right instanceof AST_String&&self.right.getValue()==""&&self.left.is_string(compressor)){return self.left}if(self.left instanceof AST_String&&self.left.getValue()==""&&self.right.is_string(compressor)){return self.right}if(self.left instanceof AST_Binary&&self.left.operator=="+"&&self.left.left instanceof AST_String&&self.left.left.getValue()==""&&self.right.is_string(compressor)){self.left=self.left.right;return self.transform(compressor)}}if(compressor.option("evaluate")){switch(self.operator){case"&&":var ll=fuzzy_eval(self.left);if(!ll){compressor.warn("Condition left of && always false [{file}:{line},{col}]",self.start);return maintain_this_binding(compressor,compressor.parent(),compressor.self(),self.left).optimize(compressor)}else if(!(ll instanceof AST_Node)){compressor.warn("Condition left of && always true [{file}:{line},{col}]",self.start);return make_sequence(self,[self.left,self.right]).optimize(compressor)}var rr=self.right.evaluate(compressor);if(!rr){if(compressor.option("booleans")&&compressor.in_boolean_context()){compressor.warn("Boolean && always false [{file}:{line},{col}]",self.start);return make_sequence(self,[self.left,make_node(AST_False,self)]).optimize(compressor)}else self.falsy=true}else if(!(rr instanceof AST_Node)){var parent=compressor.parent();if(parent.operator=="&&"&&parent.left===compressor.self()||compressor.option("booleans")&&compressor.in_boolean_context()){compressor.warn("Dropping side-effect-free && [{file}:{line},{col}]",self.start);return self.left.optimize(compressor)}}if(self.left.operator=="||"){var lr=self.left.right.evaluate(compressor);if(!lr)return make_node(AST_Conditional,self,{condition:self.left.left,consequent:self.right,alternative:self.left.right}).optimize(compressor)}break;case"||":var ll=fuzzy_eval(self.left);if(!ll){compressor.warn("Condition left of || always false [{file}:{line},{col}]",self.start);return make_sequence(self,[self.left,self.right]).optimize(compressor)}else if(!(ll instanceof AST_Node)){compressor.warn("Condition left of || always true [{file}:{line},{col}]",self.start);return maintain_this_binding(compressor,compressor.parent(),compressor.self(),self.left).optimize(compressor)}var rr=self.right.evaluate(compressor);if(!rr){var parent=compressor.parent();if(parent.operator=="||"&&parent.left===compressor.self()||compressor.option("booleans")&&compressor.in_boolean_context()){compressor.warn("Dropping side-effect-free || [{file}:{line},{col}]",self.start);return self.left.optimize(compressor)}}else if(!(rr instanceof AST_Node)){if(compressor.option("booleans")&&compressor.in_boolean_context()){compressor.warn("Boolean || always true [{file}:{line},{col}]",self.start);return make_sequence(self,[self.left,make_node(AST_True,self)]).optimize(compressor)}else self.truthy=true}if(self.left.operator=="&&"){var lr=self.left.right.evaluate(compressor);if(lr&&!(lr instanceof AST_Node))return make_node(AST_Conditional,self,{condition:self.left.left,consequent:self.left.right,alternative:self.right}).optimize(compressor)}break}var associative=true;switch(self.operator){case"+":if(self.left instanceof AST_Constant&&self.right instanceof AST_Binary&&self.right.operator=="+"&&self.right.left instanceof AST_Constant&&self.right.is_string(compressor)){self=make_node(AST_Binary,self,{operator:"+",left:make_node(AST_String,self.left,{value:""+self.left.getValue()+self.right.left.getValue(),start:self.left.start,end:self.right.left.end}),right:self.right.right})}if(self.right instanceof AST_Constant&&self.left instanceof AST_Binary&&self.left.operator=="+"&&self.left.right instanceof AST_Constant&&self.left.is_string(compressor)){self=make_node(AST_Binary,self,{operator:"+",left:self.left.left,right:make_node(AST_String,self.right,{value:""+self.left.right.getValue()+self.right.getValue(),start:self.left.right.start,end:self.right.end})})}if(self.left instanceof AST_Binary&&self.left.operator=="+"&&self.left.is_string(compressor)&&self.left.right instanceof AST_Constant&&self.right instanceof AST_Binary&&self.right.operator=="+"&&self.right.left instanceof AST_Constant&&self.right.is_string(compressor)){self=make_node(AST_Binary,self,{operator:"+",left:make_node(AST_Binary,self.left,{operator:"+",left:self.left.left,right:make_node(AST_String,self.left.right,{value:""+self.left.right.getValue()+self.right.left.getValue(),start:self.left.right.start,end:self.right.left.end})}),right:self.right.right})}if(self.right instanceof AST_UnaryPrefix&&self.right.operator=="-"&&self.left.is_number(compressor)){self=make_node(AST_Binary,self,{operator:"-",left:self.left,right:self.right.expression});break}if(self.left instanceof AST_UnaryPrefix&&self.left.operator=="-"&&reversible()&&self.right.is_number(compressor)){self=make_node(AST_Binary,self,{operator:"-",left:self.right,right:self.left.expression});break}case"*":associative=compressor.option("unsafe_math");case"&":case"|":case"^":if(self.left.is_number(compressor)&&self.right.is_number(compressor)&&reversible()&&!(self.left instanceof AST_Binary&&self.left.operator!=self.operator&&PRECEDENCE[self.left.operator]>=PRECEDENCE[self.operator])){var reversed=make_node(AST_Binary,self,{operator:self.operator,left:self.right,right:self.left});if(self.right instanceof AST_Constant&&!(self.left instanceof AST_Constant)){self=best_of(compressor,reversed,self)}else{self=best_of(compressor,self,reversed)}}if(associative&&self.is_number(compressor)){if(self.right instanceof AST_Binary&&self.right.operator==self.operator){self=make_node(AST_Binary,self,{operator:self.operator,left:make_node(AST_Binary,self.left,{operator:self.operator,left:self.left,right:self.right.left,start:self.left.start,end:self.right.left.end}),right:self.right.right})}if(self.right instanceof AST_Constant&&self.left instanceof AST_Binary&&self.left.operator==self.operator){if(self.left.left instanceof AST_Constant){self=make_node(AST_Binary,self,{operator:self.operator,left:make_node(AST_Binary,self.left,{operator:self.operator,left:self.left.left,right:self.right,start:self.left.left.start,end:self.right.end}),right:self.left.right})}else if(self.left.right instanceof AST_Constant){self=make_node(AST_Binary,self,{operator:self.operator,left:make_node(AST_Binary,self.left,{operator:self.operator,left:self.left.right,right:self.right,start:self.left.right.start,end:self.right.end}),right:self.left.left})}}if(self.left instanceof AST_Binary&&self.left.operator==self.operator&&self.left.right instanceof AST_Constant&&self.right instanceof AST_Binary&&self.right.operator==self.operator&&self.right.left instanceof AST_Constant){self=make_node(AST_Binary,self,{operator:self.operator,left:make_node(AST_Binary,self.left,{operator:self.operator,left:make_node(AST_Binary,self.left.left,{operator:self.operator,left:self.left.right,right:self.right.left,start:self.left.right.start,end:self.right.left.end}),right:self.left.left}),right:self.right.right})}}}}if(self.right instanceof AST_Binary&&self.right.operator==self.operator&&(lazy_op[self.operator]||self.operator=="+"&&(self.right.left.is_string(compressor)||self.left.is_string(compressor)&&self.right.right.is_string(compressor)))){self.left=make_node(AST_Binary,self.left,{operator:self.operator,left:self.left,right:self.right.left});self.right=self.right.right;return self.transform(compressor)}var ev=self.evaluate(compressor);if(ev!==self){ev=make_node_from_constant(ev,self).optimize(compressor);return best_of(compressor,ev,self)}return self;function fuzzy_eval(node){if(node.truthy)return true;if(node.falsy)return false;if(node.is_truthy())return true;return node.evaluate(compressor)}});function recursive_ref(compressor,def){var node;for(var i=0;node=compressor.parent(i);i++){if(node instanceof AST_Lambda){var name=node.name;if(name&&name.definition()===def)break}}return node}OPT(AST_SymbolRef,function(self,compressor){if(!compressor.option("ie8")&&is_undeclared_ref(self)&&!(self.scope.uses_with&&compressor.find_parent(AST_With))){switch(self.name){case"undefined":return make_node(AST_Undefined,self).optimize(compressor);case"NaN":return make_node(AST_NaN,self).optimize(compressor);case"Infinity":return make_node(AST_Infinity,self).optimize(compressor)}}var parent=compressor.parent();if(compressor.option("reduce_vars")&&is_lhs(self,parent)!==self){var def=self.definition();var fixed=self.fixed_value();var single_use=def.single_use&&!(parent instanceof AST_Call&&parent.is_expr_pure(compressor));if(single_use&&fixed instanceof AST_Lambda){if(def.scope!==self.scope&&(!compressor.option("reduce_funcs")||def.escaped==1||fixed.inlined)){single_use=false}else if(recursive_ref(compressor,def)){single_use=false}else if(def.scope!==self.scope||def.orig[0]instanceof AST_SymbolFunarg){single_use=fixed.is_constant_expression(self.scope);if(single_use=="f"){var scope=self.scope;do{if(scope instanceof AST_Defun||scope instanceof AST_Function){scope.inlined=true}}while(scope=scope.parent_scope)}}}if(single_use&&fixed){def.single_use=false;fixed._squeezed=true;if(fixed instanceof AST_Defun){fixed=make_node(AST_Function,fixed,fixed);fixed.name=make_node(AST_SymbolLambda,fixed.name,fixed.name)}var value;if(def.recursive_refs>0){value=fixed.clone(true);var defun_def=value.name.definition();var lambda_def=value.variables.get(value.name.name);var name=lambda_def&&lambda_def.orig[0];if(!(name instanceof AST_SymbolLambda)){name=make_node(AST_SymbolLambda,value.name,value.name);name.scope=value;value.name=name;lambda_def=value.def_function(name)}value.walk(new TreeWalker(function(node){if(!(node instanceof AST_SymbolRef))return;var def=node.definition();if(def===defun_def){node.thedef=lambda_def;lambda_def.references.push(node)}else{def.single_use=false;var fn=node.fixed_value();if(!(fn instanceof AST_Lambda))return;if(!fn.name)return;if(fixed.variables.get(fn.name.name)!==fn.name.definition())return;fn.name=fn.name.clone();var value_def=value.variables.get(fn.name.name)||value.def_function(fn.name);node.thedef=value_def;value_def.references.push(node)}}))}else{value=fixed.optimize(compressor);if(value===fixed)value=fixed.clone(true)}def.replaced++;return value}if(fixed&&def.should_replace===undefined){var init;if(fixed instanceof AST_This){if(!(def.orig[0]instanceof AST_SymbolFunarg)&&all(def.references,function(ref){return def.scope===ref.scope})){init=fixed}}else{var ev=fixed.evaluate(compressor);if(ev!==fixed&&(compressor.option("unsafe_regexp")||!(ev instanceof RegExp))){init=make_node_from_constant(ev,fixed)}}if(init){var value_length=init.optimize(compressor).print_to_string().length;var fn;if(has_symbol_ref(fixed)){fn=function(){var result=init.optimize(compressor);return result===init?result.clone(true):result}}else{value_length=Math.min(value_length,fixed.print_to_string().length);fn=function(){var result=best_of_expression(init.optimize(compressor),fixed);return result===init||result===fixed?result.clone(true):result}}var name_length=def.name.length;var overhead=0;if(compressor.option("unused")&&!compressor.exposed(def)){overhead=(name_length+2+value_length)/(def.references.length-def.assignments)}def.should_replace=value_length<=name_length+overhead?fn:false}else{def.should_replace=false}}if(def.should_replace){var value=def.should_replace();def.replaced++;return value}}return self;function has_symbol_ref(value){var found;value.walk(new TreeWalker(function(node){if(node instanceof AST_SymbolRef)found=true;if(found)return true}));return found}});function is_atomic(lhs,self){return lhs instanceof AST_SymbolRef||lhs.TYPE===self.TYPE}OPT(AST_Undefined,function(self,compressor){if(compressor.option("unsafe_undefined")){var undef=find_variable(compressor,"undefined");if(undef){var ref=make_node(AST_SymbolRef,self,{name:"undefined",scope:undef.scope,thedef:undef});ref.is_undefined=true;return ref}}var lhs=is_lhs(compressor.self(),compressor.parent());if(lhs&&is_atomic(lhs,self))return self;return make_node(AST_UnaryPrefix,self,{operator:"void",expression:make_node(AST_Number,self,{value:0})})});OPT(AST_Infinity,function(self,compressor){var lhs=is_lhs(compressor.self(),compressor.parent());if(lhs&&is_atomic(lhs,self))return self;if(compressor.option("keep_infinity")&&!(lhs&&!is_atomic(lhs,self))&&!find_variable(compressor,"Infinity"))return self;return make_node(AST_Binary,self,{operator:"/",left:make_node(AST_Number,self,{value:1}),right:make_node(AST_Number,self,{value:0})})});OPT(AST_NaN,function(self,compressor){var lhs=is_lhs(compressor.self(),compressor.parent());if(lhs&&!is_atomic(lhs,self)||find_variable(compressor,"NaN")){return make_node(AST_Binary,self,{operator:"/",left:make_node(AST_Number,self,{value:0}),right:make_node(AST_Number,self,{value:0})})}return self});function is_reachable(self,defs){var reachable=false;var find_ref=new TreeWalker(function(node){if(reachable)return true;if(node instanceof AST_SymbolRef&&member(node.definition(),defs)){return reachable=true}});var scan_scope=new TreeWalker(function(node){if(reachable)return true;if(node instanceof AST_Scope&&node!==self){var parent=scan_scope.parent();if(parent instanceof AST_Call&&parent.expression===node)return;node.walk(find_ref);return true}});self.walk(scan_scope);return reachable}var ASSIGN_OPS=makePredicate("+ - / * % >> << >>> | ^ &");var ASSIGN_OPS_COMMUTATIVE=makePredicate("* | ^ &");OPT(AST_Assign,function(self,compressor){var def;if(compressor.option("dead_code")&&self.left instanceof AST_SymbolRef&&(def=self.left.definition()).scope===compressor.find_parent(AST_Lambda)){var level=0,node,parent=self;do{node=parent;parent=compressor.parent(level++);if(parent instanceof AST_Exit){if(in_try(level,parent))break;if(is_reachable(def.scope,[def]))break;if(self.operator=="=")return self.right;def.fixed=false;return make_node(AST_Binary,self,{operator:self.operator.slice(0,-1),left:self.left,right:self.right}).optimize(compressor)}}while(parent instanceof AST_Binary&&parent.right===node||parent instanceof AST_Sequence&&parent.tail_node()===node)}self=self.lift_sequences(compressor);if(!compressor.option("assignments"))return self;if(self.operator=="="&&self.left instanceof AST_SymbolRef&&self.right instanceof AST_Binary){if(self.right.left instanceof AST_SymbolRef&&self.right.left.name==self.left.name&&ASSIGN_OPS[self.right.operator]){self.operator=self.right.operator+"=";self.right=self.right.right}else if(self.right.right instanceof AST_SymbolRef&&self.right.right.name==self.left.name&&ASSIGN_OPS_COMMUTATIVE[self.right.operator]&&!self.right.left.has_side_effects(compressor)){self.operator=self.right.operator+"=";self.right=self.right.left}}if((self.operator=="+="||self.operator=="-=")&&self.left.is_number(compressor)&&self.right instanceof AST_Number&&self.right.getValue()===1){var op=self.operator.slice(0,-1);return make_node(AST_UnaryPrefix,self,{operator:op+op,expression:self.left})}return self;function in_try(level,node){var right=self.right;self.right=make_node(AST_Null,right);var may_throw=node.may_throw(compressor);self.right=right;var scope=self.left.definition().scope;var parent;while((parent=compressor.parent(level++))!==scope){if(parent instanceof AST_Try){if(parent.bfinally)return true;if(may_throw&&parent.bcatch)return true}}}});OPT(AST_Conditional,function(self,compressor){if(!compressor.option("conditionals"))return self;if(self.condition instanceof AST_Sequence){var expressions=self.condition.expressions.slice();self.condition=expressions.pop();expressions.push(self);return make_sequence(self,expressions)}var cond=self.condition.is_truthy()||self.condition.tail_node().evaluate(compressor);if(!cond){compressor.warn("Condition always false [{file}:{line},{col}]",self.start);return make_sequence(self,[self.condition,self.alternative]).optimize(compressor)}else if(!(cond instanceof AST_Node)){compressor.warn("Condition always true [{file}:{line},{col}]",self.start);return make_sequence(self,[self.condition,self.consequent]).optimize(compressor)}var negated=cond.negate(compressor,first_in_statement(compressor));if(best_of(compressor,cond,negated)===negated){self=make_node(AST_Conditional,self,{condition:negated,consequent:self.alternative,alternative:self.consequent})}var condition=self.condition;var consequent=self.consequent;var alternative=self.alternative;if(condition instanceof AST_SymbolRef&&consequent instanceof AST_SymbolRef&&condition.definition()===consequent.definition()){return make_node(AST_Binary,self,{operator:"||",left:condition,right:alternative})}var seq_tail=consequent.tail_node();if(seq_tail instanceof AST_Assign){var is_eq=seq_tail.operator=="=";var alt_tail=is_eq?alternative.tail_node():alternative;if((is_eq||consequent===seq_tail)&&alt_tail instanceof AST_Assign&&seq_tail.operator==alt_tail.operator&&seq_tail.left.equivalent_to(alt_tail.left)&&(is_eq&&!seq_tail.left.has_side_effects(compressor)||!condition.has_side_effects(compressor)&&can_shift_lhs_of_tail(consequent)&&can_shift_lhs_of_tail(alternative))){return make_node(AST_Assign,self,{operator:seq_tail.operator,left:seq_tail.left,right:make_node(AST_Conditional,self,{condition:condition,consequent:pop_lhs(consequent),alternative:pop_lhs(alternative)})})}}var arg_index;if(consequent instanceof AST_Call&&alternative.TYPE===consequent.TYPE&&consequent.args.length>0&&consequent.args.length==alternative.args.length&&consequent.expression.equivalent_to(alternative.expression)&&!condition.has_side_effects(compressor)&&!consequent.expression.has_side_effects(compressor)&&typeof(arg_index=single_arg_diff())=="number"){var node=consequent.clone();node.args[arg_index]=make_node(AST_Conditional,self,{condition:condition,consequent:consequent.args[arg_index],alternative:alternative.args[arg_index]});return node}if(consequent instanceof AST_Conditional&&consequent.alternative.equivalent_to(alternative)){return make_node(AST_Conditional,self,{condition:make_node(AST_Binary,self,{left:condition,operator:"&&",right:consequent.condition}),consequent:consequent.consequent,alternative:alternative})}if(consequent.equivalent_to(alternative)){return make_sequence(self,[condition,consequent]).optimize(compressor)}if((consequent instanceof AST_Sequence||alternative instanceof AST_Sequence)&&consequent.tail_node().equivalent_to(alternative.tail_node())){return make_sequence(self,[make_node(AST_Conditional,self,{condition:condition,consequent:pop_seq(consequent),alternative:pop_seq(alternative)}),consequent.tail_node()]).optimize(compressor)}if(consequent instanceof AST_Binary&&consequent.operator=="||"&&consequent.right.equivalent_to(alternative)){return make_node(AST_Binary,self,{operator:"||",left:make_node(AST_Binary,self,{operator:"&&",left:condition,right:consequent.left}),right:alternative}).optimize(compressor)}var in_bool=compressor.option("booleans")&&compressor.in_boolean_context();if(is_true(self.consequent)){if(is_false(self.alternative)){return booleanize(condition)}return make_node(AST_Binary,self,{operator:"||",left:booleanize(condition),right:self.alternative})}if(is_false(self.consequent)){if(is_true(self.alternative)){return booleanize(condition.negate(compressor))}return make_node(AST_Binary,self,{operator:"&&",left:booleanize(condition.negate(compressor)),right:self.alternative})}if(is_true(self.alternative)){return make_node(AST_Binary,self,{operator:"||",left:booleanize(condition.negate(compressor)),right:self.consequent})}if(is_false(self.alternative)){return make_node(AST_Binary,self,{operator:"&&",left:booleanize(condition),right:self.consequent})}return self;function booleanize(node){if(node.is_boolean(compressor))return node;return make_node(AST_UnaryPrefix,node,{operator:"!",expression:node.negate(compressor)})}function is_true(node){return node instanceof AST_True||in_bool&&node instanceof AST_Constant&&node.getValue()||node instanceof AST_UnaryPrefix&&node.operator=="!"&&node.expression instanceof AST_Constant&&!node.expression.getValue()}function is_false(node){return node instanceof AST_False||in_bool&&node instanceof AST_Constant&&!node.getValue()||node instanceof AST_UnaryPrefix&&node.operator=="!"&&node.expression instanceof AST_Constant&&node.expression.getValue()}function single_arg_diff(){var a=consequent.args;var b=alternative.args;for(var i=0,len=a.length;i<len;i++){if(!a[i].equivalent_to(b[i])){for(var j=i+1;j<len;j++){if(!a[j].equivalent_to(b[j]))return}return i}}}function can_shift_lhs_of_tail(node){if(node===node.tail_node())return true;var exprs=node.expressions;for(var i=exprs.length-1;--i>=0;){var expr=exprs[i];if(!(expr instanceof AST_Assign)&&expr.has_side_effects(compressor)||expr.operator!="="||expr.left.has_side_effects(compressor)||expr.right.has_side_effects(compressor))return false}return true}function pop_lhs(node){if(!(node instanceof AST_Sequence))return node.right;var exprs=node.expressions.slice();exprs.push(exprs.pop().right);return make_sequence(node,exprs)}function pop_seq(node){if(!(node instanceof AST_Sequence))return make_node(AST_Number,node,{value:0});return make_sequence(node,node.expressions.slice(0,-1))}});OPT(AST_Boolean,function(self,compressor){if(!compressor.option("booleans"))return self;if(compressor.in_boolean_context())return make_node(AST_Number,self,{value:+self.value});var p=compressor.parent();if(p instanceof AST_Binary&&(p.operator=="=="||p.operator=="!=")){compressor.warn("Non-strict equality against boolean: {operator} {value} [{file}:{line},{col}]",{operator:p.operator,value:self.value,file:p.start.file,line:p.start.line,col:p.start.col});return make_node(AST_Number,self,{value:+self.value})}return make_node(AST_UnaryPrefix,self,{operator:"!",expression:make_node(AST_Number,self,{value:1-self.value})})});function safe_to_flatten(value,compressor){if(value instanceof AST_SymbolRef){value=value.fixed_value()}if(!value)return false;return!(value instanceof AST_Lambda)||compressor.parent()instanceof AST_New||!value.contains_this()}OPT(AST_Sub,function(self,compressor){var expr=self.expression;var prop=self.property;if(compressor.option("properties")){var key=prop.evaluate(compressor);if(key!==prop){if(typeof key=="string"){if(key=="undefined"){key=undefined}else{var value=parseFloat(key);if(value.toString()==key){key=value}}}prop=self.property=best_of_expression(prop,make_node_from_constant(key,prop).transform(compressor));var property=""+key;if(is_identifier_string(property)&&property.length<=prop.print_to_string().length+1){return make_node(AST_Dot,self,{expression:expr,property:property}).optimize(compressor)}}}var fn;if(compressor.option("arguments")&&expr instanceof AST_SymbolRef&&expr.name=="arguments"&&expr.definition().orig.length==1&&prop instanceof AST_Number&&(fn=expr.scope)===compressor.find_parent(AST_Lambda)){var index=prop.getValue();var argname=fn.argnames[index];if(argname&&compressor.has_directive("use strict")){var def=argname.definition();if(!compressor.option("reduce_vars")||expr.definition().reassigned||def.assignments||def.orig.length>1){argname=null}}else if(!argname&&!compressor.option("keep_fargs")&&index<fn.argnames.length+5){while(index>=fn.argnames.length){argname=make_node(AST_SymbolFunarg,fn,{name:fn.make_var_name("argument_"+fn.argnames.length),scope:fn});fn.argnames.push(argname);fn.enclosed.push(fn.def_variable(argname))}}if(argname&&find_if(function(node){return node.name===argname.name},fn.argnames)===argname){var sym=make_node(AST_SymbolRef,self,argname);sym.reference({});delete argname.__unused;return sym}}if(is_lhs(self,compressor.parent()))return self;if(key!==prop){var sub=self.flatten_object(property,compressor);if(sub){expr=self.expression=sub.expression;prop=self.property=sub.property}}if(compressor.option("properties")&&compressor.option("side_effects")&&prop instanceof AST_Number&&expr instanceof AST_Array){var index=prop.getValue();var elements=expr.elements;var retValue=elements[index];if(safe_to_flatten(retValue,compressor)){var flatten=true;var values=[];for(var i=elements.length;--i>index;){var value=elements[i].drop_side_effect_free(compressor);if(value){values.unshift(value);if(flatten&&value.has_side_effects(compressor))flatten=false}}retValue=retValue instanceof AST_Hole?make_node(AST_Undefined,retValue):retValue;if(!flatten)values.unshift(retValue);while(--i>=0){var value=elements[i].drop_side_effect_free(compressor);if(value)values.unshift(value);else index--}if(flatten){values.push(retValue);return make_sequence(self,values).optimize(compressor)}else return make_node(AST_Sub,self,{expression:make_node(AST_Array,expr,{elements:values}),property:make_node(AST_Number,prop,{value:index})})}}var ev=self.evaluate(compressor);if(ev!==self){ev=make_node_from_constant(ev,self).optimize(compressor);return best_of(compressor,ev,self)}return self});AST_Scope.DEFMETHOD("contains_this",function(){var result;var self=this;self.walk(new TreeWalker(function(node){if(result)return true;if(node instanceof AST_This)return result=true;if(node!==self&&node instanceof AST_Scope)return true}));return result});AST_PropAccess.DEFMETHOD("flatten_object",function(key,compressor){if(!compressor.option("properties"))return;var expr=this.expression;if(expr instanceof AST_Object){var props=expr.properties;for(var i=props.length;--i>=0;){var prop=props[i];if(""+prop.key==key){if(!all(props,function(prop){return prop instanceof AST_ObjectKeyVal}))break;if(!safe_to_flatten(prop.value,compressor))break;return make_node(AST_Sub,this,{expression:make_node(AST_Array,expr,{elements:props.map(function(prop){return prop.value})}),property:make_node(AST_Number,this,{value:i})})}}}});OPT(AST_Dot,function(self,compressor){if(self.property=="arguments"||self.property=="caller"){compressor.warn("Function.prototype.{prop} not supported [{file}:{line},{col}]",{prop:self.property,file:self.start.file,line:self.start.line,col:self.start.col})}if(is_lhs(self,compressor.parent()))return self;if(compressor.option("unsafe_proto")&&self.expression instanceof AST_Dot&&self.expression.property=="prototype"){var exp=self.expression.expression;if(is_undeclared_ref(exp))switch(exp.name){case"Array":self.expression=make_node(AST_Array,self.expression,{elements:[]});break;case"Function":self.expression=make_node(AST_Function,self.expression,{argnames:[],body:[]});break;case"Number":self.expression=make_node(AST_Number,self.expression,{value:0});break;case"Object":self.expression=make_node(AST_Object,self.expression,{properties:[]});break;case"RegExp":self.expression=make_node(AST_RegExp,self.expression,{value:/t/});break;case"String":self.expression=make_node(AST_String,self.expression,{value:""});break}}var sub=self.flatten_object(self.property,compressor);if(sub)return sub.optimize(compressor);var ev=self.evaluate(compressor);if(ev!==self){ev=make_node_from_constant(ev,self).optimize(compressor);return best_of(compressor,ev,self)}return self});OPT(AST_Return,function(self,compressor){if(self.value&&is_undefined(self.value,compressor)){self.value=null}return self})})(function(node,optimizer){node.DEFMETHOD("optimize",function(compressor){var self=this;if(self._optimized)return self;if(compressor.has_directive("use asm"))return self;var opt=optimizer(self,compressor);opt._optimized=true;return opt})});"use strict";function SourceMap(options){options=defaults(options,{file:null,root:null,orig:null,orig_line_diff:0,dest_line_diff:0},true);var generator=new MOZ_SourceMap.SourceMapGenerator({file:options.file,sourceRoot:options.root});var maps=options.orig&&Object.create(null);if(maps)for(var source in options.orig){var map=new MOZ_SourceMap.SourceMapConsumer(options.orig[source]);if(Array.isArray(options.orig[source].sources)){map._sources.toArray().forEach(function(source){var sourceContent=map.sourceContentFor(source,true);if(sourceContent)generator.setSourceContent(source,sourceContent)})}maps[source]=map}return{add:function(source,gen_line,gen_col,orig_line,orig_col,name){var map=maps&&maps[source];if(map){var info=map.originalPositionFor({line:orig_line,column:orig_col});if(info.source===null)return;source=info.source;orig_line=info.line;orig_col=info.column;name=info.name||name}generator.addMapping({name:name,source:source,generated:{line:gen_line+options.dest_line_diff,column:gen_col},original:{line:orig_line+options.orig_line_diff,column:orig_col}})},get:function(){return generator},toString:function(){return JSON.stringify(generator.toJSON())}}}"use strict";(function(){function normalize_directives(body){var in_directive=true;for(var i=0;i<body.length;i++){if(in_directive&&body[i]instanceof AST_Statement&&body[i].body instanceof AST_String){body[i]=new AST_Directive({start:body[i].start,end:body[i].end,value:body[i].body.value})}else if(in_directive&&!(body[i]instanceof AST_Statement&&body[i].body instanceof AST_String)){in_directive=false}}return body}var MOZ_TO_ME={Program:function(M){return new AST_Toplevel({start:my_start_token(M),end:my_end_token(M),body:normalize_directives(M.body.map(from_moz))})},FunctionDeclaration:function(M){return new AST_Defun({start:my_start_token(M),end:my_end_token(M),name:from_moz(M.id),argnames:M.params.map(from_moz),body:normalize_directives(from_moz(M.body).body)})},FunctionExpression:function(M){return new AST_Function({start:my_start_token(M),end:my_end_token(M),name:from_moz(M.id),argnames:M.params.map(from_moz),body:normalize_directives(from_moz(M.body).body)})},ExpressionStatement:function(M){return new AST_SimpleStatement({start:my_start_token(M),end:my_end_token(M),body:from_moz(M.expression)})},TryStatement:function(M){var handlers=M.handlers||[M.handler];if(handlers.length>1||M.guardedHandlers&&M.guardedHandlers.length){throw new Error("Multiple catch clauses are not supported.")}return new AST_Try({start:my_start_token(M),end:my_end_token(M),body:from_moz(M.block).body,bcatch:from_moz(handlers[0]),bfinally:M.finalizer?new AST_Finally(from_moz(M.finalizer)):null})},Property:function(M){var key=M.key;var args={start:my_start_token(key),end:my_end_token(M.value),key:key.type=="Identifier"?key.name:key.value,value:from_moz(M.value)};if(M.kind=="init")return new AST_ObjectKeyVal(args);args.key=new AST_SymbolAccessor({name:args.key});args.value=new AST_Accessor(args.value);if(M.kind=="get")return new AST_ObjectGetter(args);if(M.kind=="set")return new AST_ObjectSetter(args)},ArrayExpression:function(M){return new AST_Array({start:my_start_token(M),end:my_end_token(M),elements:M.elements.map(function(elem){return elem===null?new AST_Hole:from_moz(elem)})})},ObjectExpression:function(M){return new AST_Object({start:my_start_token(M),end:my_end_token(M),properties:M.properties.map(function(prop){prop.type="Property";return from_moz(prop)})})},SequenceExpression:function(M){return new AST_Sequence({start:my_start_token(M),end:my_end_token(M),expressions:M.expressions.map(from_moz)})},MemberExpression:function(M){return new(M.computed?AST_Sub:AST_Dot)({start:my_start_token(M),end:my_end_token(M),property:M.computed?from_moz(M.property):M.property.name,expression:from_moz(M.object)})},SwitchCase:function(M){return new(M.test?AST_Case:AST_Default)({start:my_start_token(M),end:my_end_token(M),expression:from_moz(M.test),body:M.consequent.map(from_moz)})},VariableDeclaration:function(M){return new AST_Var({start:my_start_token(M),end:my_end_token(M),definitions:M.declarations.map(from_moz)})},Literal:function(M){var val=M.value,args={start:my_start_token(M),end:my_end_token(M)};if(val===null)return new AST_Null(args);var rx=M.regex;if(rx&&rx.pattern){args.value=new RegExp(rx.pattern,rx.flags);args.value.raw_source=rx.pattern;return new AST_RegExp(args)}else if(rx){args.value=M.regex&&M.raw?M.raw:val;return new AST_RegExp(args)}switch(typeof val){case"string":args.value=val;return new AST_String(args);case"number":args.value=val;return new AST_Number(args);case"boolean":return new(val?AST_True:AST_False)(args)}},Identifier:function(M){var p=FROM_MOZ_STACK[FROM_MOZ_STACK.length-2];return new(p.type=="LabeledStatement"?AST_Label:p.type=="VariableDeclarator"&&p.id===M?AST_SymbolVar:p.type=="FunctionExpression"?p.id===M?AST_SymbolLambda:AST_SymbolFunarg:p.type=="FunctionDeclaration"?p.id===M?AST_SymbolDefun:AST_SymbolFunarg:p.type=="CatchClause"?AST_SymbolCatch:p.type=="BreakStatement"||p.type=="ContinueStatement"?AST_LabelRef:AST_SymbolRef)({start:my_start_token(M),end:my_end_token(M),name:M.name})}};MOZ_TO_ME.UpdateExpression=MOZ_TO_ME.UnaryExpression=function To_Moz_Unary(M){var prefix="prefix"in M?M.prefix:M.type=="UnaryExpression"?true:false;return new(prefix?AST_UnaryPrefix:AST_UnaryPostfix)({start:my_start_token(M),end:my_end_token(M),operator:M.operator,expression:from_moz(M.argument)})};map("EmptyStatement",AST_EmptyStatement);map("BlockStatement",AST_BlockStatement,"body@body");map("IfStatement",AST_If,"test>condition, consequent>body, alternate>alternative");map("LabeledStatement",AST_LabeledStatement,"label>label, body>body");map("BreakStatement",AST_Break,"label>label");map("ContinueStatement",AST_Continue,"label>label");map("WithStatement",AST_With,"object>expression, body>body");map("SwitchStatement",AST_Switch,"discriminant>expression, cases@body");map("ReturnStatement",AST_Return,"argument>value");map("ThrowStatement",AST_Throw,"argument>value");map("WhileStatement",AST_While,"test>condition, body>body");map("DoWhileStatement",AST_Do,"test>condition, body>body");map("ForStatement",AST_For,"init>init, test>condition, update>step, body>body");map("ForInStatement",AST_ForIn,"left>init, right>object, body>body");map("DebuggerStatement",AST_Debugger);map("VariableDeclarator",AST_VarDef,"id>name, init>value");map("CatchClause",AST_Catch,"param>argname, body%body");map("ThisExpression",AST_This);map("BinaryExpression",AST_Binary,"operator=operator, left>left, right>right");map("LogicalExpression",AST_Binary,"operator=operator, left>left, right>right");map("AssignmentExpression",AST_Assign,"operator=operator, left>left, right>right");map("ConditionalExpression",AST_Conditional,"test>condition, consequent>consequent, alternate>alternative");map("NewExpression",AST_New,"callee>expression, arguments@args");map("CallExpression",AST_Call,"callee>expression, arguments@args");def_to_moz(AST_Toplevel,function To_Moz_Program(M){return to_moz_scope("Program",M)});def_to_moz(AST_Defun,function To_Moz_FunctionDeclaration(M){return{type:"FunctionDeclaration",id:to_moz(M.name),params:M.argnames.map(to_moz),body:to_moz_scope("BlockStatement",M)}});def_to_moz(AST_Function,function To_Moz_FunctionExpression(M){return{type:"FunctionExpression",id:to_moz(M.name),params:M.argnames.map(to_moz),body:to_moz_scope("BlockStatement",M)}});def_to_moz(AST_Directive,function To_Moz_Directive(M){return{type:"ExpressionStatement",expression:{type:"Literal",value:M.value}}});def_to_moz(AST_SimpleStatement,function To_Moz_ExpressionStatement(M){return{type:"ExpressionStatement",expression:to_moz(M.body)}});def_to_moz(AST_SwitchBranch,function To_Moz_SwitchCase(M){return{type:"SwitchCase",test:to_moz(M.expression),consequent:M.body.map(to_moz)}});def_to_moz(AST_Try,function To_Moz_TryStatement(M){return{type:"TryStatement",block:to_moz_block(M),handler:to_moz(M.bcatch),guardedHandlers:[],finalizer:to_moz(M.bfinally)}});def_to_moz(AST_Catch,function To_Moz_CatchClause(M){return{type:"CatchClause",param:to_moz(M.argname),guard:null,body:to_moz_block(M)}});def_to_moz(AST_Definitions,function To_Moz_VariableDeclaration(M){return{type:"VariableDeclaration",kind:"var",declarations:M.definitions.map(to_moz)}});def_to_moz(AST_Sequence,function To_Moz_SequenceExpression(M){return{type:"SequenceExpression",expressions:M.expressions.map(to_moz)}});def_to_moz(AST_PropAccess,function To_Moz_MemberExpression(M){var isComputed=M instanceof AST_Sub;return{type:"MemberExpression",object:to_moz(M.expression),computed:isComputed,property:isComputed?to_moz(M.property):{type:"Identifier",name:M.property}}});def_to_moz(AST_Unary,function To_Moz_Unary(M){return{type:M.operator=="++"||M.operator=="--"?"UpdateExpression":"UnaryExpression",operator:M.operator,prefix:M instanceof AST_UnaryPrefix,argument:to_moz(M.expression)}});def_to_moz(AST_Binary,function To_Moz_BinaryExpression(M){return{type:M.operator=="&&"||M.operator=="||"?"LogicalExpression":"BinaryExpression",left:to_moz(M.left),operator:M.operator,right:to_moz(M.right)}});def_to_moz(AST_Array,function To_Moz_ArrayExpression(M){return{type:"ArrayExpression",elements:M.elements.map(to_moz)}});def_to_moz(AST_Object,function To_Moz_ObjectExpression(M){return{type:"ObjectExpression",properties:M.properties.map(to_moz)}});def_to_moz(AST_ObjectProperty,function To_Moz_Property(M){var key={type:"Literal",value:M.key instanceof AST_SymbolAccessor?M.key.name:M.key};var kind;if(M instanceof AST_ObjectKeyVal){kind="init"}else if(M instanceof AST_ObjectGetter){kind="get"}else if(M instanceof AST_ObjectSetter){kind="set"}return{type:"Property",kind:kind,key:key,value:to_moz(M.value)}});def_to_moz(AST_Symbol,function To_Moz_Identifier(M){var def=M.definition();return{type:"Identifier",name:def?def.mangled_name||def.name:M.name}});def_to_moz(AST_RegExp,function To_Moz_RegExpLiteral(M){var flags=M.value.toString().match(/[gimuy]*$/)[0];var value="/"+M.value.raw_source+"/"+flags;return{type:"Literal",value:value,raw:value,regex:{pattern:M.value.raw_source,flags:flags}}});def_to_moz(AST_Constant,function To_Moz_Literal(M){var value=M.value;if(typeof value==="number"&&(value<0||value===0&&1/value<0)){return{type:"UnaryExpression",operator:"-",prefix:true,argument:{type:"Literal",value:-value,raw:M.start.raw}}}return{type:"Literal",value:value,raw:M.start.raw}});def_to_moz(AST_Atom,function To_Moz_Atom(M){return{type:"Identifier",name:String(M.value)}});AST_Boolean.DEFMETHOD("to_mozilla_ast",AST_Constant.prototype.to_mozilla_ast);AST_Null.DEFMETHOD("to_mozilla_ast",AST_Constant.prototype.to_mozilla_ast);AST_Hole.DEFMETHOD("to_mozilla_ast",function To_Moz_ArrayHole(){return null});AST_Block.DEFMETHOD("to_mozilla_ast",AST_BlockStatement.prototype.to_mozilla_ast);AST_Lambda.DEFMETHOD("to_mozilla_ast",AST_Function.prototype.to_mozilla_ast);function raw_token(moznode){if(moznode.type=="Literal"){return moznode.raw!=null?moznode.raw:moznode.value+""}}function my_start_token(moznode){var loc=moznode.loc,start=loc&&loc.start;var range=moznode.range;return new AST_Token({file:loc&&loc.source,line:start&&start.line,col:start&&start.column,pos:range?range[0]:moznode.start,endline:start&&start.line,endcol:start&&start.column,endpos:range?range[0]:moznode.start,raw:raw_token(moznode)})}function my_end_token(moznode){var loc=moznode.loc,end=loc&&loc.end;var range=moznode.range;return new AST_Token({file:loc&&loc.source,line:end&&end.line,col:end&&end.column,pos:range?range[1]:moznode.end,endline:end&&end.line,endcol:end&&end.column,endpos:range?range[1]:moznode.end,raw:raw_token(moznode)})}function map(moztype,mytype,propmap){var moz_to_me="function From_Moz_"+moztype+"(M){\n";moz_to_me+="return new U2."+mytype.name+"({\n"+"start: my_start_token(M),\n"+"end: my_end_token(M)";var me_to_moz="function To_Moz_"+moztype+"(M){\n";me_to_moz+="return {\n"+"type: "+JSON.stringify(moztype);if(propmap)propmap.split(/\s*,\s*/).forEach(function(prop){var m=/([a-z0-9$_]+)(=|@|>|%)([a-z0-9$_]+)/i.exec(prop);if(!m)throw new Error("Can't understand property map: "+prop);var moz=m[1],how=m[2],my=m[3];moz_to_me+=",\n"+my+": ";me_to_moz+=",\n"+moz+": ";switch(how){case"@":moz_to_me+="M."+moz+".map(from_moz)";me_to_moz+="M."+my+".map(to_moz)";break;case">":moz_to_me+="from_moz(M."+moz+")";me_to_moz+="to_moz(M."+my+")";break;case"=":moz_to_me+="M."+moz;me_to_moz+="M."+my;break;case"%":moz_to_me+="from_moz(M."+moz+").body";me_to_moz+="to_moz_block(M)";break;default:throw new Error("Can't understand operator in propmap: "+prop)}});moz_to_me+="\n})\n}";me_to_moz+="\n}\n}";moz_to_me=new Function("U2","my_start_token","my_end_token","from_moz","return("+moz_to_me+")")(exports,my_start_token,my_end_token,from_moz);me_to_moz=new Function("to_moz","to_moz_block","to_moz_scope","return("+me_to_moz+")")(to_moz,to_moz_block,to_moz_scope);MOZ_TO_ME[moztype]=moz_to_me;def_to_moz(mytype,me_to_moz)}var FROM_MOZ_STACK=null;function from_moz(node){FROM_MOZ_STACK.push(node);var ret=node!=null?MOZ_TO_ME[node.type](node):null;FROM_MOZ_STACK.pop();return ret}AST_Node.from_mozilla_ast=function(node){var save_stack=FROM_MOZ_STACK;FROM_MOZ_STACK=[];var ast=from_moz(node);FROM_MOZ_STACK=save_stack;ast.walk(new TreeWalker(function(node){if(node instanceof AST_LabelRef){for(var level=0,parent;parent=this.parent(level);level++){if(parent instanceof AST_Scope)break;if(parent instanceof AST_LabeledStatement&&parent.label.name==node.name){node.thedef=parent.label;break}}if(!node.thedef){var s=node.start;js_error("Undefined label "+node.name,s.file,s.line,s.col,s.pos)}}}));return ast};function set_moz_loc(mynode,moznode,myparent){var start=mynode.start;var end=mynode.end;if(start.pos!=null&&end.endpos!=null){moznode.range=[start.pos,end.endpos]}if(start.line){moznode.loc={start:{line:start.line,column:start.col},end:end.endline?{line:end.endline,column:end.endcol}:null};if(start.file){moznode.loc.source=start.file}}return moznode}function def_to_moz(mytype,handler){mytype.DEFMETHOD("to_mozilla_ast",function(){return set_moz_loc(this,handler(this))})}function to_moz(node){return node!=null?node.to_mozilla_ast():null}function to_moz_block(node){return{type:"BlockStatement",body:node.body.map(to_moz)}}function to_moz_scope(type,node){var body=node.body.map(to_moz);if(node.body[0]instanceof AST_SimpleStatement&&node.body[0].body instanceof AST_String){body.unshift(to_moz(new AST_EmptyStatement(node.body[0])))}return{type:type,body:body}}})();"use strict";function find_builtins(reserved){["null","true","false","Infinity","-Infinity","undefined"].forEach(add);[Array,Boolean,Date,Error,Function,Math,Number,Object,RegExp,String].forEach(function(ctor){Object.getOwnPropertyNames(ctor).map(add);if(ctor.prototype){Object.getOwnPropertyNames(ctor.prototype).map(add)}});function add(name){push_uniq(reserved,name)}}function reserve_quoted_keys(ast,reserved){ast.walk(new TreeWalker(function(node){if(node instanceof AST_ObjectKeyVal&&node.quote){add(node.key)}else if(node instanceof AST_Sub){addStrings(node.property,add)}}));function add(name){push_uniq(reserved,name)}}function addStrings(node,add){node.walk(new TreeWalker(function(node){if(node instanceof AST_Sequence){addStrings(node.tail_node(),add)}else if(node instanceof AST_String){add(node.value)}else if(node instanceof AST_Conditional){addStrings(node.consequent,add);addStrings(node.alternative,add)}return true}))}function mangle_properties(ast,options){options=defaults(options,{builtins:false,cache:null,debug:false,keep_quoted:false,only_cache:false,regex:null,reserved:null},true);var reserved=options.reserved;if(!Array.isArray(reserved))reserved=[];if(!options.builtins)find_builtins(reserved);var cname=-1;var cache;if(options.cache){cache=options.cache.props;cache.each(function(mangled_name){push_uniq(reserved,mangled_name)})}else{cache=new Dictionary}var regex=options.regex;var debug=options.debug!==false;var debug_suffix;if(debug)debug_suffix=options.debug===true?"":options.debug;var names_to_mangle=[];var unmangleable=[];ast.walk(new TreeWalker(function(node){if(node instanceof AST_ObjectKeyVal){add(node.key)}else if(node instanceof AST_ObjectProperty){add(node.key.name)}else if(node instanceof AST_Dot){add(node.property)}else if(node instanceof AST_Sub){addStrings(node.property,add)}else if(node instanceof AST_Call&&node.expression.print_to_string()=="Object.defineProperty"){addStrings(node.args[1],add)}}));return ast.transform(new TreeTransformer(function(node){if(node instanceof AST_ObjectKeyVal){node.key=mangle(node.key)}else if(node instanceof AST_ObjectProperty){node.key.name=mangle(node.key.name)}else if(node instanceof AST_Dot){node.property=mangle(node.property)}else if(!options.keep_quoted&&node instanceof AST_Sub){node.property=mangleStrings(node.property)}else if(node instanceof AST_Call&&node.expression.print_to_string()=="Object.defineProperty"){node.args[1]=mangleStrings(node.args[1])}}));function can_mangle(name){if(unmangleable.indexOf(name)>=0)return false;if(reserved.indexOf(name)>=0)return false;if(options.only_cache)return cache.has(name);if(/^-?[0-9]+(\.[0-9]+)?(e[+-][0-9]+)?$/.test(name))return false;return true}function should_mangle(name){if(regex&&!regex.test(name))return false;if(reserved.indexOf(name)>=0)return false;return cache.has(name)||names_to_mangle.indexOf(name)>=0}function add(name){if(can_mangle(name))push_uniq(names_to_mangle,name);if(!should_mangle(name))push_uniq(unmangleable,name)}function mangle(name){if(!should_mangle(name)){return name}var mangled=cache.get(name);if(!mangled){if(debug){var debug_mangled="_$"+name+"$"+debug_suffix+"_";if(can_mangle(debug_mangled))mangled=debug_mangled}if(!mangled)do{mangled=base54(++cname)}while(!can_mangle(mangled));cache.set(name,mangled)}return mangled}function mangleStrings(node){return node.transform(new TreeTransformer(function(node){if(node instanceof AST_Sequence){var last=node.expressions.length-1;node.expressions[last]=mangleStrings(node.expressions[last])}else if(node instanceof AST_String){node.value=mangle(node.value)}else if(node instanceof AST_Conditional){node.consequent=mangleStrings(node.consequent);node.alternative=mangleStrings(node.alternative)}return node}))}}"use strict";var to_ascii=typeof atob=="undefined"?function(b64){return new Buffer(b64,"base64").toString()}:atob;var to_base64=typeof btoa=="undefined"?function(str){return new Buffer(str).toString("base64")}:btoa;function read_source_map(name,code){var match=/\n\/\/# sourceMappingURL=data:application\/json(;.*?)?;base64,(.*)/.exec(code);if(!match){AST_Node.warn("inline source map not found: "+name);return null}return to_ascii(match[2])}function parse_source_map(content){try{return JSON.parse(content)}catch(ex){throw new Error("invalid input source map: "+content)}}function set_shorthand(name,options,keys){if(options[name]){keys.forEach(function(key){if(options[key]){if(typeof options[key]!="object")options[key]={};if(!(name in options[key]))options[key][name]=options[name]}})}}function init_cache(cache){if(!cache)return;if(!("props"in cache)){cache.props=new Dictionary}else if(!(cache.props instanceof Dictionary)){cache.props=Dictionary.fromObject(cache.props)}}function to_json(cache){return{props:cache.props.toObject()}}function minify(files,options){var warn_function=AST_Node.warn_function;try{options=defaults(options,{compress:{},enclose:false,ie8:false,keep_fnames:false,mangle:{},nameCache:null,output:{},parse:{},rename:undefined,sourceMap:false,timings:false,toplevel:false,warnings:false,wrap:false},true);var timings=options.timings&&{start:Date.now()};if(options.rename===undefined){options.rename=options.compress&&options.mangle}set_shorthand("ie8",options,["compress","mangle","output"]);set_shorthand("keep_fnames",options,["compress","mangle"]);set_shorthand("toplevel",options,["compress","mangle"]);set_shorthand("warnings",options,["compress"]);var quoted_props;if(options.mangle){options.mangle=defaults(options.mangle,{cache:options.nameCache&&(options.nameCache.vars||{}),eval:false,ie8:false,keep_fnames:false,properties:false,reserved:[],toplevel:false},true);if(options.mangle.properties){if(typeof options.mangle.properties!="object"){options.mangle.properties={}}if(options.mangle.properties.keep_quoted){quoted_props=options.mangle.properties.reserved;if(!Array.isArray(quoted_props))quoted_props=[];options.mangle.properties.reserved=quoted_props}if(options.nameCache&&!("cache"in options.mangle.properties)){options.mangle.properties.cache=options.nameCache.props||{}}}init_cache(options.mangle.cache);init_cache(options.mangle.properties.cache)}if(options.sourceMap){options.sourceMap=defaults(options.sourceMap,{content:null,filename:null,includeSources:false,root:null,url:null},true)}var warnings=[];if(options.warnings&&!AST_Node.warn_function){AST_Node.warn_function=function(warning){warnings.push(warning)}}if(timings)timings.parse=Date.now();var source_maps,toplevel;if(files instanceof AST_Toplevel){toplevel=files}else{if(typeof files=="string"){files=[files]}options.parse=options.parse||{};options.parse.toplevel=null;var source_map_content=options.sourceMap&&options.sourceMap.content;if(typeof source_map_content=="string"&&source_map_content!="inline"){source_map_content=parse_source_map(source_map_content)}source_maps=source_map_content&&Object.create(null);for(var name in files)if(HOP(files,name)){options.parse.filename=name;options.parse.toplevel=parse(files[name],options.parse);if(source_maps){if(source_map_content=="inline"){var inlined_content=read_source_map(name,files[name]);if(inlined_content){source_maps[name]=parse_source_map(inlined_content)}}else{source_maps[name]=source_map_content}}}toplevel=options.parse.toplevel}if(quoted_props){reserve_quoted_keys(toplevel,quoted_props)}if(options.wrap){toplevel=toplevel.wrap_commonjs(options.wrap)}if(options.enclose){toplevel=toplevel.wrap_enclose(options.enclose)}if(timings)timings.rename=Date.now();if(options.rename){toplevel.figure_out_scope(options.mangle);toplevel.expand_names(options.mangle)}if(timings)timings.compress=Date.now();if(options.compress)toplevel=new Compressor(options.compress).compress(toplevel);if(timings)timings.scope=Date.now();if(options.mangle)toplevel.figure_out_scope(options.mangle);if(timings)timings.mangle=Date.now();if(options.mangle){toplevel.compute_char_frequency(options.mangle);toplevel.mangle_names(options.mangle)}if(timings)timings.properties=Date.now();if(options.mangle&&options.mangle.properties){toplevel=mangle_properties(toplevel,options.mangle.properties)}if(timings)timings.output=Date.now();var result={};if(options.output.ast){result.ast=toplevel}if(!HOP(options.output,"code")||options.output.code){if(options.sourceMap){options.output.source_map=SourceMap({file:options.sourceMap.filename,orig:source_maps,root:options.sourceMap.root});if(options.sourceMap.includeSources){if(files instanceof AST_Toplevel){throw new Error("original source content unavailable")}else for(var name in files)if(HOP(files,name)){options.output.source_map.get().setSourceContent(name,files[name])}}else{options.output.source_map.get()._sourcesContents=null}}delete options.output.ast;delete options.output.code;var stream=OutputStream(options.output);toplevel.print(stream);result.code=stream.get();if(options.sourceMap){result.map=options.output.source_map.toString();if(options.sourceMap.url=="inline"){result.code+="\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,"+to_base64(result.map)}else if(options.sourceMap.url){result.code+="\n//# sourceMappingURL="+options.sourceMap.url}}}if(options.nameCache&&options.mangle){if(options.mangle.cache)options.nameCache.vars=to_json(options.mangle.cache);if(options.mangle.properties&&options.mangle.properties.cache){options.nameCache.props=to_json(options.mangle.properties.cache)}}if(timings){timings.end=Date.now();result.timings={parse:.001*(timings.rename-timings.parse),rename:.001*(timings.compress-timings.rename),compress:.001*(timings.scope-timings.compress),scope:.001*(timings.mangle-timings.scope),mangle:.001*(timings.properties-timings.mangle),properties:.001*(timings.output-timings.properties),output:.001*(timings.end-timings.output),total:.001*(timings.end-timings.start)}}if(warnings.length){result.warnings=warnings}return result}catch(ex){return{error:ex}}finally{AST_Node.warn_function=warn_function}}exports["Dictionary"]=Dictionary;exports["minify"]=minify;exports["parse"]=parse;exports["push_uniq"]=push_uniq;exports["TreeTransformer"]=TreeTransformer;exports["TreeWalker"]=TreeWalker})(typeof exports=="undefined"?exports={}:exports);
-}).call(this,require("buffer").Buffer)
-},{"buffer":4}]},{},["html-minifier"]);
+},{"./htmlparser":167,"./tokenchain":168,"./utils":169,"clean-css":6,"he":102,"relateurl":116,"terser":"terser"}],"terser":[function(require,module,exports){
+(function (global,Buffer){
+!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?t(exports,require("source-map")):"function"==typeof define&&define.amd?define(["exports","source-map"],t):t((e=e||self).Terser={},e.sourceMap)}(this,(function(e,t){"use strict";function n(e){return e.split("")}function i(e,t){return t.includes(e)}t=t&&t.hasOwnProperty("default")?t.default:t;class r extends Error{constructor(e,t){super(),this.name="DefaultsError",this.message=e,this.defs=t}}function o(e,t,n){!0===e&&(e={});var i=e||{};if(n)for(var o in i)if(D(i,o)&&!D(t,o))throw new r("`"+o+"` is not a supported option",t);for(var o in t)D(t,o)&&(i[o]=e&&D(e,o)?e[o]:t[o]);return i}function a(){}function s(){return!1}function u(){return!0}function c(){return this}function l(){return null}var f=function(){function e(e,o,a){var s,u=[],c=[];function l(){var l=o(e[s],s),f=l instanceof r;return f&&(l=l.v),l instanceof n?(l=l.v)instanceof i?c.push.apply(c,a?l.v.slice().reverse():l.v):c.push(l):l!==t&&(l instanceof i?u.push.apply(u,a?l.v.slice().reverse():l.v):u.push(l)),f}if(Array.isArray(e))if(a){for(s=e.length;--s>=0&&!l(););u.reverse(),c.reverse()}else for(s=0;s<e.length&&!l();++s);else for(s in e)if(D(e,s)&&l())break;return c.concat(u)}e.at_top=function(e){return new n(e)},e.splice=function(e){return new i(e)},e.last=function(e){return new r(e)};var t=e.skip={};function n(e){this.v=e}function i(e){this.v=e}function r(e){this.v=e}return e}();function p(e,t){e.includes(t)||e.push(t)}function _(e,t){return e.replace(/{(.+?)}/g,(function(e,n){return t&&t[n]}))}function d(e,t){for(var n=e.length;--n>=0;)e[n]===t&&e.splice(n,1)}function m(e,t){if(e.length<2)return e.slice();return function e(n){if(n.length<=1)return n;var i=Math.floor(n.length/2),r=n.slice(0,i),o=n.slice(i);return function(e,n){for(var i=[],r=0,o=0,a=0;r<e.length&&o<n.length;)t(e[r],n[o])<=0?i[a++]=e[r++]:i[a++]=n[o++];return r<e.length&&i.push.apply(i,e.slice(r)),o<n.length&&i.push.apply(i,n.slice(o)),i}(r=e(r),o=e(o))}(e)}function E(e){return Array.isArray(e)||(e=e.split(" ")),new Set(e)}function h(e,t,n){e.has(t)?e.get(t).push(n):e.set(t,[n])}function D(e,t){return Object.prototype.hasOwnProperty.call(e,t)}function g(e,t){return!0===e||e instanceof RegExp&&e.test(t)}var S={"\n":"n","\r":"r","\u2028":"u2028","\u2029":"u2029"};function A(e){return e.replace(/[\n\r\u2028\u2029]/g,(function(t,n){return("\\"==e[n-1]&&("\\"!=e[n-2]||/(?:^|[^\\])(?:\\{2})*$/.test(e.slice(0,n-1)))?"":"\\")+S[t]}))}const v="gimuy";var T="break case catch class const continue debugger default delete do else export extends finally for function if in instanceof let new return switch throw try typeof var void while with",b="false null true",y="enum implements import interface package private protected public static super this "+b+" "+T,C="return new delete throw else case yield await";T=E(T),y=E(y),C=E(C),b=E(b);var O=E(n("+-*&%=<>!?|~^")),F=/[0-9a-f]/i,M=/^0x[0-9a-f]+$/i,R=/^0[0-7]+$/,w=/^0o[0-7]+$/i,N=/^0b[01]+$/i,x=/^\d*\.?\d*(?:e[+-]?\d*(?:\d\.?|\.?\d)\d*)?$/i,k=/^(0[xob])?[0-9]+n$/i,I=E(["in","instanceof","typeof","new","void","delete","++","--","+","-","!","~","&","|","^","*","**","/","%",">>","<<",">>>","<",">","<=",">=","==","===","!=","!==","?","=","+=","-=","/=","*=","**=","%=",">>=","<<=",">>>=","|=","^=","&=","&&","||"]),L=E(n("  \n\r\t\f\v​           \u2028\u2029  　\ufeff")),V=E(n("\n\r\u2028\u2029")),P=E(n(";]),:")),B=E(n("[{(,;:")),K=E(n("[]{}(),;:")),U={ID_Start:/[A-Za-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0-\u08B4\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0AF9\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58-\u0C5A\u0C60\u0C61\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D5F-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309B-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AD\uA7B0-\uA7B7\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA8FD\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDE80-\uDE9C\uDEA0-\uDED0\uDF00-\uDF1F\uDF30-\uDF4A\uDF50-\uDF75\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00\uDE10-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE4\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC03-\uDC37\uDC83-\uDCAF\uDCD0-\uDCE8\uDD03-\uDD26\uDD50-\uDD72\uDD76\uDD83-\uDDB2\uDDC1-\uDDC4\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE2B\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEDE\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3D\uDF50\uDF5D-\uDF61]|\uD805[\uDC80-\uDCAF\uDCC4\uDCC5\uDCC7\uDD80-\uDDAE\uDDD8-\uDDDB\uDE00-\uDE2F\uDE44\uDE80-\uDEAA\uDF00-\uDF19]|\uD806[\uDCA0-\uDCDF\uDCFF\uDEC0-\uDEF8]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDED0-\uDEED\uDF00-\uDF2F\uDF40-\uDF43\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50\uDF93-\uDF9F]|\uD82C[\uDC00\uDC01]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB]|\uD83A[\uDC00-\uDCC4]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1]|\uD87E[\uDC00-\uDE1D]/,ID_Continue:/[0-9A-Z_a-z\xAA\xB5\xB7\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u0669\u066E-\u06D3\u06D5-\u06DC\u06DF-\u06E8\u06EA-\u06FC\u06FF\u0710-\u074A\u074D-\u07B1\u07C0-\u07F5\u07FA\u0800-\u082D\u0840-\u085B\u08A0-\u08B4\u08E3-\u0963\u0966-\u096F\u0971-\u0983\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC-\u09C4\u09C7\u09C8\u09CB-\u09CE\u09D7\u09DC\u09DD\u09DF-\u09E3\u09E6-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABC-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE3\u0AE6-\u0AEF\u0AF9\u0B01-\u0B03\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3C-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B5C\u0B5D\u0B5F-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C58-\u0C5A\u0C60-\u0C63\u0C66-\u0C6F\u0C81-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CDE\u0CE0-\u0CE3\u0CE6-\u0CEF\u0CF1\u0CF2\u0D01-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D-\u0D44\u0D46-\u0D48\u0D4A-\u0D4E\u0D57\u0D5F-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E01-\u0E3A\u0E40-\u0E4E\u0E50-\u0E59\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB9\u0EBB-\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u1049\u1050-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1369-\u1371\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1714\u1720-\u1734\u1740-\u1753\u1760-\u176C\u176E-\u1770\u1772\u1773\u1780-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18AA\u18B0-\u18F5\u1900-\u191E\u1920-\u192B\u1930-\u193B\u1946-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u19D0-\u19DA\u1A00-\u1A1B\u1A20-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1AB0-\u1ABD\u1B00-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1BF3\u1C00-\u1C37\u1C40-\u1C49\u1C4D-\u1C7D\u1CD0-\u1CD2\u1CD4-\u1CF6\u1CF8\u1CF9\u1D00-\u1DF5\u1DFC-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u203F\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2118-\u211D\u2124\u2126\u2128\u212A-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u3005-\u3007\u3021-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA62B\uA640-\uA66F\uA674-\uA67D\uA67F-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AD\uA7B0-\uA7B7\uA7F7-\uA827\uA840-\uA873\uA880-\uA8C4\uA8D0-\uA8D9\uA8E0-\uA8F7\uA8FB\uA8FD\uA900-\uA92D\uA930-\uA953\uA960-\uA97C\uA980-\uA9C0\uA9CF-\uA9D9\uA9E0-\uA9FE\uAA00-\uAA36\uAA40-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A-\uAAC2\uAADB-\uAADD\uAAE0-\uAAEF\uAAF2-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABEA\uABEC\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE2F\uFE33\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDDFD\uDE80-\uDE9C\uDEA0-\uDED0\uDEE0\uDF00-\uDF1F\uDF30-\uDF4A\uDF50-\uDF7A\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDCA0-\uDCA9\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00-\uDE03\uDE05\uDE06\uDE0C-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE38-\uDE3A\uDE3F\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE6\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC00-\uDC46\uDC66-\uDC6F\uDC7F-\uDCBA\uDCD0-\uDCE8\uDCF0-\uDCF9\uDD00-\uDD34\uDD36-\uDD3F\uDD50-\uDD73\uDD76\uDD80-\uDDC4\uDDCA-\uDDCC\uDDD0-\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE37\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEEA\uDEF0-\uDEF9\uDF00-\uDF03\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3C-\uDF44\uDF47\uDF48\uDF4B-\uDF4D\uDF50\uDF57\uDF5D-\uDF63\uDF66-\uDF6C\uDF70-\uDF74]|\uD805[\uDC80-\uDCC5\uDCC7\uDCD0-\uDCD9\uDD80-\uDDB5\uDDB8-\uDDC0\uDDD8-\uDDDD\uDE00-\uDE40\uDE44\uDE50-\uDE59\uDE80-\uDEB7\uDEC0-\uDEC9\uDF00-\uDF19\uDF1D-\uDF2B\uDF30-\uDF39]|\uD806[\uDCA0-\uDCE9\uDCFF\uDEC0-\uDEF8]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDE60-\uDE69\uDED0-\uDEED\uDEF0-\uDEF4\uDF00-\uDF36\uDF40-\uDF43\uDF50-\uDF59\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50-\uDF7E\uDF8F-\uDF9F]|\uD82C[\uDC00\uDC01]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99\uDC9D\uDC9E]|\uD834[\uDD65-\uDD69\uDD6D-\uDD72\uDD7B-\uDD82\uDD85-\uDD8B\uDDAA-\uDDAD\uDE42-\uDE44]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB\uDFCE-\uDFFF]|\uD836[\uDE00-\uDE36\uDE3B-\uDE6C\uDE75\uDE84\uDE9B-\uDE9F\uDEA1-\uDEAF]|\uD83A[\uDC00-\uDCC4\uDCD0-\uDCD6]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1]|\uD87E[\uDC00-\uDE1D]|\uDB40[\uDD00-\uDDEF]/};function G(e,t){var n=e.charAt(t);if(H(n)){var i=e.charAt(t+1);if(X(i))return n+i}if(X(n)){var r=e.charAt(t-1);if(H(r))return r+n}return n}function H(e){return"string"==typeof e&&(e=e.charCodeAt(0)),e>=55296&&e<=56319}function X(e){return"string"==typeof e&&(e=e.charCodeAt(0)),e>=56320&&e<=57343}function z(e){return e>=48&&e<=57}function W(e){var t=e.charCodeAt(0);return U.ID_Start.test(e)||36==t||95==t}function Y(e){var t=e.charCodeAt(0);return U.ID_Continue.test(e)||36==t||95==t||8204==t||8205==t}function q(e){return/^[a-z_$][a-z0-9_$]*$/i.test(e)}class $ extends Error{constructor(e,t,n,i,r){super(),this.name="SyntaxError",this.message=e,this.filename=t,this.line=n,this.col=i,this.pos=r}}function j(e,t,n,i,r){throw new $(e,t,n,i,r)}function Z(e,t,n){return e.type==t&&(null==n||e.value==n)}var J={};function Q(e,t,n,i){var r={text:e,filename:t,pos:0,tokpos:0,line:1,tokline:0,col:0,tokcol:0,newline_before:!1,regex_allowed:!1,brace_counter:0,template_braces:[],comments_before:[],directives:{},directive_stack:[]};function o(){return G(r.text,r.pos)}function a(e,t){var n=G(r.text,r.pos++);if(e&&!n)throw J;return V.has(n)?(r.newline_before=r.newline_before||!t,++r.line,r.col=0,"\r"==n&&"\n"==o()&&(++r.pos,n="\n")):(n.length>1&&(++r.pos,++r.col),++r.col),n}function s(e){for(;e-- >0;)a()}function u(e){return r.text.substr(r.pos,e.length)==e}function c(e,t){var n=r.text.indexOf(e,r.pos);if(t&&-1==n)throw J;return n}function l(){r.tokline=r.line,r.tokcol=r.col,r.tokpos=r.pos}var f=!1,p=null;function _(n,i,o){r.regex_allowed="operator"==n&&!te.has(i)||"keyword"==n&&C.has(i)||"punc"==n&&B.has(i)||"arrow"==n,"punc"==n&&"."==i?f=!0:o||(f=!1);var a={type:n,value:i,line:r.tokline,col:r.tokcol,pos:r.tokpos,endline:r.line,endcol:r.col,endpos:r.pos,nlb:r.newline_before,file:t};return/^(?:num|string|regexp)$/i.test(n)&&(a.raw=e.substring(a.pos,a.endpos)),o||(a.comments_before=r.comments_before,a.comments_after=r.comments_before=[]),r.newline_before=!1,a=new se(a),o||(p=a),a}function d(){for(;L.has(o());)a()}function m(e){j(e,t,r.tokline,r.tokcol,r.tokpos)}function E(e){var t=!1,n=!1,i=!1,r="."==e,s=!1,u=function(e){for(var t,n="",i=0;(t=o())&&e(t,i++);)n+=a();return n}((function(o,a){if(s)return!1;switch(o.charCodeAt(0)){case 98:case 66:return i=!0;case 111:case 79:case 120:case 88:return!i&&(i=!0);case 101:case 69:return!!i||!t&&(t=n=!0);case 45:return n||0==a&&!e;case 43:return n;case n=!1,46:return!(r||i||t)&&(r=!0)}return"n"===o?(s=!0,!0):F.test(o)}));if(e&&(u=e+u),R.test(u)&&ee.has_directive("use strict")&&m("Legacy octal literals are not allowed in strict mode"),u.endsWith("n")){if(!r&&k.test(u))return _("big_int",u.replace("n",""));m("Invalid or unexpected token")}var c=function(e){if(M.test(e))return parseInt(e.substr(2),16);if(R.test(e))return parseInt(e.substr(1),8);if(w.test(e))return parseInt(e.substr(2),8);if(N.test(e))return parseInt(e.substr(2),2);if(x.test(e))return parseFloat(e);var t=parseFloat(e);return t==e?t:void 0}(u);if(!isNaN(c))return _("num",c);m("Invalid syntax: "+u)}function h(e){return e>="0"&&e<="7"}function D(e,t,n){var i,s=a(!0,e);switch(s.charCodeAt(0)){case 110:return"\n";case 114:return"\r";case 116:return"\t";case 98:return"\b";case 118:return"\v";case 102:return"\f";case 120:return String.fromCharCode(g(2,t));case 117:if("{"==o()){for(a(!0),"}"===o()&&m("Expecting hex-character between {}");"0"==o();)a(!0);var u,l=c("}",!0)-r.pos;return(l>6||(u=g(l,t))>1114111)&&m("Unicode reference out of bounds"),a(!0),(i=u)>65535?(i-=65536,String.fromCharCode(55296+(i>>10))+String.fromCharCode(i%1024+56320)):String.fromCharCode(i)}return String.fromCharCode(g(4,t));case 10:return"";case 13:if("\n"==o())return a(!0,e),""}if(h(s)){if(n&&t){"0"===s&&!h(o())||m("Octal escape sequences are not allowed in template strings")}return function(e,t){var n=o();n>="0"&&n<="7"&&(e+=a(!0))[0]<="3"&&(n=o())>="0"&&n<="7"&&(e+=a(!0));if("0"===e)return"\0";e.length>0&&ee.has_directive("use strict")&&t&&m("Legacy octal escape sequences are not allowed in strict mode");return String.fromCharCode(parseInt(e,8))}(s,t)}return s}function g(e,t){for(var n=0;e>0;--e){if(!t&&isNaN(parseInt(o(),16)))return parseInt(n,16)||"";var i=a(!0);isNaN(parseInt(i,16))&&m("Invalid hex-character pattern in string"),n+=i}return parseInt(n,16)}var S=Q("Unterminated string constant",(function(){for(var e=a(),t="";;){var n=a(!0,!0);if("\\"==n)n=D(!0,!0);else if("\r"==n||"\n"==n)m("Unterminated string constant");else if(n==e)break;t+=n}var i=_("string",t);return i.quote=e,i})),A=Q("Unterminated template",(function(e){e&&r.template_braces.push(r.brace_counter);var t,n,i="",s="";for(a(!0,!0);"`"!=(t=a(!0,!0));){if("\r"==t)"\n"==o()&&++r.pos,t="\n";else if("$"==t&&"{"==o())return a(!0,!0),r.brace_counter++,(n=_(e?"template_head":"template_substitution",i)).raw=s,n;if(s+=t,"\\"==t){var u=r.pos;t=D(!0,!(p&&("name"===p.type||"punc"===p.type&&(")"===p.value||"]"===p.value))),!0),s+=r.text.substr(u,r.pos-u)}i+=t}return r.template_braces.pop(),(n=_(e?"template_head":"template_substitution",i)).raw=s,n.end=!0,n}));function v(e){var t,n=r.regex_allowed,i=function(){for(var e=r.text,t=r.pos,n=r.text.length;t<n;++t){var i=e[t];if(V.has(i))return t}return-1}();return-1==i?(t=r.text.substr(r.pos),r.pos=r.text.length):(t=r.text.substring(r.pos,i),r.pos=i),r.col=r.tokcol+(r.pos-r.tokpos),r.comments_before.push(_(e,t,!0)),r.regex_allowed=n,ee}var P=Q("Unterminated multiline comment",(function(){var e=r.regex_allowed,t=c("*/",!0),n=r.text.substring(r.pos,t).replace(/\r\n|\r|\u2028|\u2029/g,"\n");return s(function(e){for(var t=0,n=0;n<e.length;n++)H(e.charCodeAt(n))&&X(e.charCodeAt(n+1))&&(t++,n++);return e.length-t}(n)+2),r.comments_before.push(_("comment2",n,!0)),r.newline_before=r.newline_before||n.includes("\n"),r.regex_allowed=e,ee})),U=Q("Unterminated identifier name",(function(){var e,t,n=!1,i=function(){return n=!0,a(),"u"!==o()&&m("Expecting UnicodeEscapeSequence -- uXXXX or u{XXXX}"),D(!1,!0)};if("\\"===(e=o()))W(e=i())||m("First identifier char is an invalid identifier char");else{if(!W(e))return"";a()}for(;null!=(t=o());){if("\\"===(t=o()))Y(t=i())||m("Invalid escaped identifier char");else{if(!Y(t))break;a()}e+=t}return y.has(e)&&n&&m("Escaped characters are not allowed in keywords"),e})),q=Q("Unterminated regular expression",(function(e){for(var t,n=!1,i=!1;t=a(!0);)if(V.has(t))m("Unexpected line terminator");else if(n)e+="\\"+t,n=!1;else if("["==t)i=!0,e+=t;else if("]"==t&&i)i=!1,e+=t;else{if("/"==t&&!i)break;"\\"==t?n=!0:e+=t}return _("regexp",{source:e,flags:U()})}));function $(e){return _("operator",function e(t){if(!o())return t;var n=t+o();return I.has(n)?(a(),e(n)):t}(e||a()))}function Z(){switch(a(),o()){case"/":return a(),v("comment1");case"*":return a(),P()}return r.regex_allowed?q(""):$("/")}function Q(e,t){return function(n){try{return t(n)}catch(t){if(t!==J)throw t;m(e)}}}function ee(e){if(null!=e)return q(e);for(i&&0==r.pos&&u("#!")&&(l(),s(2),v("comment5"));;){if(d(),l(),n){if(u("\x3c!--")){s(4),v("comment3");continue}if(u("--\x3e")&&r.newline_before){s(3),v("comment4");continue}}var t=o();if(!t)return _("eof");var c=t.charCodeAt(0);switch(c){case 34:case 39:return S();case 46:return a(),z(o().charCodeAt(0))?E("."):"."===o()?(a(),a(),_("expand","...")):_("punc",".");case 47:var p=Z();if(p===ee)continue;return p;case 61:return a(),">"===o()?(a(),_("arrow","=>")):$("=");case 96:return A(!0);case 123:r.brace_counter++;break;case 125:if(r.brace_counter--,r.template_braces.length>0&&r.template_braces[r.template_braces.length-1]===r.brace_counter)return A(!1)}if(z(c))return E();if(K.has(t))return _("punc",a());if(O.has(t))return $();if(92==c||W(t))return h=void 0,h=U(),f?_("name",h):b.has(h)?_("atom",h):T.has(h)?I.has(h)?_("operator",h):_("keyword",h):_("name",h);break}var h;m("Unexpected character '"+t+"'")}return ee.next=a,ee.peek=o,ee.context=function(e){return e&&(r=e),r},ee.add_directive=function(e){r.directive_stack[r.directive_stack.length-1].push(e),void 0===r.directives[e]?r.directives[e]=1:r.directives[e]++},ee.push_directives_stack=function(){r.directive_stack.push([])},ee.pop_directives_stack=function(){for(var e=r.directive_stack[r.directive_stack.length-1],t=0;t<e.length;t++)r.directives[e[t]]--;r.directive_stack.pop()},ee.has_directive=function(e){return r.directives[e]>0},ee}var ee=E(["typeof","void","delete","--","++","!","~","-","+"]),te=E(["--","++"]),ne=E(["=","+=","-=","/=","*=","**=","%=",">>=","<<=",">>>=","|=","^=","&="]),ie=function(e,t){for(var n=0;n<e.length;++n)for(var i=e[n],r=0;r<i.length;++r)t[i[r]]=n+1;return t}([["||"],["&&"],["|"],["^"],["&"],["==","===","!=","!=="],["<",">","<=",">=","in","instanceof"],[">>","<<",">>>"],["+","-"],["*","/","%"],["**"]],{}),re=E(["atom","num","big_int","string","regexp","name"]);function oe(e,t){const n=new Map;t=o(t,{bare_returns:!1,ecma:8,expression:!1,filename:null,html5_comments:!0,module:!1,shebang:!0,strict:!1,toplevel:null},!0);var i={input:"string"==typeof e?Q(e,t.filename,t.html5_comments,t.shebang):e,token:null,prev:null,peeked:null,in_function:0,in_async:-1,in_generator:-1,in_directives:!0,in_loop:0,labels:[]};function r(e,t){return Z(i.token,e,t)}function a(){return i.peeked||(i.peeked=i.input())}function s(){return i.prev=i.token,i.peeked||a(),i.token=i.peeked,i.peeked=null,i.in_directives=i.in_directives&&("string"==i.token.type||r("punc",";")),i.token}function u(){return i.prev}function c(e,t,n,r){var o=i.input.context();j(e,o.filename,null!=t?t:o.tokline,null!=n?n:o.tokcol,null!=r?r:o.tokpos)}function l(e,t){c(t,e.line,e.col)}function f(e){null==e&&(e=i.token),l(e,"Unexpected token: "+e.type+" ("+e.value+")")}function p(e,t){if(r(e,t))return s();l(i.token,"Unexpected token "+i.token.type+" «"+i.token.value+"», expected "+e+" «"+t+"»")}function _(e){return p("punc",e)}function d(e){return e.nlb||!e.comments_before.every(e=>!e.nlb)}function m(){return!t.strict&&(r("eof")||r("punc","}")||d(i.token))}function E(){return i.in_generator===i.in_function}function h(){return i.in_async===i.in_function}function D(e){r("punc",";")?s():e||m()||f()}function g(){_("(");var e=Mt(!0);return _(")"),e}function S(e){return function(...t){const n=i.token,r=e(...t);return r.start=n,r.end=u(),r}}function A(){(r("operator","/")||r("operator","/="))&&(i.peeked=null,i.token=i.input(i.token.value.substr(1)))}i.token=s();var v=S((function(e,n,o){switch(A(),i.token.type){case"string":if(i.in_directives){var E=a();!i.token.raw.includes("\\")&&(Z(E,"punc",";")||Z(E,"punc","}")||d(E)||Z(E,"eof"))?i.input.add_directive(i.token.value):i.in_directives=!1}var S=i.in_directives,y=T();return S&&y.body instanceof nn?new fe(y.body):y;case"template_head":case"num":case"big_int":case"regexp":case"operator":case"atom":return T();case"name":if("async"==i.token.value&&Z(a(),"keyword","function"))return s(),s(),n&&c("functions are not allowed as the body of a loop"),O(Ie,!1,!0,e);if("import"==i.token.value&&!Z(a(),"punc","(")){s();var C=function(){var e,t,n=u();r("name")&&(e=_e(Wt));r("punc",",")&&s();((t=oe(!0))||e)&&p("name","from");var o=i.token;"string"!==o.type&&f();return s(),new at({start:n,imported_name:e,imported_names:t,module_name:new nn({start:o,value:o.value,quote:o.quote,end:o}),end:i.token})}();return D(),C}return Z(a(),"punc",":")?function(){var e=_e(qt);"await"===e.name&&h()&&l(i.prev,"await cannot be used as label inside async function");i.labels.some(t=>t.name===e.name)&&c("Label "+e.name+" defined twice");_(":"),i.labels.push(e);var t=v();i.labels.pop(),t instanceof Se||e.references.forEach((function(t){t instanceof We&&(t=t.label.start,c("Continue label `"+e.name+"` refers to non-IterationStatement.",t.line,t.col,t.pos))}));return new ge({body:t,label:e})}():T();case"punc":switch(i.token.value){case"{":return new Ee({start:i.token,body:N(),end:u()});case"[":case"(":return T();case";":return i.in_directives=!1,s(),new he;default:f()}case"keyword":switch(i.token.value){case"break":return s(),b(ze);case"continue":return s(),b(We);case"debugger":return s(),D(),new le;case"do":s();var F=Nt(v);p("keyword","while");var R=g();return D(!0),new ve({body:F,condition:R});case"while":return s(),new Te({condition:g(),body:Nt((function(){return v(!1,!0)}))});case"for":return s(),function(){var e="`for await` invalid in this context",t=i.token;"name"==t.type&&"await"==t.value?(h()||l(t,e),s()):t=!1;_("(");var n=null;if(r("punc",";"))t&&l(t,e);else{n=r("keyword","var")?(s(),I(!0)):r("keyword","let")?(s(),L(!0)):r("keyword","const")?(s(),V(!0)):Mt(!0,!0);var o=r("operator","in"),a=r("name","of");if(t&&!a&&l(t,e),o||a)return n instanceof tt?n.definitions.length>1&&l(n.start,"Only one variable declaration allowed in for..in loop"):Xe(n)||(n=$e(n))instanceof Le||l(n.start,"Invalid left-hand side in for..in loop"),s(),o?function(e){var t=Mt(!0);return _(")"),new ye({init:e,object:t,body:Nt((function(){return v(!1,!0)}))})}(n):function(e,t){var n=e instanceof tt?e.definitions[0].name:null,i=Mt(!0);return _(")"),new Ce({await:t,init:e,name:n,object:i,body:Nt((function(){return v(!1,!0)}))})}(n,!!t)}return function(e){_(";");var t=r("punc",";")?null:Mt(!0);_(";");var n=r("punc",")")?null:Mt(!0);return _(")"),new be({init:e,condition:t,step:n,body:Nt((function(){return v(!1,!0)}))})}(n)}();case"class":return s(),n&&c("classes are not allowed as the body of a loop"),o&&c("classes are not allowed as the body of an if"),Y(Rt);case"function":return s(),n&&c("functions are not allowed as the body of a loop"),O(Ie,!1,!1,e);case"if":return s(),function(){var e=g(),t=v(!1,!1,!0),n=null;r("keyword","else")&&(s(),n=v(!1,!1,!0));return new Ye({condition:e,body:t,alternative:n})}();case"return":0!=i.in_function||t.bare_returns||c("'return' outside of function"),s();var w=null;return r("punc",";")?s():m()||(w=Mt(!0),D()),new Ge({value:w});case"switch":return s(),new qe({expression:g(),body:Nt(x)});case"throw":s(),d(i.token)&&c("Illegal newline after 'throw'");w=Mt(!0);return D(),new He({value:w});case"try":return s(),function(){var e=N(),t=null,n=null;if(r("keyword","catch")){var o=i.token;if(s(),r("punc","{"))var a=null;else{_("(");a=M(void 0,zt);_(")")}t=new Qe({start:o,argname:a,body:N(),end:u()})}if(r("keyword","finally")){o=i.token;s(),n=new et({start:o,body:N(),end:u()})}t||n||c("Missing catch/finally blocks");return new Je({body:e,bcatch:t,bfinally:n})}();case"var":s();C=I();return D(),C;case"let":s();C=L();return D(),C;case"const":s();C=V();return D(),C;case"with":return i.input.has_directive("use strict")&&c("Strict mode may not include a with statement"),s(),new Oe({expression:g(),body:v()});case"export":if(!Z(a(),"punc","(")){s();C=function(){var e,t,n,o,c,l=i.token;if(r("keyword","default"))e=!0,s();else if(t=oe(!1)){if(r("name","from")){s();var p=i.token;return"string"!==p.type&&f(),s(),new st({start:l,is_default:e,exported_names:t,module_name:new nn({start:p,value:p.value,quote:p.quote,end:p}),end:u()})}return new st({start:l,is_default:e,exported_names:t,end:u()})}r("punc","{")||e&&(r("keyword","class")||r("keyword","function"))&&Z(a(),"punc")?(o=Mt(!1),D()):(n=v(e))instanceof tt&&e?f(n.start):n instanceof tt||n instanceof we||n instanceof Rt?c=n:n instanceof pe?o=n.body:f(n.start);return new st({start:l,is_default:e,exported_value:o,exported_definition:c,end:u()})}();return r("punc",";")&&D(),C}}}f()}));function T(e){return new pe({body:(e=Mt(!0),D(),e)})}function b(e){var t,n=null;m()||(n=_e(Jt,!0)),null!=n?((t=i.labels.find(e=>e.name===n.name))||c("Undefined label "+n.name),n.thedef=t):0==i.in_loop&&c(e.TYPE+" not inside a loop or switch"),D();var r=new e({label:n});return t&&t.references.push(r),r}var C=function(e,t,n){d(i.token)&&c("Unexpected newline before arrow (=>)"),p("arrow","=>");var o=w(r("punc","{"),!1,n),a=o instanceof Array&&o.length?o[o.length-1].end:o instanceof Array?e:o.end;return new ke({start:e,end:a,async:n,argnames:t,body:o})},O=function(e,t,n,i){var o=e===Ie,a=r("operator","*");a&&s();var c=r("name")?_e(o?Kt:Gt):null;o&&!c&&(i?e=xe:f()),!c||e===Ne||c instanceof kt||f(u());var l=[],p=w(!0,a||t,n,c,l);return new e({start:l.start,end:p.end,is_generator:a,async:n,name:c,argnames:l,body:p})};function F(e,t){var n=new Set,i=!1,r=!1,o=!1,a=!!t,s={add_parameter:function(t){if(n.has(t.value))!1===i&&(i=t),s.check_strict();else if(n.add(t.value),e)switch(t.value){case"arguments":case"eval":case"yield":a&&l(t,"Unexpected "+t.value+" identifier as parameter inside strict mode");break;default:y.has(t.value)&&f()}},mark_default_assignment:function(e){!1===r&&(r=e)},mark_spread:function(e){!1===o&&(o=e)},mark_strict_mode:function(){a=!0},is_strict:function(){return!1!==r||!1!==o||a},check_strict:function(){s.is_strict()&&!1!==i&&l(i,"Parameter "+i.value+" was used already")}};return s}function M(e,t){var n,o=!1;return void 0===e&&(e=F(!0,i.input.has_directive("use strict"))),r("expand","...")&&(o=i.token,e.mark_spread(i.token),s()),n=R(e,t),r("operator","=")&&!1===o&&(e.mark_default_assignment(i.token),s(),n=new At({start:n.start,left:n,operator:"=",right:Mt(!1),end:i.token})),!1!==o&&(r("punc",")")||f(),n=new Re({start:o,expression:n,end:o})),e.check_strict(),n}function R(e,t){var n,o=[],l=!0,p=!1,d=i.token;if(void 0===e&&(e=F(!1,i.input.has_directive("use strict"))),t=void 0===t?Bt:t,r("punc","[")){for(s();!r("punc","]");){if(l?l=!1:_(","),r("expand","...")&&(p=!0,n=i.token,e.mark_spread(i.token),s()),r("punc"))switch(i.token.value){case",":o.push(new fn({start:i.token,end:i.token}));continue;case"]":break;case"[":case"{":o.push(R(e,t));break;default:f()}else r("name")?(e.add_parameter(i.token),o.push(_e(t))):c("Invalid function parameter");r("operator","=")&&!1===p&&(e.mark_default_assignment(i.token),s(),o[o.length-1]=new At({start:o[o.length-1].start,left:o[o.length-1],operator:"=",right:Mt(!1),end:i.token})),p&&(r("punc","]")||c("Rest element must be last element"),o[o.length-1]=new Re({start:n,expression:o[o.length-1],end:n}))}return _("]"),e.check_strict(),new Le({start:d,names:o,is_array:!0,end:u()})}if(r("punc","{")){for(s();!r("punc","}");){if(l?l=!1:_(","),r("expand","...")&&(p=!0,n=i.token,e.mark_spread(i.token),s()),r("name")&&(Z(a(),"punc")||Z(a(),"operator"))&&[",","}","="].includes(a().value)){e.add_parameter(i.token);var m=u(),E=_e(t);p?o.push(new Re({start:n,expression:E,end:E.end})):o.push(new yt({start:m,key:E.name,value:E,end:E.end}))}else{if(r("punc","}"))continue;var h=i.token,D=ae();null===D?f(u()):"name"!==u().type||r("punc",":")?(_(":"),o.push(new yt({start:h,quote:h.quote,key:D,value:R(e,t),end:u()}))):o.push(new yt({start:u(),key:D,value:new t({start:u(),name:D,end:u()}),end:u()}))}p?r("punc","}")||c("Rest element must be last element"):r("operator","=")&&(e.mark_default_assignment(i.token),s(),o[o.length-1].value=new At({start:o[o.length-1].value.start,left:o[o.length-1].value,operator:"=",right:Mt(!1),end:i.token}))}return _("}"),e.check_strict(),new Le({start:d,names:o,is_array:!1,end:u()})}if(r("name"))return e.add_parameter(i.token),_e(t);c("Invalid function parameter")}function w(e,n,o,a,u){var c=i.in_loop,l=i.labels,p=i.in_generator,d=i.in_async;if(++i.in_function,n&&(i.in_generator=i.in_function),o&&(i.in_async=i.in_function),u&&function(e){var n=F(!0,i.input.has_directive("use strict"));for(_("(");!r("punc",")");){var o=M(n);if(e.push(o),r("punc",")")||(_(","),r("punc",")")&&t.ecma<8&&f()),o instanceof Re)break}s()}(u),e&&(i.in_directives=!0),i.in_loop=0,i.labels=[],e){i.input.push_directives_stack();var m=N();a&&ce(a),u&&u.forEach(ce),i.input.pop_directives_stack()}else m=Mt(!1);return--i.in_function,i.in_loop=c,i.labels=l,i.in_generator=p,i.in_async=d,m}function N(){_("{");for(var e=[];!r("punc","}");)r("eof")&&f(),e.push(v());return s(),e}function x(){_("{");for(var e,t=[],n=null,o=null;!r("punc","}");)r("eof")&&f(),r("keyword","case")?(o&&(o.end=u()),n=[],o=new Ze({start:(e=i.token,s(),e),expression:Mt(!0),body:n}),t.push(o),_(":")):r("keyword","default")?(o&&(o.end=u()),n=[],o=new je({start:(e=i.token,s(),_(":"),e),body:n}),t.push(o)):(n||f(),n.push(v()));return o&&(o.end=u()),s(),t}function k(e,t){for(var n,o=[];;){var a="var"===t?It:"const"===t?Vt:"let"===t?Pt:null;if(r("punc","{")||r("punc","[")?n=new ut({start:i.token,name:R(void 0,a),value:r("operator","=")?(p("operator","="),Mt(!1,e)):null,end:u()}):"import"==(n=new ut({start:i.token,name:_e(a),value:r("operator","=")?(s(),Mt(!1,e)):e||"const"!==t?null:c("Missing initializer in const declaration"),end:u()})).name.name&&c("Unexpected token: import"),o.push(n),!r("punc",","))break;s()}return o}var I=function(e){return new nt({start:u(),definitions:k(e,"var"),end:u()})},L=function(e){return new it({start:u(),definitions:k(e,"let"),end:u()})},V=function(e){return new rt({start:u(),definitions:k(e,"const"),end:u()})};function B(){var e,t=i.token;switch(t.type){case"name":e=se($t);break;case"num":e=new rn({start:t,end:t,value:t.value});break;case"big_int":e=new on({start:t,end:t,value:t.value});break;case"string":e=new nn({start:t,end:t,value:t.value,quote:t.quote});break;case"regexp":e=new an({start:t,end:t,value:t.value});break;case"atom":switch(t.value){case"false":e=new dn({start:t,end:t});break;case"true":e=new mn({start:t,end:t});break;case"null":e=new un({start:t,end:t})}}return s(),e}function K(e,t,n,i){var r=function(e,t){return t?new At({start:e.start,left:e,operator:"=",right:t,end:t.end}):e};return e instanceof Tt?r(new Le({start:e.start,end:e.end,is_array:!1,names:e.properties.map(K)}),i):e instanceof yt?(e.value=K(e.value,0,[e.key]),r(e,i)):e instanceof fn?e:e instanceof Le?(e.names=e.names.map(K),r(e,i)):e instanceof $t?r(new Bt({name:e.name,start:e.start,end:e.end}),i):e instanceof Re?(e.expression=K(e.expression),r(e,i)):e instanceof vt?r(new Le({start:e.start,end:e.end,is_array:!0,names:e.elements.map(K)}),i):e instanceof St?r(K(e.left,void 0,void 0,e.right),i):e instanceof At?(e.left=K(e.left,0,[e.left]),e):void c("Invalid function parameter",e.start.line,e.start.col)}var U=function(e,o){if(r("operator","new"))return function(e){var n=i.token;if(p("operator","new"),r("punc","."))return s(),p("name","target"),me(new xt({start:n,end:u()}),e);var o,a=U(!1);r("punc","(")?(s(),o=H(")",t.ecma>=8)):o=[];var c=new lt({start:n,expression:a,args:o,end:u()});return de(c),me(c,e)}(e);var c,l=i.token,d=r("name","async")&&"["!=(c=a()).value&&"arrow"!=c.type&&B();if(r("punc")){switch(i.token.value){case"(":if(d&&!e)break;var m=function(e,n){var o,a,c,l=[];for(_("(");!r("punc",")");)o&&f(o),r("expand","...")?(o=i.token,n&&(a=i.token),s(),l.push(new Re({start:u(),expression:Mt(),end:i.token}))):l.push(Mt()),r("punc",")")||(_(","),r("punc",")")&&(t.ecma<8&&f(),c=u(),n&&(a=c)));return _(")"),e&&r("arrow","=>")?o&&c&&f(c):a&&f(a),l}(o,!d);if(o&&r("arrow","=>"))return C(l,m.map(K),!!d);var E=d?new ct({expression:d,args:m}):1==m.length?m[0]:new ft({expressions:m});if(E.start){const e=l.comments_before.length;if(n.set(l,e),E.start.comments_before.unshift(...l.comments_before),l.comments_before=E.start.comments_before,0==e&&l.comments_before.length>0){var h=l.comments_before[0];h.nlb||(h.nlb=l.nlb,l.nlb=!1)}l.comments_after=E.start.comments_after}E.start=l;var D=u();return E.end&&(D.comments_before=E.end.comments_before,E.end.comments_after.push(...D.comments_after),D.comments_after=E.end.comments_after),E.end=D,E instanceof ct&&de(E),me(E,e);case"[":return me(X(),e);case"{":return me(W(),e)}d||f()}if(o&&r("name")&&Z(a(),"arrow")){var g=new Bt({name:i.token.value,start:l,end:l});return s(),C(l,[g],!!d)}if(r("keyword","function")){s();var S=O(xe,!1,!!d);return S.start=l,S.end=u(),me(S,e)}if(d)return me(d,e);if(r("keyword","class")){s();var A=Y(wt);return A.start=l,A.end=u(),me(A,e)}return r("template_head")?me(G(),e):re.has(i.token.type)?me(B(),e):void f()};function G(e){var t=[],n=i.token;for(t.push(new Be({start:i.token,raw:i.token.raw,value:i.token.value,end:i.token}));!i.token.end;)s(),A(),t.push(Mt(!0)),Z("template_substitution")||f(),t.push(new Be({start:i.token,raw:i.token.raw,value:i.token.value,end:i.token}));return s(),new Pe({start:n,segments:t,end:i.token})}function H(e,t,n){for(var o=!0,a=[];!r("punc",e)&&(o?o=!1:_(","),!t||!r("punc",e));)r("punc",",")&&n?a.push(new fn({start:i.token,end:i.token})):r("expand","...")?(s(),a.push(new Re({start:u(),expression:Mt(),end:i.token}))):a.push(Mt(!1));return s(),a}var X=S((function(){return _("["),new vt({elements:H("]",!t.strict,!0)})})),z=S((e,t)=>O(Ne,e,t)),W=S((function(){var e=i.token,n=!0,o=[];for(_("{");!r("punc","}")&&(n?n=!1:_(","),t.strict||!r("punc","}"));)if("expand"!=(e=i.token).type){var a,c=ae();if(r("punc",":"))null===c?f(u()):(s(),a=Mt(!1));else{var l=q(c,e);if(l){o.push(l);continue}a=new $t({start:u(),name:c,end:u()})}r("operator","=")&&(s(),a=new St({start:e,left:a,operator:"=",right:Mt(!1),end:u()})),o.push(new yt({start:e,quote:e.quote,key:c instanceof ue?c:""+c,value:a,end:u()}))}else s(),o.push(new Re({start:e,expression:Mt(!1),end:u()}));return s(),new Tt({properties:o})}));function Y(e){var t,n,o,a,c=[];for(i.input.push_directives_stack(),i.input.add_directive("use strict"),"name"==i.token.type&&"extends"!=i.token.value&&(o=_e(e===Rt?Ht:Xt)),e!==Rt||o||f(),"extends"==i.token.value&&(s(),a=Mt(!0)),_("{"),r("punc",";")&&s();!r("punc","}");)t=i.token,(n=q(ae(),t,!0))||f(),c.push(n),r("punc",";")&&s();return i.input.pop_directives_stack(),s(),new e({start:t,name:o,extends:a,properties:c,end:u()})}function q(e,t,n){var o=function(e,t){return"string"==typeof e||"number"==typeof e?new Ut({start:t,name:""+e,end:u()}):(null===e&&f(),e)},a=!1,s=!1,c=!1,l=t;if(n&&"static"===e&&!r("punc","(")&&(s=!0,l=i.token,e=ae()),"async"!==e||r("punc","(")||r("punc",",")||r("punc","}")||r("operator","=")||(a=!0,l=i.token,e=ae()),null===e&&(c=!0,l=i.token,null===(e=ae())&&f()),r("punc","("))return e=o(e,t),new Ft({start:t,static:s,is_generator:c,async:a,key:e,quote:e instanceof Ut?l.quote:void 0,value:z(c,a),end:u()});if(l=i.token,"get"==e){if(!r("punc")||r("punc","["))return e=o(ae(),t),new Ot({start:t,static:s,key:e,quote:e instanceof Ut?l.quote:void 0,value:z(),end:u()})}else if("set"==e&&(!r("punc")||r("punc","[")))return e=o(ae(),t),new Ct({start:t,static:s,key:e,quote:e instanceof Ut?l.quote:void 0,value:z(),end:u()})}function $(e){function t(e){return new e({name:ae(),start:u(),end:u()})}var n,o,a=e?Yt:Zt,c=e?Wt:jt,l=i.token;return e?n=t(a):o=t(c),r("name","as")?(s(),e?o=t(c):n=t(a)):e?o=new c(n):n=new a(o),new ot({start:l,foreign_name:n,name:o,end:u()})}function J(e,t){var n,r=e?Yt:Zt,o=e?Wt:jt,a=i.token,s=u();return t=t||new o({name:"*",start:a,end:s}),n=new r({name:"*",start:a,end:s}),new ot({start:a,foreign_name:n,name:t,end:s})}function oe(e){var t;if(r("punc","{")){for(s(),t=[];!r("punc","}");)t.push($(e)),r("punc",",")&&s();s()}else if(r("operator","*")){var n;s(),e&&r("name","as")&&(s(),n=_e(e?Wt:Zt)),t=[J(e,n)]}return t}function ae(){var e=i.token;switch(e.type){case"punc":if("["===e.value){s();var t=Mt(!1);return _("]"),t}f(e);case"operator":if("*"===e.value)return s(),null;["delete","in","instanceof","new","typeof","void"].includes(e.value)||f(e);case"name":"yield"==e.value&&(E()?l(e,"Yield cannot be used as identifier inside generators"):Z(a(),"punc",":")||Z(a(),"punc","(")||!i.input.has_directive("use strict")||l(e,"Unexpected yield identifier inside strict mode"));case"string":case"num":case"big_int":case"keyword":case"atom":return s(),e.value;default:f(e)}}function se(e){var t=i.token.value;return new("this"==t?Qt:"super"==t?en:e)({name:String(t),start:i.token,end:i.token})}function ce(e){var t=e.name;E()&&"yield"==t&&l(e.start,"Yield cannot be used as identifier inside generators"),i.input.has_directive("use strict")&&("yield"==t&&l(e.start,"Unexpected yield identifier inside strict mode"),e instanceof kt&&("arguments"==t||"eval"==t)&&l(e.start,"Unexpected "+t+" in strict mode"))}function _e(e,t){if(!r("name"))return t||c("Name expected"),null;var n=se(e);return ce(n),s(),n}function de(e){var t=e.start,i=t.comments_before;const r=n.get(t);for(var o=null!=r?r:i.length;--o>=0;){var a=i[o];if(/[@#]__PURE__/.test(a.value)){e.pure=!0;break}}}var me=function(e,t){var n,o=e.start;if(r("punc","."))return s(),me(new _t({start:o,expression:e,property:(n=i.token,"name"!=n.type&&f(),s(),n.value),end:u()}),t);if(r("punc","[")){s();var a=Mt(!0);return _("]"),me(new dt({start:o,expression:e,property:a,end:u()}),t)}if(t&&r("punc","(")){s();var c=new ct({start:o,expression:e,args:De(),end:u()});return de(c),me(c,!0)}return r("template_head")?me(new Ve({start:o,prefix:e,template_string:G(),end:u()}),t):e};function De(){for(var e=[];!r("punc",")");)r("expand","...")?(s(),e.push(new Re({start:u(),expression:Mt(!1),end:u()}))):e.push(Mt(!1)),r("punc",")")||(_(","),r("punc",")")&&t.ecma<8&&f());return s(),e}var Ae=function(e,t){var n=i.token;if("name"==n.type&&"await"==n.value){if(h())return s(),h()||c("Unexpected await expression outside async function",i.prev.line,i.prev.col,i.prev.pos),new En({start:u(),end:i.token,expression:Ae(!0)});i.input.has_directive("use strict")&&l(i.token,"Unexpected await identifier inside strict mode")}if(r("operator")&&ee.has(n.value)){s(),A();var o=Fe(Et,n,Ae(e));return o.start=n,o.end=u(),o}for(var a=U(e,t);r("operator")&&te.has(i.token.value)&&!d(i.token);)a instanceof ke&&f(),(a=Fe(ht,i.token,a)).start=n,a.end=i.token,s();return a};function Fe(e,t,n){var r=t.value;switch(r){case"++":case"--":Xe(n)||c("Invalid use of "+r+" operator",t.line,t.col,t.pos);break;case"delete":n instanceof $t&&i.input.has_directive("use strict")&&c("Calling delete on expression not allowed in strict mode",n.start.line,n.start.col,n.start.pos)}return new e({operator:r,expression:n})}var Ke=function(e,t,n){var o=r("operator")?i.token.value:null;"in"==o&&n&&(o=null),"**"==o&&e instanceof Et&&!Z(e.start,"punc","(")&&"--"!==e.operator&&"++"!==e.operator&&f(e.start);var a=null!=o?ie[o]:null;if(null!=a&&(a>t||"**"===o&&t===a)){s();var u=Ke(Ae(!0),a,n);return Ke(new Dt({start:e.start,left:e,operator:o,right:u,end:u.end}),t,n)}return e};var Ue=function(e){var t=i.token,n=function(e){return Ke(Ae(!0,!0),0,e)}(e);if(r("operator","?")){s();var o=Mt(!1);return _(":"),new gt({start:t,condition:n,consequent:o,alternative:Mt(!1,e),end:u()})}return n};function Xe(e){return e instanceof pt||e instanceof $t}function $e(e){if(e instanceof Tt)e=new Le({start:e.start,names:e.properties.map($e),is_array:!1,end:e.end});else if(e instanceof vt){for(var t=[],n=0;n<e.elements.length;n++)e.elements[n]instanceof Re&&(n+1!==e.elements.length&&l(e.elements[n].start,"Spread must the be last element in destructuring array"),e.elements[n].expression=$e(e.elements[n].expression)),t.push($e(e.elements[n]));e=new Le({start:e.start,names:t,is_array:!0,end:e.end})}else e instanceof bt?e.value=$e(e.value):e instanceof St&&(e=new At({start:e.start,left:e.left,operator:"=",right:e.right,end:e.end}));return e}var mt=function(e){A();var t=i.token;if("name"==t.type&&"yield"==t.value){if(E())return s(),function(){E()||c("Unexpected yield expression outside generator function",i.prev.line,i.prev.col,i.prev.pos);var e=i.token,t=!1,n=!0;return m()||r("punc")&&P.has(i.token.value)?n=!1:r("operator","*")&&(t=!0,s()),new hn({start:e,is_star:t,expression:n?Mt():null,end:u()})}();i.input.has_directive("use strict")&&l(i.token,"Unexpected yield identifier inside strict mode")}var n=Ue(e),o=i.token.value;if(r("operator")&&ne.has(o)){if(Xe(n)||(n=$e(n))instanceof Le)return s(),new St({start:t,left:n,operator:o,right:mt(e),end:u()});c("Invalid assignment")}return n},Mt=function(e,t){for(var n=i.token,o=[];o.push(mt(t)),e&&r("punc",",");)s(),e=!0;return 1==o.length?o[0]:new ft({start:n,expressions:o,end:a()})};function Nt(e){++i.in_loop;var t=e();return--i.in_loop,t}return t.expression?Mt(!0):function(){var e=i.token,n=[];for(i.input.push_directives_stack(),t.module&&i.input.add_directive("use strict");!r("eof");)n.push(v());i.input.pop_directives_stack();var o=u(),a=t.toplevel;return a?(a.body=a.body.concat(n),a.end=o):a=new Me({start:e,body:n,end:o}),a}()}function ae(e,t,n,i=ue){var r=t=t?t.split(/\s+/):[];i&&i.PROPS&&(t=t.concat(i.PROPS));for(var o="return function AST_"+e+"(props){ if (props) { ",a=t.length;--a>=0;)o+="this."+t[a]+" = props."+t[a]+";";const s=i&&Object.create(i.prototype);(s&&s.initialize||n&&n.initialize)&&(o+="this.initialize();"),o+="}",o+="this.flags = 0;",o+="}";var u=new Function(o)();if(s&&(u.prototype=s,u.BASE=i),i&&i.SUBCLASSES.push(u),u.prototype.CTOR=u,u.PROPS=t||null,u.SELF_PROPS=r,u.SUBCLASSES=[],e&&(u.prototype.TYPE=u.TYPE=e),n)for(a in n)D(n,a)&&("$"===a[0]?u[a.substr(1)]=n[a]:u.prototype[a]=n[a]);return u.DEFMETHOD=function(e,t){this.prototype[e]=t},u}var se=ae("Token","type value line col pos endline endcol endpos nlb comments_before comments_after file raw quote end",{},null),ue=ae("Node","start end",{_clone:function(e){if(e){var t=this.clone();return t.transform(new gn((function(e){if(e!==t)return e.clone(!0)})))}return new this.CTOR(this)},clone:function(e){return this._clone(e)},$documentation:"Base class of all AST nodes",$propdoc:{start:"[AST_Token] The first token of this node",end:"[AST_Token] The last token of this node"},_walk:function(e){return e._visit(this)},walk:function(e){return this._walk(e)}},null);ue.warn_function=null,ue.warn=function(e,t){ue.warn_function&&ue.warn_function(_(e,t))};var ce=ae("Statement",null,{$documentation:"Base class of all statements"}),le=ae("Debugger",null,{$documentation:"Represents a debugger statement"},ce),fe=ae("Directive","value quote",{$documentation:'Represents a directive, like "use strict";',$propdoc:{value:"[string] The value of this directive as a plain string (it's not an AST_String!)",quote:"[string] the original quote character"}},ce),pe=ae("SimpleStatement","body",{$documentation:"A statement consisting of an expression, i.e. a = 1 + 2",$propdoc:{body:"[AST_Node] an expression node (should not be instanceof AST_Statement)"},_walk:function(e){return e._visit(this,(function(){this.body._walk(e)}))}},ce);function _e(e,t){var n=e.body;if(n instanceof ue)n._walk(t);else for(var i=0,r=n.length;i<r;i++)n[i]._walk(t)}function de(e){var t=this._clone(e);return this.block_scope&&(t.block_scope=this.block_scope.clone()),t}var me=ae("Block","body block_scope",{$documentation:"A body of statements (usually braced)",$propdoc:{body:"[AST_Statement*] an array of statements",block_scope:"[AST_Scope] the block scope"},_walk:function(e){return e._visit(this,(function(){_e(this,e)}))},clone:de},ce),Ee=ae("BlockStatement",null,{$documentation:"A block statement"},me),he=ae("EmptyStatement",null,{$documentation:"The empty statement (empty block or simply a semicolon)"},ce),De=ae("StatementWithBody","body",{$documentation:"Base class for all statements that contain one nested body: `For`, `ForIn`, `Do`, `While`, `With`",$propdoc:{body:"[AST_Statement] the body; this should always be present, even if it's an AST_EmptyStatement"}},ce),ge=ae("LabeledStatement","label",{$documentation:"Statement with a label",$propdoc:{label:"[AST_Label] a label definition"},_walk:function(e){return e._visit(this,(function(){this.label._walk(e),this.body._walk(e)}))},clone:function(e){var t=this._clone(e);if(e){var n=t.label,i=this.label;t.walk(new Dn((function(e){e instanceof Xe&&e.label&&e.label.thedef===i&&(e.label.thedef=n,n.references.push(e))})))}return t}},De),Se=ae("IterationStatement","block_scope",{$documentation:"Internal class.  All loops inherit from it.",$propdoc:{block_scope:"[AST_Scope] the block scope for this iteration statement."},clone:de},De),Ae=ae("DWLoop","condition",{$documentation:"Base class for do/while statements",$propdoc:{condition:"[AST_Node] the loop condition.  Should not be instanceof AST_Statement"}},Se),ve=ae("Do",null,{$documentation:"A `do` statement",_walk:function(e){return e._visit(this,(function(){this.body._walk(e),this.condition._walk(e)}))}},Ae),Te=ae("While",null,{$documentation:"A `while` statement",_walk:function(e){return e._visit(this,(function(){this.condition._walk(e),this.body._walk(e)}))}},Ae),be=ae("For","init condition step",{$documentation:"A `for` statement",$propdoc:{init:"[AST_Node?] the `for` initialization code, or null if empty",condition:"[AST_Node?] the `for` termination clause, or null if empty",step:"[AST_Node?] the `for` update clause, or null if empty"},_walk:function(e){return e._visit(this,(function(){this.init&&this.init._walk(e),this.condition&&this.condition._walk(e),this.step&&this.step._walk(e),this.body._walk(e)}))}},Se),ye=ae("ForIn","init object",{$documentation:"A `for ... in` statement",$propdoc:{init:"[AST_Node] the `for/in` initialization code",object:"[AST_Node] the object that we're looping through"},_walk:function(e){return e._visit(this,(function(){this.init._walk(e),this.object._walk(e),this.body._walk(e)}))}},Se),Ce=ae("ForOf","await",{$documentation:"A `for ... of` statement"},ye),Oe=ae("With","expression",{$documentation:"A `with` statement",$propdoc:{expression:"[AST_Node] the `with` expression"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e),this.body._walk(e)}))}},De),Fe=ae("Scope","variables functions uses_with uses_eval parent_scope enclosed cname _var_name_cache",{$documentation:"Base class for all statements introducing a lexical scope",$propdoc:{variables:"[Map/S] a map of name -> SymbolDef for all variables/functions defined in this scope",functions:"[Map/S] like `variables`, but only lists function declarations",uses_with:"[boolean/S] tells whether this scope uses the `with` statement",uses_eval:"[boolean/S] tells whether this scope contains a direct call to the global `eval`",parent_scope:"[AST_Scope?/S] link to the parent scope",enclosed:"[SymbolDef*/S] a list of all symbol definitions that are accessed from this scope or any subscopes",cname:"[integer/S] current index for mangling variables (used internally by the mangler)"},get_defun_scope:function(){for(var e=this;e.is_block_scope();)e=e.parent_scope;return e},clone:function(e){var t=this._clone(e);return this.variables&&(t.variables=new Map(this.variables)),this.functions&&(t.functions=new Map(this.functions)),this.enclosed&&(t.enclosed=this.enclosed.slice()),t},pinned:function(){return this.uses_eval||this.uses_with}},me),Me=ae("Toplevel","globals",{$documentation:"The toplevel scope",$propdoc:{globals:"[Map/S] a map of name -> SymbolDef for all undeclared names"},wrap_commonjs:function(e){var t=this.body,n="(function(exports){'$ORIG';})(typeof "+e+"=='undefined'?("+e+"={}):"+e+");";return n=(n=oe(n)).transform(new gn((function(e){if(e instanceof fe&&"$ORIG"==e.value)return f.splice(t)})))},wrap_enclose:function(e){"string"!=typeof e&&(e="");var t=e.indexOf(":");t<0&&(t=e.length);var n=this.body;return oe(["(function(",e.slice(0,t),'){"$ORIG"})(',e.slice(t+1),")"].join("")).transform(new gn((function(e){if(e instanceof fe&&"$ORIG"==e.value)return f.splice(n)})))}},Fe),Re=ae("Expansion","expression",{$documentation:"An expandible argument, such as ...rest, a splat, such as [1,2,...all], or an expansion in a variable declaration, such as var [first, ...rest] = list",$propdoc:{expression:"[AST_Node] the thing to be expanded"},_walk:function(e){var t=this;return e._visit(this,(function(){t.expression.walk(e)}))}}),we=ae("Lambda","name argnames uses_arguments is_generator async",{$documentation:"Base class for functions",$propdoc:{name:"[AST_SymbolDeclaration?] the name of this function",argnames:"[AST_SymbolFunarg|AST_Destructuring|AST_Expansion|AST_DefaultAssign*] array of function arguments, destructurings, or expanding arguments",uses_arguments:"[boolean/S] tells whether this function accesses the arguments array",is_generator:"[boolean] is this a generator method",async:"[boolean] is this method async"},args_as_names:function(){for(var e=[],t=0;t<this.argnames.length;t++)this.argnames[t]instanceof Le?e.push(...this.argnames[t].all_symbols()):e.push(this.argnames[t]);return e},_walk:function(e){return e._visit(this,(function(){this.name&&this.name._walk(e);for(var t=this.argnames,n=0,i=t.length;n<i;n++)t[n]._walk(e);_e(this,e)}))}},Fe),Ne=ae("Accessor",null,{$documentation:"A setter/getter function.  The `name` property is always null."},we),xe=ae("Function",null,{$documentation:"A function expression"},we),ke=ae("Arrow",null,{$documentation:"An ES6 Arrow function ((a) => b)"},we),Ie=ae("Defun",null,{$documentation:"A function definition"},we),Le=ae("Destructuring","names is_array",{$documentation:"A destructuring of several names. Used in destructuring assignment and with destructuring function argument names",$propdoc:{names:"[AST_Node*] Array of properties or elements",is_array:"[Boolean] Whether the destructuring represents an object or array"},_walk:function(e){return e._visit(this,(function(){this.names.forEach((function(t){t._walk(e)}))}))},all_symbols:function(){var e=[];return this.walk(new Dn((function(t){t instanceof Nt&&e.push(t)}))),e}}),Ve=ae("PrefixedTemplateString","template_string prefix",{$documentation:"A templatestring with a prefix, such as String.raw`foobarbaz`",$propdoc:{template_string:"[AST_TemplateString] The template string",prefix:"[AST_SymbolRef|AST_PropAccess] The prefix, which can be a symbol such as `foo` or a dotted expression such as `String.raw`."},_walk:function(e){this.prefix._walk(e),this.template_string._walk(e)}}),Pe=ae("TemplateString","segments",{$documentation:"A template string literal",$propdoc:{segments:"[AST_Node*] One or more segments, starting with AST_TemplateSegment. AST_Node may follow AST_TemplateSegment, but each AST_Node must be followed by AST_TemplateSegment."},_walk:function(e){return e._visit(this,(function(){this.segments.forEach((function(t){t._walk(e)}))}))}}),Be=ae("TemplateSegment","value raw",{$documentation:"A segment of a template string literal",$propdoc:{value:"Content of the segment",raw:"Raw content of the segment"}}),Ke=ae("Jump",null,{$documentation:"Base class for “jumps” (for now that's `return`, `throw`, `break` and `continue`)"},ce),Ue=ae("Exit","value",{$documentation:"Base class for “exits” (`return` and `throw`)",$propdoc:{value:"[AST_Node?] the value returned or thrown by this statement; could be null for AST_Return"},_walk:function(e){return e._visit(this,this.value&&function(){this.value._walk(e)})}},Ke),Ge=ae("Return",null,{$documentation:"A `return` statement"},Ue),He=ae("Throw",null,{$documentation:"A `throw` statement"},Ue),Xe=ae("LoopControl","label",{$documentation:"Base class for loop control statements (`break` and `continue`)",$propdoc:{label:"[AST_LabelRef?] the label, or null if none"},_walk:function(e){return e._visit(this,this.label&&function(){this.label._walk(e)})}},Ke),ze=ae("Break",null,{$documentation:"A `break` statement"},Xe),We=ae("Continue",null,{$documentation:"A `continue` statement"},Xe),Ye=ae("If","condition alternative",{$documentation:"A `if` statement",$propdoc:{condition:"[AST_Node] the `if` condition",alternative:"[AST_Statement?] the `else` part, or null if not present"},_walk:function(e){return e._visit(this,(function(){this.condition._walk(e),this.body._walk(e),this.alternative&&this.alternative._walk(e)}))}},De),qe=ae("Switch","expression",{$documentation:"A `switch` statement",$propdoc:{expression:"[AST_Node] the `switch` “discriminant”"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e),_e(this,e)}))}},me),$e=ae("SwitchBranch",null,{$documentation:"Base class for `switch` branches"},me),je=ae("Default",null,{$documentation:"A `default` switch branch"},$e),Ze=ae("Case","expression",{$documentation:"A `case` switch branch",$propdoc:{expression:"[AST_Node] the `case` expression"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e),_e(this,e)}))}},$e),Je=ae("Try","bcatch bfinally",{$documentation:"A `try` statement",$propdoc:{bcatch:"[AST_Catch?] the catch block, or null if not present",bfinally:"[AST_Finally?] the finally block, or null if not present"},_walk:function(e){return e._visit(this,(function(){_e(this,e),this.bcatch&&this.bcatch._walk(e),this.bfinally&&this.bfinally._walk(e)}))}},me),Qe=ae("Catch","argname",{$documentation:"A `catch` node; only makes sense as part of a `try` statement",$propdoc:{argname:"[AST_SymbolCatch|AST_Destructuring|AST_Expansion|AST_DefaultAssign] symbol for the exception"},_walk:function(e){return e._visit(this,(function(){this.argname&&this.argname._walk(e),_e(this,e)}))}},me),et=ae("Finally",null,{$documentation:"A `finally` node; only makes sense as part of a `try` statement"},me),tt=ae("Definitions","definitions",{$documentation:"Base class for `var` or `const` nodes (variable declarations/initializations)",$propdoc:{definitions:"[AST_VarDef*] array of variable definitions"},_walk:function(e){return e._visit(this,(function(){for(var t=this.definitions,n=0,i=t.length;n<i;n++)t[n]._walk(e)}))}},ce),nt=ae("Var",null,{$documentation:"A `var` statement"},tt),it=ae("Let",null,{$documentation:"A `let` statement"},tt),rt=ae("Const",null,{$documentation:"A `const` statement"},tt),ot=ae("NameMapping","foreign_name name",{$documentation:"The part of the export/import statement that declare names from a module.",$propdoc:{foreign_name:"[AST_SymbolExportForeign|AST_SymbolImportForeign] The name being exported/imported (as specified in the module)",name:"[AST_SymbolExport|AST_SymbolImport] The name as it is visible to this module."},_walk:function(e){return e._visit(this,(function(){this.foreign_name._walk(e),this.name._walk(e)}))}}),at=ae("Import","imported_name imported_names module_name",{$documentation:"An `import` statement",$propdoc:{imported_name:"[AST_SymbolImport] The name of the variable holding the module's default export.",imported_names:"[AST_NameMapping*] The names of non-default imported variables",module_name:"[AST_String] String literal describing where this module came from"},_walk:function(e){return e._visit(this,(function(){this.imported_name&&this.imported_name._walk(e),this.imported_names&&this.imported_names.forEach((function(t){t._walk(e)})),this.module_name._walk(e)}))}}),st=ae("Export","exported_definition exported_value is_default exported_names module_name",{$documentation:"An `export` statement",$propdoc:{exported_definition:"[AST_Defun|AST_Definitions|AST_DefClass?] An exported definition",exported_value:"[AST_Node?] An exported value",exported_names:"[AST_NameMapping*?] List of exported names",module_name:"[AST_String?] Name of the file to load exports from",is_default:"[Boolean] Whether this is the default exported value of this module"},_walk:function(e){e._visit(this,(function(){this.exported_definition&&this.exported_definition._walk(e),this.exported_value&&this.exported_value._walk(e),this.exported_names&&this.exported_names.forEach((function(t){t._walk(e)})),this.module_name&&this.module_name._walk(e)}))}},ce),ut=ae("VarDef","name value",{$documentation:"A variable declaration; only appears in a AST_Definitions node",$propdoc:{name:"[AST_Destructuring|AST_SymbolConst|AST_SymbolLet|AST_SymbolVar] name of the variable",value:"[AST_Node?] initializer, or null of there's no initializer"},_walk:function(e){return e._visit(this,(function(){this.name._walk(e),this.value&&this.value._walk(e)}))}}),ct=ae("Call","expression args pure",{$documentation:"A function call expression",$propdoc:{expression:"[AST_Node] expression to invoke as function",args:"[AST_Node*] array of arguments",pure:"[boolean] whether this is a pure call"},_walk:function(e){return e._visit(this,(function(){for(var t=this.args,n=0,i=t.length;n<i;n++)t[n]._walk(e);this.expression._walk(e)}))}}),lt=ae("New",null,{$documentation:"An object instantiation.  Derives from a function call since it has exactly the same properties"},ct),ft=ae("Sequence","expressions",{$documentation:"A sequence expression (comma-separated expressions)",$propdoc:{expressions:"[AST_Node*] array of expressions (at least two)"},_walk:function(e){return e._visit(this,(function(){this.expressions.forEach((function(t){t._walk(e)}))}))}}),pt=ae("PropAccess","expression property",{$documentation:'Base class for property access expressions, i.e. `a.foo` or `a["foo"]`',$propdoc:{expression:"[AST_Node] the “container” expression",property:"[AST_Node|string] the property to access.  For AST_Dot this is always a plain string, while for AST_Sub it's an arbitrary AST_Node"}}),_t=ae("Dot","quote",{$documentation:"A dotted property access expression",$propdoc:{quote:"[string] the original quote character when transformed from AST_Sub"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e)}))}},pt),dt=ae("Sub",null,{$documentation:'Index-style property access, i.e. `a["foo"]`',_walk:function(e){return e._visit(this,(function(){this.expression._walk(e),this.property._walk(e)}))}},pt),mt=ae("Unary","operator expression",{$documentation:"Base class for unary expressions",$propdoc:{operator:"[string] the operator",expression:"[AST_Node] expression that this unary operator applies to"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e)}))}}),Et=ae("UnaryPrefix",null,{$documentation:"Unary prefix expression, i.e. `typeof i` or `++i`"},mt),ht=ae("UnaryPostfix",null,{$documentation:"Unary postfix expression, i.e. `i++`"},mt),Dt=ae("Binary","operator left right",{$documentation:"Binary expression, i.e. `a + b`",$propdoc:{left:"[AST_Node] left-hand side expression",operator:"[string] the operator",right:"[AST_Node] right-hand side expression"},_walk:function(e){return e._visit(this,(function(){this.left._walk(e),this.right._walk(e)}))}}),gt=ae("Conditional","condition consequent alternative",{$documentation:"Conditional expression using the ternary operator, i.e. `a ? b : c`",$propdoc:{condition:"[AST_Node]",consequent:"[AST_Node]",alternative:"[AST_Node]"},_walk:function(e){return e._visit(this,(function(){this.condition._walk(e),this.consequent._walk(e),this.alternative._walk(e)}))}}),St=ae("Assign",null,{$documentation:"An assignment expression — `a = b + 5`"},Dt),At=ae("DefaultAssign",null,{$documentation:"A default assignment expression like in `(a = 3) => a`"},Dt),vt=ae("Array","elements",{$documentation:"An array literal",$propdoc:{elements:"[AST_Node*] array of elements"},_walk:function(e){return e._visit(this,(function(){for(var t=this.elements,n=0,i=t.length;n<i;n++)t[n]._walk(e)}))}}),Tt=ae("Object","properties",{$documentation:"An object literal",$propdoc:{properties:"[AST_ObjectProperty*] array of properties"},_walk:function(e){return e._visit(this,(function(){for(var t=this.properties,n=0,i=t.length;n<i;n++)t[n]._walk(e)}))}}),bt=ae("ObjectProperty","key value",{$documentation:"Base class for literal object properties",$propdoc:{key:"[string|AST_Node] property name. For ObjectKeyVal this is a string. For getters, setters and computed property this is an AST_Node.",value:"[AST_Node] property value.  For getters and setters this is an AST_Accessor."},_walk:function(e){return e._visit(this,(function(){this.key instanceof ue&&this.key._walk(e),this.value._walk(e)}))}}),yt=ae("ObjectKeyVal","quote",{$documentation:"A key: value object property",$propdoc:{quote:"[string] the original quote character"}},bt),Ct=ae("ObjectSetter","quote static",{$propdoc:{quote:"[string|undefined] the original quote character, if any",static:"[boolean] whether this is a static setter (classes only)"},$documentation:"An object setter property"},bt),Ot=ae("ObjectGetter","quote static",{$propdoc:{quote:"[string|undefined] the original quote character, if any",static:"[boolean] whether this is a static getter (classes only)"},$documentation:"An object getter property"},bt),Ft=ae("ConciseMethod","quote static is_generator async",{$propdoc:{quote:"[string|undefined] the original quote character, if any",static:"[boolean] is this method static (classes only)",is_generator:"[boolean] is this a generator method",async:"[boolean] is this method async"},$documentation:"An ES6 concise method inside an object or class"},bt),Mt=ae("Class","name extends properties",{$propdoc:{name:"[AST_SymbolClass|AST_SymbolDefClass?] optional class name.",extends:"[AST_Node]? optional parent class",properties:"[AST_ObjectProperty*] array of properties"},$documentation:"An ES6 class",_walk:function(e){return e._visit(this,(function(){this.name&&this.name._walk(e),this.extends&&this.extends._walk(e),this.properties.forEach(t=>t._walk(e))}))}},Fe),Rt=ae("DefClass",null,{$documentation:"A class definition"},Mt),wt=ae("ClassExpression",null,{$documentation:"A class expression."},Mt),Nt=ae("Symbol","scope name thedef",{$propdoc:{name:"[string] name of this symbol",scope:"[AST_Scope/S] the current scope (not necessarily the definition scope)",thedef:"[SymbolDef/S] the definition of this symbol"},$documentation:"Base class for all symbols"}),xt=ae("NewTarget",null,{$documentation:"A reference to new.target"}),kt=ae("SymbolDeclaration","init",{$documentation:"A declaration symbol (symbol in var/const, function name or argument, symbol in catch)"},Nt),It=ae("SymbolVar",null,{$documentation:"Symbol defining a variable"},kt),Lt=ae("SymbolBlockDeclaration",null,{$documentation:"Base class for block-scoped declaration symbols"},kt),Vt=ae("SymbolConst",null,{$documentation:"A constant declaration"},Lt),Pt=ae("SymbolLet",null,{$documentation:"A block-scoped `let` declaration"},Lt),Bt=ae("SymbolFunarg",null,{$documentation:"Symbol naming a function argument"},It),Kt=ae("SymbolDefun",null,{$documentation:"Symbol defining a function"},kt),Ut=ae("SymbolMethod",null,{$documentation:"Symbol in an object defining a method"},Nt),Gt=ae("SymbolLambda",null,{$documentation:"Symbol naming a function expression"},kt),Ht=ae("SymbolDefClass",null,{$documentation:"Symbol naming a class's name in a class declaration. Lexically scoped to its containing scope, and accessible within the class."},Lt),Xt=ae("SymbolClass",null,{$documentation:"Symbol naming a class's name. Lexically scoped to the class."},kt),zt=ae("SymbolCatch",null,{$documentation:"Symbol naming the exception in catch"},Lt),Wt=ae("SymbolImport",null,{$documentation:"Symbol referring to an imported name"},Lt),Yt=ae("SymbolImportForeign",null,{$documentation:"A symbol imported from a module, but it is defined in the other module, and its real name is irrelevant for this module's purposes"},Nt),qt=ae("Label","references",{$documentation:"Symbol naming a label (declaration)",$propdoc:{references:"[AST_LoopControl*] a list of nodes referring to this label"},initialize:function(){this.references=[],this.thedef=this}},Nt),$t=ae("SymbolRef",null,{$documentation:"Reference to some symbol (not definition/declaration)"},Nt),jt=ae("SymbolExport",null,{$documentation:"Symbol referring to a name to export"},$t),Zt=ae("SymbolExportForeign",null,{$documentation:"A symbol exported from this module, but it is used in the other module, and its real name is irrelevant for this module's purposes"},Nt),Jt=ae("LabelRef",null,{$documentation:"Reference to a label symbol"},Nt),Qt=ae("This",null,{$documentation:"The `this` symbol"},Nt),en=ae("Super",null,{$documentation:"The `super` symbol"},Qt),tn=ae("Constant",null,{$documentation:"Base class for all constants",getValue:function(){return this.value}}),nn=ae("String","value quote",{$documentation:"A string literal",$propdoc:{value:"[string] the contents of this string",quote:"[string] the original quote character"}},tn),rn=ae("Number","value literal",{$documentation:"A number literal",$propdoc:{value:"[number] the numeric value",literal:"[string] numeric value as string (optional)"}},tn),on=ae("BigInt","value",{$documentation:"A big int literal",$propdoc:{value:"[string] big int value"}},tn),an=ae("RegExp","value",{$documentation:"A regexp literal",$propdoc:{value:"[RegExp] the actual regexp"}},tn),sn=ae("Atom",null,{$documentation:"Base class for atoms"},tn),un=ae("Null",null,{$documentation:"The `null` atom",value:null},sn),cn=ae("NaN",null,{$documentation:"The impossible value",value:NaN},sn),ln=ae("Undefined",null,{$documentation:"The `undefined` value",value:void 0},sn),fn=ae("Hole",null,{$documentation:"A hole in an array",value:void 0},sn),pn=ae("Infinity",null,{$documentation:"The `Infinity` value",value:1/0},sn),_n=ae("Boolean",null,{$documentation:"Base class for booleans"},sn),dn=ae("False",null,{$documentation:"The `false` atom",value:!1},_n),mn=ae("True",null,{$documentation:"The `true` atom",value:!0},_n),En=ae("Await","expression",{$documentation:"An `await` statement",$propdoc:{expression:"[AST_Node] the mandatory expression being awaited"},_walk:function(e){return e._visit(this,(function(){this.expression._walk(e)}))}}),hn=ae("Yield","expression is_star",{$documentation:"A `yield` statement",$propdoc:{expression:"[AST_Node?] the value returned or thrown by this statement; could be null (representing undefined) but only when is_star is set to false",is_star:"[Boolean] Whether this is a yield or yield* statement"},_walk:function(e){return e._visit(this,this.expression&&function(){this.expression._walk(e)})}});class Dn{constructor(e){this.visit=e,this.stack=[],this.directives=Object.create(null)}_visit(e,t){this.push(e);var n=this.visit(e,t?function(){t.call(e)}:a);return!n&&t&&t.call(e),this.pop(),n}parent(e){return this.stack[this.stack.length-2-(e||0)]}push(e){e instanceof we?this.directives=Object.create(this.directives):e instanceof fe&&!this.directives[e.value]?this.directives[e.value]=e:e instanceof Mt&&(this.directives=Object.create(this.directives),this.directives["use strict"]||(this.directives["use strict"]=e)),this.stack.push(e)}pop(){var e=this.stack.pop();(e instanceof we||e instanceof Mt)&&(this.directives=Object.getPrototypeOf(this.directives))}self(){return this.stack[this.stack.length-1]}find_parent(e){for(var t=this.stack,n=t.length;--n>=0;){var i=t[n];if(i instanceof e)return i}}has_directive(e){var t=this.directives[e];if(t)return t;var n=this.stack[this.stack.length-1];if(n instanceof Fe&&n.body)for(var i=0;i<n.body.length;++i){var r=n.body[i];if(!(r instanceof fe))break;if(r.value==e)return r}}loopcontrol_target(e){var t=this.stack;if(e.label)for(var n=t.length;--n>=0;){if((i=t[n])instanceof ge&&i.label.name==e.label.name)return i.body}else for(n=t.length;--n>=0;){var i;if((i=t[n])instanceof Se||e instanceof ze&&i instanceof qe)return i}}}class gn extends Dn{constructor(e,t){super(),this.before=e,this.after=t}}var Sn=Object.freeze({__proto__:null,AST_Accessor:Ne,AST_Array:vt,AST_Arrow:ke,AST_Assign:St,AST_Atom:sn,AST_Await:En,AST_BigInt:on,AST_Binary:Dt,AST_Block:me,AST_BlockStatement:Ee,AST_Boolean:_n,AST_Break:ze,AST_Call:ct,AST_Case:Ze,AST_Catch:Qe,AST_Class:Mt,AST_ClassExpression:wt,AST_ConciseMethod:Ft,AST_Conditional:gt,AST_Const:rt,AST_Constant:tn,AST_Continue:We,AST_Debugger:le,AST_Default:je,AST_DefaultAssign:At,AST_DefClass:Rt,AST_Definitions:tt,AST_Defun:Ie,AST_Destructuring:Le,AST_Directive:fe,AST_Do:ve,AST_Dot:_t,AST_DWLoop:Ae,AST_EmptyStatement:he,AST_Exit:Ue,AST_Expansion:Re,AST_Export:st,AST_False:dn,AST_Finally:et,AST_For:be,AST_ForIn:ye,AST_ForOf:Ce,AST_Function:xe,AST_Hole:fn,AST_If:Ye,AST_Import:at,AST_Infinity:pn,AST_IterationStatement:Se,AST_Jump:Ke,AST_Label:qt,AST_LabeledStatement:ge,AST_LabelRef:Jt,AST_Lambda:we,AST_Let:it,AST_LoopControl:Xe,AST_NameMapping:ot,AST_NaN:cn,AST_New:lt,AST_NewTarget:xt,AST_Node:ue,AST_Null:un,AST_Number:rn,AST_Object:Tt,AST_ObjectGetter:Ot,AST_ObjectKeyVal:yt,AST_ObjectProperty:bt,AST_ObjectSetter:Ct,AST_PrefixedTemplateString:Ve,AST_PropAccess:pt,AST_RegExp:an,AST_Return:Ge,AST_Scope:Fe,AST_Sequence:ft,AST_SimpleStatement:pe,AST_Statement:ce,AST_StatementWithBody:De,AST_String:nn,AST_Sub:dt,AST_Super:en,AST_Switch:qe,AST_SwitchBranch:$e,AST_Symbol:Nt,AST_SymbolBlockDeclaration:Lt,AST_SymbolCatch:zt,AST_SymbolClass:Xt,AST_SymbolConst:Vt,AST_SymbolDeclaration:kt,AST_SymbolDefClass:Ht,AST_SymbolDefun:Kt,AST_SymbolExport:jt,AST_SymbolExportForeign:Zt,AST_SymbolFunarg:Bt,AST_SymbolImport:Wt,AST_SymbolImportForeign:Yt,AST_SymbolLambda:Gt,AST_SymbolLet:Pt,AST_SymbolMethod:Ut,AST_SymbolRef:$t,AST_SymbolVar:It,AST_TemplateSegment:Be,AST_TemplateString:Pe,AST_This:Qt,AST_Throw:He,AST_Token:se,AST_Toplevel:Me,AST_True:mn,AST_Try:Je,AST_Unary:mt,AST_UnaryPostfix:ht,AST_UnaryPrefix:Et,AST_Undefined:ln,AST_Var:nt,AST_VarDef:ut,AST_While:Te,AST_With:Oe,AST_Yield:hn,TreeTransformer:gn,TreeWalker:Dn,walk_body:_e});function An(e,t){e.DEFMETHOD("transform",(function(e,n){let i=void 0;if(e.push(this),e.before&&(i=e.before(this,t,n)),void 0===i&&(t(i=this,e),e.after)){const t=e.after(i,n);void 0!==t&&(i=t)}return e.pop(),i}))}function vn(e,t){return f(e,(function(e){return e.transform(t,!0)}))}function Tn(e){let t=e.parent(-1);for(let n,i=0;n=e.parent(i);i++){if(n instanceof ce&&n.body===t)return!0;if(!(n instanceof ft&&n.expressions[0]===t||"Call"===n.TYPE&&n.expression===t||n instanceof Ve&&n.prefix===t||n instanceof _t&&n.expression===t||n instanceof dt&&n.expression===t||n instanceof gt&&n.condition===t||n instanceof Dt&&n.left===t||n instanceof ht&&n.expression===t))return!1;t=n}}An(ue,a),An(ge,(function(e,t){e.label=e.label.transform(t),e.body=e.body.transform(t)})),An(pe,(function(e,t){e.body=e.body.transform(t)})),An(me,(function(e,t){e.body=vn(e.body,t)})),An(ve,(function(e,t){e.body=e.body.transform(t),e.condition=e.condition.transform(t)})),An(Te,(function(e,t){e.condition=e.condition.transform(t),e.body=e.body.transform(t)})),An(be,(function(e,t){e.init&&(e.init=e.init.transform(t)),e.condition&&(e.condition=e.condition.transform(t)),e.step&&(e.step=e.step.transform(t)),e.body=e.body.transform(t)})),An(ye,(function(e,t){e.init=e.init.transform(t),e.object=e.object.transform(t),e.body=e.body.transform(t)})),An(Oe,(function(e,t){e.expression=e.expression.transform(t),e.body=e.body.transform(t)})),An(Ue,(function(e,t){e.value&&(e.value=e.value.transform(t))})),An(Xe,(function(e,t){e.label&&(e.label=e.label.transform(t))})),An(Ye,(function(e,t){e.condition=e.condition.transform(t),e.body=e.body.transform(t),e.alternative&&(e.alternative=e.alternative.transform(t))})),An(qe,(function(e,t){e.expression=e.expression.transform(t),e.body=vn(e.body,t)})),An(Ze,(function(e,t){e.expression=e.expression.transform(t),e.body=vn(e.body,t)})),An(Je,(function(e,t){e.body=vn(e.body,t),e.bcatch&&(e.bcatch=e.bcatch.transform(t)),e.bfinally&&(e.bfinally=e.bfinally.transform(t))})),An(Qe,(function(e,t){e.argname&&(e.argname=e.argname.transform(t)),e.body=vn(e.body,t)})),An(tt,(function(e,t){e.definitions=vn(e.definitions,t)})),An(ut,(function(e,t){e.name=e.name.transform(t),e.value&&(e.value=e.value.transform(t))})),An(Le,(function(e,t){e.names=vn(e.names,t)})),An(we,(function(e,t){e.name&&(e.name=e.name.transform(t)),e.argnames=vn(e.argnames,t),e.body instanceof ue?e.body=e.body.transform(t):e.body=vn(e.body,t)})),An(ct,(function(e,t){e.expression=e.expression.transform(t),e.args=vn(e.args,t)})),An(ft,(function(e,t){e.expressions=vn(e.expressions,t)})),An(_t,(function(e,t){e.expression=e.expression.transform(t)})),An(dt,(function(e,t){e.expression=e.expression.transform(t),e.property=e.property.transform(t)})),An(hn,(function(e,t){e.expression&&(e.expression=e.expression.transform(t))})),An(En,(function(e,t){e.expression=e.expression.transform(t)})),An(mt,(function(e,t){e.expression=e.expression.transform(t)})),An(Dt,(function(e,t){e.left=e.left.transform(t),e.right=e.right.transform(t)})),An(gt,(function(e,t){e.condition=e.condition.transform(t),e.consequent=e.consequent.transform(t),e.alternative=e.alternative.transform(t)})),An(vt,(function(e,t){e.elements=vn(e.elements,t)})),An(Tt,(function(e,t){e.properties=vn(e.properties,t)})),An(bt,(function(e,t){e.key instanceof ue&&(e.key=e.key.transform(t)),e.value=e.value.transform(t)})),An(Mt,(function(e,t){e.name&&(e.name=e.name.transform(t)),e.extends&&(e.extends=e.extends.transform(t)),e.properties=vn(e.properties,t)})),An(Re,(function(e,t){e.expression=e.expression.transform(t)})),An(ot,(function(e,t){e.foreign_name=e.foreign_name.transform(t),e.name=e.name.transform(t)})),An(at,(function(e,t){e.imported_name&&(e.imported_name=e.imported_name.transform(t)),e.imported_names&&vn(e.imported_names,t),e.module_name=e.module_name.transform(t)})),An(st,(function(e,t){e.exported_definition&&(e.exported_definition=e.exported_definition.transform(t)),e.exported_value&&(e.exported_value=e.exported_value.transform(t)),e.exported_names&&vn(e.exported_names,t),e.module_name&&(e.module_name=e.module_name.transform(t))})),An(Pe,(function(e,t){e.segments=vn(e.segments,t)})),An(Ve,(function(e,t){e.prefix=e.prefix.transform(t),e.template_string=e.template_string.transform(t)}));const bn=/^$|[;{][\s\n]*$/,yn=10,Cn=32;function On(e){return"comment2"==e.type&&/@preserve|@lic|@cc_on|^\**!/i.test(e.value)}function Fn(e){var t=!e;void 0===(e=o(e,{ascii_only:!1,beautify:!1,braces:!1,comments:"some",ecma:5,ie8:!1,indent_level:4,indent_start:0,inline_script:!0,keep_quoted_props:!1,max_line_len:!1,preamble:null,quote_keys:!1,quote_style:0,safari10:!1,semicolons:!0,shebang:!0,shorthand:void 0,source_map:null,webkit:!1,width:80,wrap_iife:!1,wrap_func_args:!0},!0)).shorthand&&(e.shorthand=e.ecma>5);var n=s;if(e.comments){let t=e.comments;if("string"==typeof e.comments&&/^\/.*\/[a-zA-Z]*$/.test(e.comments)){var i=e.comments.lastIndexOf("/");t=new RegExp(e.comments.substr(1,i-1),e.comments.substr(i+1))}n=t instanceof RegExp?function(e){return"comment5"!=e.type&&t.test(e.value)}:"function"==typeof t?function(e){return"comment5"!=e.type&&t(this,e)}:"some"===t?On:u}var r=0,c=0,l=1,f=0,p="";let _=new Set;var d=e.ascii_only?function(t,n){return e.ecma>=6&&(t=t.replace(/[\ud800-\udbff][\udc00-\udfff]/g,(function(e){return"\\u{"+function(e,t){return H(e.charAt(t))?65536+(e.charCodeAt(t)-55296<<10)+e.charCodeAt(t+1)-56320:e.charCodeAt(t)}(e,0).toString(16)+"}"}))),t.replace(/[\u0000-\u001f\u007f-\uffff]/g,(function(e){var t=e.charCodeAt(0).toString(16);if(t.length<=2&&!n){for(;t.length<2;)t="0"+t;return"\\x"+t}for(;t.length<4;)t="0"+t;return"\\u"+t}))}:function(e){for(var t="",n=0,i=e.length;n<i;n++)H(e[n])&&!X(e[n+1])||X(e[n])&&!H(e[n-1])?t+="\\u"+e.charCodeAt(n).toString(16):t+=e[n];return t};function m(t,n){var i=function(t,n){var i=0,r=0;function o(){return"'"+t.replace(/\x27/g,"\\'")+"'"}function a(){return'"'+t.replace(/\x22/g,'\\"')+'"'}if(t=t.replace(/[\\\b\f\n\r\v\t\x22\x27\u2028\u2029\0\ufeff]/g,(function(n,o){switch(n){case'"':return++i,'"';case"'":return++r,"'";case"\\":return"\\\\";case"\n":return"\\n";case"\r":return"\\r";case"\t":return"\\t";case"\b":return"\\b";case"\f":return"\\f";case"\v":return e.ie8?"\\x0B":"\\v";case"\u2028":return"\\u2028";case"\u2029":return"\\u2029";case"\ufeff":return"\\ufeff";case"\0":return/[0-9]/.test(G(t,o+1))?"\\x00":"\\0"}return n})),t=d(t),"`"===n)return"`"+t.replace(/`/g,"\\`")+"`";switch(e.quote_style){case 1:return o();case 2:return a();case 3:return"'"==n?o():a();default:return i>r?o():a()}}(t,n);return e.inline_script&&(i=(i=(i=i.replace(/<\x2f(script)([>\/\t\n\f\r ])/gi,"<\\/$1$2")).replace(/\x3c!--/g,"\\x3c!--")).replace(/--\x3e/g,"--\\x3e")),i}var h,D,g=!1,S=!1,A=!1,v=0,T=!1,b=!1,y=-1,C="",O=e.source_map&&[],F=O?function(){O.forEach((function(t){try{e.source_map.add(t.token.file,t.line,t.col,t.token.line,t.token.col,t.name||"name"!=t.token.type?t.name:t.token.value)}catch(e){null!=t.token.file&&ue.warn("Couldn't figure out mapping for {file}:{line},{col} → {cline},{ccol} [{name}]",{file:t.token.file,line:t.token.line,col:t.token.col,cline:t.line,ccol:t.col,name:t.name||""})}})),O=[]}:a,M=e.max_line_len?function(){if(c>e.max_line_len){if(v){var t=p.slice(0,v),n=p.slice(v);if(O){var i=n.length-c;O.forEach((function(e){e.line++,e.col+=i}))}p=t+"\n"+n,l++,f++,c=n.length}c>e.max_line_len&&ue.warn("Output exceeds {max_line_len} characters",e)}v&&(v=0,F())}:a,R=E("( [ + * / - , . `");function w(t){var n=G(t=String(t),0);T&&n&&(T=!1,"\n"!==n&&(w("\n"),x())),b&&n&&(b=!1,/[\s;})]/.test(n)||N()),y=-1;var i=C.charAt(C.length-1);A&&(A=!1,(":"!==i||"}"!==n)&&(n&&";}".includes(n)||";"===i)||(e.semicolons||R.has(n)?(p+=";",c++,f++):(M(),c>0&&(p+="\n",f++,l++,c=0),/^\s+$/.test(t)&&(A=!0)),e.beautify||(S=!1))),S&&((Y(i)&&(Y(n)||"\\"==n)||"/"==n&&n==i||("+"==n||"-"==n)&&n==C)&&(p+=" ",c++,f++),S=!1),h&&(O.push({token:h,name:D,line:l,col:c}),h=!1,v||F()),p+=t,g="("==t[t.length-1],f+=t.length;var r=t.split(/\r?\n/),o=r.length-1;l+=o,c+=r[0].length,o>0&&(M(),c=r[o].length),C=t}var N=e.beautify?function(){w(" ")}:function(){S=!0},x=e.beautify?function(t){var n;e.beautify&&w((n=t?.5:0," ".repeat(e.indent_start+r-n*e.indent_level)))}:a,k=e.beautify?function(e,t){!0===e&&(e=P());var n=r;r=e;var i=t();return r=n,i}:function(e,t){return t()},I=e.beautify?function(){if(y<0)return w("\n");"\n"!=p[y]&&(p=p.slice(0,y)+"\n"+p.slice(y),f++,l++),y++}:e.max_line_len?function(){M(),v=p.length}:a,L=e.beautify?function(){w(";")}:function(){A=!0};function V(){A=!1,w(";")}function P(){return r+e.indent_level}function B(){return v&&M(),p}function K(){let e=p.length-1;for(;e>=0;){const t=p.charCodeAt(e);if(t===yn)return!0;if(t!==Cn)return!1;e--}return!0}var U=[];return{get:B,toString:B,indent:x,indentation:function(){return r},current_width:function(){return c-r},should_break:function(){return e.width&&this.current_width()>=e.width},has_parens:function(){return g},newline:I,print:w,star:function(){w("*")},space:N,comma:function(){w(","),N()},colon:function(){w(":"),N()},last:function(){return C},semicolon:L,force_semicolon:V,to_utf8:d,print_name:function(e){w(function(e){return e=e.toString(),e=d(e,!0)}(e))},print_string:function(e,t,n){var i=m(e,t);!0!==n||i.includes("\\")||(bn.test(p)||V(),V()),w(i)},print_template_string_chars:function(e){var t=m(e,"`").replace(/\${/g,"\\${");return w(t.substr(1,t.length-2))},encode_string:m,next_indent:P,with_indent:k,with_block:function(e){var t;return w("{"),I(),k(P(),(function(){t=e()})),x(),w("}"),t},with_parens:function(e){w("(");var t=e();return w(")"),t},with_square:function(e){w("[");var t=e();return w("]"),t},add_mapping:O?function(e,t){h=e,D=t}:a,option:function(t){return e[t]},printed_comments:_,prepend_comments:t?a:function(t){var i=t.start;if(i){var r=this.printed_comments;if(!i.comments_before||!r.has(i.comments_before)){var o=i.comments_before;if(o||(o=i.comments_before=[]),r.add(o),t instanceof Ue&&t.value){var a=new Dn((function(e){var t=a.parent();if(!(t instanceof Ue||t instanceof Dt&&t.left===e||"Call"==t.TYPE&&t.expression===e||t instanceof gt&&t.condition===e||t instanceof _t&&t.expression===e||t instanceof ft&&t.expressions[0]===e||t instanceof dt&&t.expression===e||t instanceof ht))return!0;if(e.start){var n=e.start.comments_before;n&&!r.has(n)&&(r.add(n),o=o.concat(n))}}));a.push(t),t.value.walk(a)}if(0==f){o.length>0&&e.shebang&&"comment5"===o[0].type&&!r.has(o[0])&&(w("#!"+o.shift().value+"\n"),x());var s=e.preamble;s&&w(s.replace(/\r\n?|[\n\u2028\u2029]|\s*$/g,"\n"))}if(0!=(o=o.filter(n,t).filter(e=>!r.has(e))).length){var u=K();o.forEach((function(e,t){r.add(e),u||(e.nlb?(w("\n"),x(),u=!0):t>0&&N()),/comment[134]/.test(e.type)?(w("//"+e.value.replace(/[@#]__PURE__/g," ")+"\n"),x(),u=!0):"comment2"==e.type&&(w("/*"+e.value.replace(/[@#]__PURE__/g," ")+"*/"),u=!1)})),u||(i.nlb?(w("\n"),x()):N())}}}},append_comments:t||n===s?a:function(e,t){var i=e.end;if(i){var r=this.printed_comments,o=i[t?"comments_before":"comments_after"];if(o&&!r.has(o)&&(e instanceof ce||o.every(e=>!/comment[134]/.test(e.type)))){r.add(o);var a=p.length;o.filter(n,e).forEach((function(e,n){r.has(e)||(r.add(e),b=!1,T?(w("\n"),x(),T=!1):e.nlb&&(n>0||!K())?(w("\n"),x()):(n>0||!t)&&N(),/comment[134]/.test(e.type)?(w("//"+e.value.replace(/[@#]__PURE__/g," ")),T=!0):"comment2"==e.type&&(w("/*"+e.value.replace(/[@#]__PURE__/g," ")+"*/"),b=!0))})),p.length>a&&(y=a)}}},line:function(){return l},col:function(){return c},pos:function(){return f},push_node:function(e){U.push(e)},pop_node:function(){return U.pop()},parent:function(e){return U[U.length-2-(e||0)]}}}!function(){function e(e,t){e.DEFMETHOD("_codegen",t)}var t=!1,n=null,i=null;function r(e,t){Array.isArray(e)?e.forEach((function(e){r(e,t)})):e.DEFMETHOD("needs_parens",t)}function o(e,n,i,r){var o=e.length-1;t=r,e.forEach((function(e,r){!0!==t||e instanceof fe||e instanceof he||e instanceof pe&&e.body instanceof nn||(t=!1),e instanceof he||(i.indent(),e.print(i),r==o&&n||(i.newline(),n&&i.newline())),!0===t&&e instanceof pe&&e.body instanceof nn&&(t=!1)})),t=!1}function u(e,t){t.print("{"),t.with_indent(t.next_indent(),(function(){t.append_comments(e,!0)})),t.print("}")}function c(e,t,n){e.body.length>0?t.with_block((function(){o(e.body,!1,t,n)})):u(e,t)}function l(e,t,n){var i=!1;n&&e.walk(new Dn((function(e){return!!(i||e instanceof Fe)||(e instanceof Dt&&"in"==e.operator?(i=!0,!0):void 0)}))),e.print(t,i)}function f(e,t,n){n.option("quote_keys")?n.print_string(e):""+ +e==e&&e>=0?n.print(_(e)):(y.has(e)?!n.option("ie8"):q(e))?t&&n.option("keep_quoted_props")?n.print_string(e,t):n.print_name(e):n.print_string(e,t)}function p(e,t){t.option("braces")?d(e,t):!e||e instanceof he?t.force_semicolon():e.print(t)}function _(e){var t,n,i,r=e.toString(10).replace(/^0\./,".").replace("e+","e"),o=[r];return Math.floor(e)===e&&(e<0?o.push("-0x"+(-e).toString(16).toLowerCase()):o.push("0x"+e.toString(16).toLowerCase())),(t=/^\.0+/.exec(r))?(n=t[0].length,i=r.slice(n),o.push(i+"e-"+(i.length+n-1))):(t=/0+$/.exec(r))?(n=t[0].length,o.push(r.slice(0,-n)+"e"+n)):(t=/^(\d)\.(\d+)e(-?\d+)$/.exec(r))&&o.push(t[1]+t[2]+"e"+(t[3]-t[2].length)),function(e){for(var t=e[0],n=t.length,i=1;i<e.length;++i)e[i].length<n&&(n=(t=e[i]).length);return t}(o)}function d(e,t){!e||e instanceof he?t.print("{}"):e instanceof Ee?e.print(t):t.with_block((function(){t.indent(),e.print(t),t.newline()}))}function m(e,t){e.forEach((function(e){e.DEFMETHOD("add_source_map",t)}))}ue.DEFMETHOD("print",(function(e,t){var r=this,o=r._codegen;function a(){e.prepend_comments(r),r.add_source_map(e),o(r,e),e.append_comments(r)}r instanceof Fe?n=r:!i&&r instanceof fe&&"use asm"==r.value&&(i=n),e.push_node(r),t||r.needs_parens(e)?e.with_parens(a):a(),e.pop_node(),r===i&&(i=null)})),ue.DEFMETHOD("_print",ue.prototype.print),ue.DEFMETHOD("print_to_string",(function(e){var t=Fn(e);return this.print(t),t.get()})),r(ue,s),r(xe,(function(e){if(!e.has_parens()&&Tn(e))return!0;var t;if(e.option("webkit")&&((t=e.parent())instanceof pt&&t.expression===this))return!0;if(e.option("wrap_iife")&&((t=e.parent())instanceof ct&&t.expression===this))return!0;if(e.option("wrap_func_args")&&((t=e.parent())instanceof ct&&t.args.includes(this)))return!0;return!1})),r(ke,(function(e){var t=e.parent();return t instanceof pt&&t.expression===this})),r(Tt,(function(e){return!e.has_parens()&&Tn(e)})),r(wt,Tn),r(mt,(function(e){var t=e.parent();return t instanceof pt&&t.expression===this||t instanceof ct&&t.expression===this||t instanceof Dt&&"**"===t.operator&&this instanceof Et&&t.left===this&&"++"!==this.operator&&"--"!==this.operator})),r(En,(function(e){var t=e.parent();return t instanceof pt&&t.expression===this||t instanceof ct&&t.expression===this||e.option("safari10")&&t instanceof Et})),r(ft,(function(e){var t=e.parent();return t instanceof ct||t instanceof mt||t instanceof Dt||t instanceof ut||t instanceof pt||t instanceof vt||t instanceof bt||t instanceof gt||t instanceof ke||t instanceof At||t instanceof Re||t instanceof Ce&&this===t.object||t instanceof hn||t instanceof st})),r(Dt,(function(e){var t=e.parent();if(t instanceof ct&&t.expression===this)return!0;if(t instanceof mt)return!0;if(t instanceof pt&&t.expression===this)return!0;if(t instanceof Dt){var n=t.operator,i=ie[n],r=this.operator,o=ie[r];if(i>o||i==o&&(this===t.right||"**"==n))return!0}})),r(hn,(function(e){var t=e.parent();return t instanceof Dt&&"="!==t.operator||(t instanceof ct&&t.expression===this||(t instanceof gt&&t.condition===this||(t instanceof mt||(t instanceof pt&&t.expression===this||void 0))))})),r(pt,(function(e){var t=e.parent();if(t instanceof lt&&t.expression===this){var n=!1;return this.walk(new Dn((function(e){return!!(n||e instanceof Fe)||(e instanceof ct?(n=!0,!0):void 0)}))),n}})),r(ct,(function(e){var t,n=e.parent();return!!(n instanceof lt&&n.expression===this||n instanceof st&&n.is_default&&this.expression instanceof xe)||this.expression instanceof xe&&n instanceof pt&&n.expression===this&&(t=e.parent(1))instanceof St&&t.left===n})),r(lt,(function(e){var t=e.parent();if(0===this.args.length&&(t instanceof pt||t instanceof ct&&t.expression===this))return!0})),r(rn,(function(e){var t=e.parent();if(t instanceof pt&&t.expression===this){var n=this.getValue();if(n<0||/^0/.test(_(n)))return!0}})),r(on,(function(e){var t=e.parent();if(t instanceof pt&&t.expression===this&&this.getValue().startsWith("-"))return!0})),r([St,gt],(function(e){var t=e.parent();return t instanceof mt||(t instanceof Dt&&!(t instanceof St)||(t instanceof ct&&t.expression===this||(t instanceof gt&&t.condition===this||(t instanceof pt&&t.expression===this||(this instanceof St&&this.left instanceof Le&&!1===this.left.is_array||void 0)))))})),e(fe,(function(e,t){t.print_string(e.value,e.quote),t.semicolon()})),e(Re,(function(e,t){t.print("..."),e.expression.print(t)})),e(Le,(function(e,t){t.print(e.is_array?"[":"{");var n=e.names.length;e.names.forEach((function(e,i){i>0&&t.comma(),e.print(t),i==n-1&&e instanceof fn&&t.comma()})),t.print(e.is_array?"]":"}")})),e(le,(function(e,t){t.print("debugger"),t.semicolon()})),De.DEFMETHOD("_do_print_body",(function(e){p(this.body,e)})),e(ce,(function(e,t){e.body.print(t),t.semicolon()})),e(Me,(function(e,t){o(e.body,!0,t,!0),t.print("")})),e(ge,(function(e,t){e.label.print(t),t.colon(),e.body.print(t)})),e(pe,(function(e,t){e.body.print(t),t.semicolon()})),e(Ee,(function(e,t){c(e,t)})),e(he,(function(e,t){t.semicolon()})),e(ve,(function(e,t){t.print("do"),t.space(),d(e.body,t),t.space(),t.print("while"),t.space(),t.with_parens((function(){e.condition.print(t)})),t.semicolon()})),e(Te,(function(e,t){t.print("while"),t.space(),t.with_parens((function(){e.condition.print(t)})),t.space(),e._do_print_body(t)})),e(be,(function(e,t){t.print("for"),t.space(),t.with_parens((function(){e.init?(e.init instanceof tt?e.init.print(t):l(e.init,t,!0),t.print(";"),t.space()):t.print(";"),e.condition?(e.condition.print(t),t.print(";"),t.space()):t.print(";"),e.step&&e.step.print(t)})),t.space(),e._do_print_body(t)})),e(ye,(function(e,t){t.print("for"),e.await&&(t.space(),t.print("await")),t.space(),t.with_parens((function(){e.init.print(t),t.space(),t.print(e instanceof Ce?"of":"in"),t.space(),e.object.print(t)})),t.space(),e._do_print_body(t)})),e(Oe,(function(e,t){t.print("with"),t.space(),t.with_parens((function(){e.expression.print(t)})),t.space(),e._do_print_body(t)})),we.DEFMETHOD("_do_print",(function(e,t){var n=this;t||(n.async&&(e.print("async"),e.space()),e.print("function"),n.is_generator&&e.star(),n.name&&e.space()),n.name instanceof Nt?n.name.print(e):t&&n.name instanceof ue&&e.with_square((function(){n.name.print(e)})),e.with_parens((function(){n.argnames.forEach((function(t,n){n&&e.comma(),t.print(e)}))})),e.space(),c(n,e,!0)})),e(we,(function(e,t){e._do_print(t)})),e(Ve,(function(e,t){var n=e.prefix,i=n instanceof we||n instanceof Dt||n instanceof gt||n instanceof ft||n instanceof mt||n instanceof _t&&n.expression instanceof Tt;i&&t.print("("),e.prefix.print(t),i&&t.print(")"),e.template_string.print(t)})),e(Pe,(function(e,t){var n=t.parent()instanceof Ve;t.print("`");for(var i=0;i<e.segments.length;i++)e.segments[i]instanceof Be?n?t.print(e.segments[i].raw):t.print_template_string_chars(e.segments[i].value):(t.print("${"),e.segments[i].print(t),t.print("}"));t.print("`")})),ke.DEFMETHOD("_do_print",(function(e){var t=this,n=e.parent(),i=n instanceof Dt&&!(n instanceof St)||n instanceof mt||n instanceof ct&&t===n.expression;i&&e.print("("),t.async&&(e.print("async"),e.space()),1===t.argnames.length&&t.argnames[0]instanceof Nt?t.argnames[0].print(e):e.with_parens((function(){t.argnames.forEach((function(t,n){n&&e.comma(),t.print(e)}))})),e.space(),e.print("=>"),e.space(),t.body instanceof ue?t.body.print(e):c(t,e),i&&e.print(")")})),Ue.DEFMETHOD("_do_print",(function(e,t){if(e.print(t),this.value){e.space();const t=this.value.start.comments_before;t&&t.length&&!e.printed_comments.has(t)?(e.print("("),this.value.print(e),e.print(")")):this.value.print(e)}e.semicolon()})),e(Ge,(function(e,t){e._do_print(t,"return")})),e(He,(function(e,t){e._do_print(t,"throw")})),e(hn,(function(e,t){var n=e.is_star?"*":"";t.print("yield"+n),e.expression&&(t.space(),e.expression.print(t))})),e(En,(function(e,t){t.print("await"),t.space();var n=e.expression,i=!(n instanceof ct||n instanceof $t||n instanceof pt||n instanceof mt||n instanceof tn);i&&t.print("("),e.expression.print(t),i&&t.print(")")})),Xe.DEFMETHOD("_do_print",(function(e,t){e.print(t),this.label&&(e.space(),this.label.print(e)),e.semicolon()})),e(ze,(function(e,t){e._do_print(t,"break")})),e(We,(function(e,t){e._do_print(t,"continue")})),e(Ye,(function(e,t){t.print("if"),t.space(),t.with_parens((function(){e.condition.print(t)})),t.space(),e.alternative?(!function(e,t){var n=e.body;if(t.option("braces")||t.option("ie8")&&n instanceof ve)return d(n,t);if(!n)return t.force_semicolon();for(;;)if(n instanceof Ye){if(!n.alternative)return void d(e.body,t);n=n.alternative}else{if(!(n instanceof De))break;n=n.body}p(e.body,t)}(e,t),t.space(),t.print("else"),t.space(),e.alternative instanceof Ye?e.alternative.print(t):p(e.alternative,t)):e._do_print_body(t)})),e(qe,(function(e,t){t.print("switch"),t.space(),t.with_parens((function(){e.expression.print(t)})),t.space();var n=e.body.length-1;n<0?u(e,t):t.with_block((function(){e.body.forEach((function(e,i){t.indent(!0),e.print(t),i<n&&e.body.length>0&&t.newline()}))}))})),$e.DEFMETHOD("_do_print_body",(function(e){e.newline(),this.body.forEach((function(t){e.indent(),t.print(e),e.newline()}))})),e(je,(function(e,t){t.print("default:"),e._do_print_body(t)})),e(Ze,(function(e,t){t.print("case"),t.space(),e.expression.print(t),t.print(":"),e._do_print_body(t)})),e(Je,(function(e,t){t.print("try"),t.space(),c(e,t),e.bcatch&&(t.space(),e.bcatch.print(t)),e.bfinally&&(t.space(),e.bfinally.print(t))})),e(Qe,(function(e,t){t.print("catch"),e.argname&&(t.space(),t.with_parens((function(){e.argname.print(t)}))),t.space(),c(e,t)})),e(et,(function(e,t){t.print("finally"),t.space(),c(e,t)})),tt.DEFMETHOD("_do_print",(function(e,t){e.print(t),e.space(),this.definitions.forEach((function(t,n){n&&e.comma(),t.print(e)}));var n=e.parent();(!(n instanceof be||n instanceof ye)||n&&n.init!==this)&&e.semicolon()})),e(it,(function(e,t){e._do_print(t,"let")})),e(nt,(function(e,t){e._do_print(t,"var")})),e(rt,(function(e,t){e._do_print(t,"const")})),e(at,(function(e,t){t.print("import"),t.space(),e.imported_name&&e.imported_name.print(t),e.imported_name&&e.imported_names&&(t.print(","),t.space()),e.imported_names&&(1===e.imported_names.length&&"*"===e.imported_names[0].foreign_name.name?e.imported_names[0].print(t):(t.print("{"),e.imported_names.forEach((function(n,i){t.space(),n.print(t),i<e.imported_names.length-1&&t.print(",")})),t.space(),t.print("}"))),(e.imported_name||e.imported_names)&&(t.space(),t.print("from"),t.space()),e.module_name.print(t),t.semicolon()})),e(ot,(function(e,t){var n=t.parent()instanceof at,i=e.name.definition();(i&&i.mangled_name||e.name.name)!==e.foreign_name.name?(n?t.print(e.foreign_name.name):e.name.print(t),t.space(),t.print("as"),t.space(),n?e.name.print(t):t.print(e.foreign_name.name)):e.name.print(t)})),e(st,(function(e,t){if(t.print("export"),t.space(),e.is_default&&(t.print("default"),t.space()),e.exported_names)1===e.exported_names.length&&"*"===e.exported_names[0].name.name?e.exported_names[0].print(t):(t.print("{"),e.exported_names.forEach((function(n,i){t.space(),n.print(t),i<e.exported_names.length-1&&t.print(",")})),t.space(),t.print("}"));else if(e.exported_value)e.exported_value.print(t);else if(e.exported_definition&&(e.exported_definition.print(t),e.exported_definition instanceof tt))return;e.module_name&&(t.space(),t.print("from"),t.space(),e.module_name.print(t)),(e.exported_value&&!(e.exported_value instanceof Ie||e.exported_value instanceof xe||e.exported_value instanceof Mt)||e.module_name||e.exported_names)&&t.semicolon()})),e(ut,(function(e,t){if(e.name.print(t),e.value){t.space(),t.print("="),t.space();var n=t.parent(1),i=n instanceof be||n instanceof ye;l(e.value,t,i)}})),e(ct,(function(e,t){e.expression.print(t),e instanceof lt&&0===e.args.length||((e.expression instanceof ct||e.expression instanceof we)&&t.add_mapping(e.start),t.with_parens((function(){e.args.forEach((function(e,n){n&&t.comma(),e.print(t)}))})))})),e(lt,(function(e,t){t.print("new"),t.space(),ct.prototype._codegen(e,t)})),ft.DEFMETHOD("_do_print",(function(e){this.expressions.forEach((function(t,n){n>0&&(e.comma(),e.should_break()&&(e.newline(),e.indent())),t.print(e)}))})),e(ft,(function(e,t){e._do_print(t)})),e(_t,(function(e,t){var n=e.expression;n.print(t);var i=e.property;t.option("ie8")&&y.has(i)?(t.print("["),t.add_mapping(e.end),t.print_string(i),t.print("]")):(n instanceof rn&&n.getValue()>=0&&(/[xa-f.)]/i.test(t.last())||t.print(".")),t.print("."),t.add_mapping(e.end),t.print_name(i))})),e(dt,(function(e,t){e.expression.print(t),t.print("["),e.property.print(t),t.print("]")})),e(Et,(function(e,t){var n=e.operator;t.print(n),(/^[a-z]/i.test(n)||/[+-]$/.test(n)&&e.expression instanceof Et&&/^[+-]/.test(e.expression.operator))&&t.space(),e.expression.print(t)})),e(ht,(function(e,t){e.expression.print(t),t.print(e.operator)})),e(Dt,(function(e,t){var n=e.operator;e.left.print(t),">"==n[0]&&e.left instanceof ht&&"--"==e.left.operator?t.print(" "):t.space(),t.print(n),("<"==n||"<<"==n)&&e.right instanceof Et&&"!"==e.right.operator&&e.right.expression instanceof Et&&"--"==e.right.expression.operator?t.print(" "):t.space(),e.right.print(t)})),e(gt,(function(e,t){e.condition.print(t),t.space(),t.print("?"),t.space(),e.consequent.print(t),t.space(),t.colon(),e.alternative.print(t)})),e(vt,(function(e,t){t.with_square((function(){var n=e.elements,i=n.length;i>0&&t.space(),n.forEach((function(e,n){n&&t.comma(),e.print(t),n===i-1&&e instanceof fn&&t.comma()})),i>0&&t.space()}))})),e(Tt,(function(e,t){e.properties.length>0?t.with_block((function(){e.properties.forEach((function(e,n){n&&(t.print(","),t.newline()),t.indent(),e.print(t)})),t.newline()})):u(e,t)})),e(Mt,(function(e,t){if(t.print("class"),t.space(),e.name&&(e.name.print(t),t.space()),e.extends){var n=!(e.extends instanceof $t||e.extends instanceof pt||e.extends instanceof wt||e.extends instanceof xe);t.print("extends"),n?t.print("("):t.space(),e.extends.print(t),n?t.print(")"):t.space()}e.properties.length>0?t.with_block((function(){e.properties.forEach((function(e,n){n&&t.newline(),t.indent(),e.print(t)})),t.newline()})):t.print("{}")})),e(xt,(function(e,t){t.print("new.target")})),e(yt,(function(e,t){function n(e){var t=e.definition();return t?t.mangled_name||t.name:e.name}var i=t.option("shorthand");i&&e.value instanceof Nt&&q(e.key)&&n(e.value)===e.key&&!y.has(e.key)?f(e.key,e.quote,t):i&&e.value instanceof At&&e.value.left instanceof Nt&&q(e.key)&&n(e.value.left)===e.key?(f(e.key,e.quote,t),t.space(),t.print("="),t.space(),e.value.right.print(t)):(e.key instanceof ue?t.with_square((function(){e.key.print(t)})):f(e.key,e.quote,t),t.colon(),e.value.print(t))})),bt.DEFMETHOD("_print_getter_setter",(function(e,t){var n=this;n.static&&(t.print("static"),t.space()),e&&(t.print(e),t.space()),n.key instanceof Ut?f(n.key.name,n.quote,t):t.with_square((function(){n.key.print(t)})),n.value._do_print(t,!0)})),e(Ct,(function(e,t){e._print_getter_setter("set",t)})),e(Ot,(function(e,t){e._print_getter_setter("get",t)})),e(Ft,(function(e,t){var n;e.is_generator&&e.async?n="async*":e.is_generator?n="*":e.async&&(n="async"),e._print_getter_setter(n,t)})),Nt.DEFMETHOD("_do_print",(function(e){var t=this.definition();e.print_name(t?t.mangled_name||t.name:this.name)})),e(Nt,(function(e,t){e._do_print(t)})),e(fn,a),e(Qt,(function(e,t){t.print("this")})),e(en,(function(e,t){t.print("super")})),e(tn,(function(e,t){t.print(e.getValue())})),e(nn,(function(e,n){n.print_string(e.getValue(),e.quote,t)})),e(rn,(function(e,t){i&&e.start&&null!=e.start.raw?t.print(e.start.raw):t.print(_(e.getValue()))})),e(on,(function(e,t){t.print(e.getValue()+"n")})),e(an,(function(e,t){let{source:n,flags:i}=e.getValue();n=A(n),i=i?function(e){const t=new Set(e.split(""));let n="";for(const e of v)t.has(e)&&(n+=e,t.delete(e));return t.size&&t.forEach(e=>{n+=e}),n}(i):"",t.print(t.to_utf8(`/${n}/${i}`));const r=t.parent();r instanceof Dt&&/^\w/.test(r.operator)&&r.left===e&&t.print(" ")})),m([ue,ge,Me],a),m([vt,Ee,Qe,Mt,tn,le,tt,fe,et,Ke,we,lt,Tt,De,Nt,qe,$e,Pe,Be,Je],(function(e){e.add_mapping(this.start)})),m([Ot,Ct],(function(e){e.add_mapping(this.start,this.key.name)})),m([bt],(function(e){e.add_mapping(this.start,this.key)}))}();const Mn=1,Rn=2;let wn=null;class Nn{constructor(e,t,n){this.name=t.name,this.orig=[t],this.init=n,this.eliminated=0,this.assignments=0,this.scope=e,this.references=[],this.replaced=0,this.global=!1,this.export=0,this.mangled_name=null,this.undeclared=!1,this.id=Nn.next_id++,this.chained=!1,this.direct_access=!1,this.escaped=0,this.recursive_refs=0,this.references=[],this.should_replace=void 0,this.single_use=!1,this.fixed=!1,Object.seal(this)}unmangleable(e){return e||(e={}),!!(wn&&wn.has(this.id)&&g(e.keep_fnames,this.orig[0].name))||(this.global&&!e.toplevel||this.export&Mn||this.undeclared||!e.eval&&this.scope.pinned()||(this.orig[0]instanceof Gt||this.orig[0]instanceof Kt)&&g(e.keep_fnames,this.orig[0].name)||this.orig[0]instanceof Ut||(this.orig[0]instanceof Xt||this.orig[0]instanceof Ht)&&g(e.keep_classnames,this.orig[0].name))}mangle(e){const t=e.cache&&e.cache.props;if(this.global&&t&&t.has(this.name))this.mangled_name=t.get(this.name);else if(!this.mangled_name&&!this.unmangleable(e)){var n=this.scope,i=this.orig[0];e.ie8&&i instanceof Gt&&(n=n.parent_scope);const r=xn(this);this.mangled_name=r?r.mangled_name||r.name:n.next_mangled(e,this),this.global&&t&&t.set(this.name,this.mangled_name)}}}function xn(e){if(e.orig[0]instanceof zt&&e.scope.is_block_scope())return e.scope.get_defun_scope().variables.get(e.name)}function kn(e,t){var n=e.enclosed;e:for(;;){var i=In(++e.cname);if(!y.has(i)&&!t.reserved.has(i)){for(var r=n.length;--r>=0;){var o=n[r];if(i==(o.mangled_name||o.unmangleable(t)&&o.name))continue e}return i}}}Nn.next_id=1,Me.DEFMETHOD("figure_out_scope",(function(e){e=o(e,{cache:null,ie8:!1,safari10:!1});var t=this,n=t.parent_scope=null,i=new Map,r=null,a=null,s=[],u=new Dn((function(t,o){if(t.is_block_scope()){const i=n;t.block_scope=n=new Fe(t);const r=t instanceof Qe?i.parent_scope:i;if(n.init_scope_vars(r),n.uses_with=i.uses_with,n.uses_eval=i.uses_eval,e.safari10&&(t instanceof be||t instanceof ye)&&s.push(n),t instanceof qe){const e=n;n=i,t.expression.walk(u),n=e;for(let e=0;e<t.body.length;e++)t.body[e].walk(u)}else o();return n=i,!0}if(t instanceof Le){const e=a;return a=t,o(),a=e,!0}if(t instanceof Fe){t.init_scope_vars(n);var c=n,l=r,f=i;return r=n=t,i=new Map,o(),n=c,r=l,i=f,!0}if(t instanceof ge){var p=t.label;if(i.has(p.name))throw new Error(_("Label {name} defined twice",p));return i.set(p.name,p),o(),i.delete(p.name),!0}if(t instanceof Oe)for(var d=n;d;d=d.parent_scope)d.uses_with=!0;else{if(t instanceof Nt&&(t.scope=n),t instanceof qt&&(t.thedef=t,t.references=[]),t instanceof Gt)r.def_function(t,"arguments"==t.name?void 0:r);else if(t instanceof Kt)h((t.scope=r.parent_scope.get_defun_scope()).def_function(t,r),1);else if(t instanceof Xt)h(r.def_variable(t,r),1);else if(t instanceof Wt)n.def_variable(t);else if(t instanceof Ht)h((t.scope=r.parent_scope).def_function(t,r),1);else if(t instanceof It||t instanceof Pt||t instanceof Vt||t instanceof zt){if((m=t instanceof Lt?n.def_variable(t,null):r.def_variable(t,"SymbolVar"==t.TYPE?null:void 0)).orig.every(e=>e===t||(t instanceof Lt?e instanceof Gt:!(e instanceof Pt||e instanceof Vt)))||j(t.name+" redeclared",t.start.file,t.start.line,t.start.col,t.start.pos),t instanceof Bt||h(m,2),r!==n){t.mark_enclosed(e);var m=n.find_variable(t);t.thedef!==m&&(t.thedef=m,t.reference(e))}}else if(t instanceof Jt){var E=i.get(t.name);if(!E)throw new Error(_("Undefined label {name} [{line},{col}]",{name:t.name,line:t.start.line,col:t.start.col}));t.thedef=E}n instanceof Me||!(t instanceof st||t instanceof at)||j(t.TYPE+" statement may only appear at top level",t.start.file,t.start.line,t.start.col,t.start.pos)}function h(e,t){if(a){var n=0;do{t++}while(u.parent(n++)!==a)}var i=u.parent(t);if(e.export=i instanceof st?Mn:0){var r=i.exported_definition;(r instanceof Ie||r instanceof Rt)&&i.is_default&&(e.export=Rn)}}}));t.walk(u),t.globals=new Map;u=new Dn((function(n,i){if(n instanceof Xe&&n.label)return n.label.thedef.references.push(n),!0;if(n instanceof $t){var r,o=n.name;if("eval"==o&&u.parent()instanceof ct)for(var a=n.scope;a&&!a.uses_eval;a=a.parent_scope)a.uses_eval=!0;return u.parent()instanceof ot&&u.parent(1).module_name||!(r=n.scope.find_variable(o))?(r=t.def_global(n),n instanceof jt&&(r.export=Mn)):r.scope instanceof we&&"arguments"==o&&(r.scope.uses_arguments=!0),n.thedef=r,n.reference(e),!n.scope.is_block_scope()||r.orig[0]instanceof Lt||(n.scope=n.scope.get_defun_scope()),!0}var s;if(n instanceof zt&&(s=xn(n.definition())))for(a=n.scope;a&&(p(a.enclosed,s),a!==s.scope);)a=a.parent_scope}));if(t.walk(u),(e.ie8||e.safari10)&&t.walk(new Dn((function(n,i){if(n instanceof zt){var r=n.name,o=n.thedef.references,a=n.scope.get_defun_scope(),s=a.find_variable(r)||t.globals.get(r)||a.def_variable(n);return o.forEach((function(t){t.thedef=s,t.reference(e)})),n.thedef=s,n.reference(e),!0}}))),e.safari10)for(const e of s)e.parent_scope.variables.forEach((function(t){p(e.enclosed,t)}))})),Me.DEFMETHOD("def_global",(function(e){var t=this.globals,n=e.name;if(t.has(n))return t.get(n);var i=new Nn(this,e);return i.undeclared=!0,i.global=!0,t.set(n,i),i})),Fe.DEFMETHOD("init_scope_vars",(function(e){this.variables=new Map,this.functions=new Map,this.uses_with=!1,this.uses_eval=!1,this.parent_scope=e,this.enclosed=[],this.cname=-1,this._var_name_cache=null})),ue.DEFMETHOD("is_block_scope",s),Mt.DEFMETHOD("is_block_scope",s),we.DEFMETHOD("is_block_scope",s),Me.DEFMETHOD("is_block_scope",s),$e.DEFMETHOD("is_block_scope",s),me.DEFMETHOD("is_block_scope",u),Se.DEFMETHOD("is_block_scope",u),we.DEFMETHOD("init_scope_vars",(function(){Fe.prototype.init_scope_vars.apply(this,arguments),this.uses_arguments=!1,this.def_variable(new Bt({name:"arguments",start:this.start,end:this.end}))})),ke.DEFMETHOD("init_scope_vars",(function(){Fe.prototype.init_scope_vars.apply(this,arguments),this.uses_arguments=!1})),Nt.DEFMETHOD("mark_enclosed",(function(e){for(var t=this.definition(),n=this.scope;n&&(p(n.enclosed,t),e.keep_fnames&&n.functions.forEach((function(n){g(e.keep_fnames,n.name)&&p(t.scope.enclosed,n)})),n!==t.scope);)n=n.parent_scope})),Nt.DEFMETHOD("reference",(function(e){this.definition().references.push(this),this.mark_enclosed(e)})),Fe.DEFMETHOD("find_variable",(function(e){return e instanceof Nt&&(e=e.name),this.variables.get(e)||this.parent_scope&&this.parent_scope.find_variable(e)})),Fe.DEFMETHOD("def_function",(function(e,t){var n=this.def_variable(e,t);return(!n.init||n.init instanceof Ie)&&(n.init=t),this.functions.set(e.name,n),n})),Fe.DEFMETHOD("def_variable",(function(e,t){var n=this.variables.get(e.name);return n?(n.orig.push(e),n.init&&(n.scope!==e.scope||n.init instanceof xe)&&(n.init=t)):(n=new Nn(this,e,t),this.variables.set(e.name,n),n.global=!this.parent_scope),e.thedef=n})),Fe.DEFMETHOD("next_mangled",(function(e){return kn(this,e)})),Me.DEFMETHOD("next_mangled",(function(e){let t;const n=this.mangled_names;do{t=kn(this,e)}while(n.has(t));return t})),xe.DEFMETHOD("next_mangled",(function(e,t){for(var n=t.orig[0]instanceof Bt&&this.name&&this.name.definition(),i=n?n.mangled_name||n.name:null;;){var r=kn(this,e);if(!i||i!=r)return r}})),Nt.DEFMETHOD("unmangleable",(function(e){var t=this.definition();return!t||t.unmangleable(e)})),qt.DEFMETHOD("unmangleable",s),Nt.DEFMETHOD("unreferenced",(function(){return!this.definition().references.length&&!this.scope.pinned()})),Nt.DEFMETHOD("definition",(function(){return this.thedef})),Nt.DEFMETHOD("global",(function(){return this.definition().global})),Me.DEFMETHOD("_default_mangler_options",(function(e){return(e=o(e,{eval:!1,ie8:!1,keep_classnames:!1,keep_fnames:!1,module:!1,reserved:[],toplevel:!1})).module&&(e.toplevel=!0),Array.isArray(e.reserved)||e.reserved instanceof Set||(e.reserved=[]),e.reserved=new Set(e.reserved),e.reserved.add("arguments"),e})),Me.DEFMETHOD("mangle_names",(function(e){e=this._default_mangler_options(e);var t=-1,n=[];e.keep_fnames&&(wn=new Set);const i=this.mangled_names=new Set;e.cache&&(this.globals.forEach(o),e.cache.props&&e.cache.props.forEach((function(e){i.add(e)})));var r=new Dn((function(i,r){if(i instanceof ge){var a=t;return r(),t=a,!0}if(i instanceof Fe)i.variables.forEach(o);else if(i.is_block_scope())i.block_scope.variables.forEach(o);else if(wn&&i instanceof ut&&i.value instanceof we&&!i.value.name)wn.add(i.name.definition().id);else{if(i instanceof qt){let e;do{e=In(++t)}while(y.has(e));return i.mangled_name=e,!0}!e.ie8&&!e.safari10&&i instanceof zt&&n.push(i.definition())}}));function o(t){!(e.reserved.has(t.name)||t.export&Mn)&&n.push(t)}this.walk(r),n.forEach(t=>{t.mangle(e)}),wn=null})),Me.DEFMETHOD("find_colliding_names",(function(e){const t=e.cache&&e.cache.props,n=new Set;return e.reserved.forEach(i),this.globals.forEach(r),this.walk(new Dn((function(e){e instanceof Fe&&e.variables.forEach(r),e instanceof zt&&r(e.definition())}))),n;function i(e){n.add(e)}function r(n){var r=n.name;if(n.global&&t&&t.has(r))r=t.get(r);else if(!n.unmangleable(e))return;i(r)}})),Me.DEFMETHOD("expand_names",(function(e){In.reset(),In.sort(),e=this._default_mangler_options(e);var t=this.find_colliding_names(e),n=0;function i(i){if(i.global&&e.cache)return;if(i.unmangleable(e))return;if(e.reserved.has(i.name))return;const r=xn(i),o=i.name=r?r.name:function(){var e;do{e=In(n++)}while(t.has(e)||y.has(e));return e}();i.orig.forEach((function(e){e.name=o})),i.references.forEach((function(e){e.name=o}))}this.globals.forEach(i),this.walk(new Dn((function(e){e instanceof Fe&&e.variables.forEach(i),e instanceof zt&&i(e.definition())})))})),ue.DEFMETHOD("tail_node",c),ft.DEFMETHOD("tail_node",(function(){return this.expressions[this.expressions.length-1]})),Me.DEFMETHOD("compute_char_frequency",(function(e){e=this._default_mangler_options(e);try{ue.prototype.print=function(t,n){this._print(t,n),this instanceof Nt&&!this.unmangleable(e)?In.consider(this.name,-1):e.properties&&(this instanceof _t?In.consider(this.property,-1):this instanceof dt&&function e(t){t instanceof nn?In.consider(t.value,-1):t instanceof gt?(e(t.consequent),e(t.alternative)):t instanceof ft&&e(t.tail_node())}(this.property))},In.consider(this.print_to_string(),1)}finally{ue.prototype.print=ue.prototype._print}In.sort()}));const In=(()=>{const e="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$_".split(""),t="0123456789".split("");let n,i;function r(){i=new Map,e.forEach((function(e){i.set(e,0)})),t.forEach((function(e){i.set(e,0)}))}function o(e,t){return i.get(t)-i.get(e)}function a(e){var t="",i=54;e++;do{t+=n[--e%i],e=Math.floor(e/i),i=64}while(e>0);return t}return a.consider=function(e,t){for(var n=e.length;--n>=0;)i.set(e[n],i.get(e[n])+t)},a.sort=function(){n=m(e,o).concat(m(t,o))},a.reset=r,r(),a})(),Ln=1,Vn=8,Pn=16,Bn=32,Kn=256,Un=512,Gn=1024,Hn=(e,t)=>e.flags&t,Xn=(e,t)=>{e.flags|=t},zn=(e,t)=>{e.flags&=~t};class Wn extends Dn{constructor(e,t){super(),void 0===e.defaults||e.defaults||(t=!0),this.options=o(e,{arguments:!1,arrows:!t,booleans:!t,booleans_as_integers:!1,collapse_vars:!t,comparisons:!t,computed_props:!t,conditionals:!t,dead_code:!t,defaults:!0,directives:!t,drop_console:!1,drop_debugger:!t,ecma:5,evaluate:!t,expression:!1,global_defs:!1,hoist_funs:!1,hoist_props:!t,hoist_vars:!1,ie8:!1,if_return:!t,inline:!t,join_vars:!t,keep_classnames:!1,keep_fargs:!0,keep_fnames:!1,keep_infinity:!1,loops:!t,module:!1,negate_iife:!t,passes:1,properties:!t,pure_getters:!t&&"strict",pure_funcs:null,reduce_funcs:null,reduce_vars:!t,sequences:!t,side_effects:!t,switches:!t,top_retain:null,toplevel:!(!e||!e.top_retain),typeofs:!t,unsafe:!1,unsafe_arrows:!1,unsafe_comps:!1,unsafe_Function:!1,unsafe_math:!1,unsafe_methods:!1,unsafe_proto:!1,unsafe_regexp:!1,unsafe_undefined:!1,unused:!t,warnings:!1},!0);var n=this.options.global_defs;if("object"==typeof n)for(var i in n)"@"===i[0]&&D(n,i)&&(n[i.slice(1)]=oe(n[i],{expression:!0}));!0===this.options.inline&&(this.options.inline=3);var r=this.options.pure_funcs;this.pure_funcs="function"==typeof r?r:r?function(e){return!r.includes(e.expression.print_to_string())}:u;var a=this.options.top_retain;a instanceof RegExp?this.top_retain=function(e){return a.test(e.name)}:"function"==typeof a?this.top_retain=a:a&&("string"==typeof a&&(a=a.split(/,/)),this.top_retain=function(e){return a.includes(e.name)}),this.options.module&&(this.directives["use strict"]=!0,this.options.toplevel=!0);var s=this.options.toplevel;this.toplevel="string"==typeof s?{funcs:/funcs/.test(s),vars:/vars/.test(s)}:{funcs:s,vars:s};var c=this.options.sequences;this.sequences_limit=1==c?800:0|c,this.warnings_produced={},this.evaluated_regexps=new Map}option(e){return this.options[e]}exposed(e){if(e.export)return!0;if(e.global)for(var t=0,n=e.orig.length;t<n;t++)if(!this.toplevel[e.orig[t]instanceof Kt?"funcs":"vars"])return!0;return!1}in_boolean_context(){if(!this.option("booleans"))return!1;for(var e,t=this.self(),n=0;e=this.parent(n);n++){if(e instanceof pe||e instanceof gt&&e.condition===t||e instanceof Ae&&e.condition===t||e instanceof be&&e.condition===t||e instanceof Ye&&e.condition===t||e instanceof Et&&"!"==e.operator&&e.expression===t)return!0;if(!(e instanceof Dt&&("&&"==e.operator||"||"==e.operator)||e instanceof gt||e.tail_node()===t))return!1;t=e}}compress(e){e=e.resolve_defines(this),this.option("expression")&&e.process_expression(!0);for(var t=+this.options.passes||1,n=1/0,i=!1,r={ie8:this.option("ie8")},o=0;o<t;o++)if(e.figure_out_scope(r),0===o&&this.option("drop_console")&&(e=e.drop_console()),(o>0||this.option("reduce_vars"))&&e.reset_opt_flags(this),e=e.transform(this),t>1){var a=0;if(e.walk(new Dn((function(){a++}))),this.info("pass "+o+": last_count: "+n+", count: "+a),a<n)n=a,i=!1;else{if(i)break;i=!0}}return this.option("expression")&&e.process_expression(!1),e}info(...e){"verbose"==this.options.warnings&&ue.warn(...e)}warn(e,t){if(this.options.warnings){var n=_(e,t);n in this.warnings_produced||(this.warnings_produced[n]=!0,ue.warn.apply(ue,arguments))}}clear_warnings(){this.warnings_produced={}}before(e,t,n){if(Hn(e,Kn))return e;var i=!1;e instanceof Fe&&(e=(e=e.hoist_properties(this)).hoist_declarations(this),i=!0),t(e,this),t(e,this);var r=e.optimize(this);return i&&r instanceof Fe&&(r.drop_unused(this),t(r,this)),r===e&&Xn(r,Kn),r}}function Yn(e,t){e.DEFMETHOD("optimize",(function(e){if(Hn(this,Un))return this;if(e.has_directive("use asm"))return this;var n=t(this,e);return Xn(n,Un),n}))}function qn(e,t){if(!((t=hi(t))instanceof ue)){var n;if(e instanceof vt){var i=e.elements;if("length"==t)return ni(i.length,e);"number"==typeof t&&t in i&&(n=i[t])}else if(e instanceof Tt){t=""+t;for(var r=e.properties,o=r.length;--o>=0;){if(!(r[o]instanceof yt))return;n||r[o].key!==t||(n=r[o].value)}}return n instanceof $t&&n.fixed_value()||n}}function $n(e,t,n,i,r,o){var a=t.parent(r),s=Ai(n,a);if(s)return s;if(!o&&a instanceof ct&&a.expression===n&&!(i instanceof ke)&&!(i instanceof Mt)&&!a.is_expr_pure(e)&&(!(i instanceof xe)||!(a instanceof lt)&&i.contains_this()))return!0;if(a instanceof vt)return $n(e,t,a,a,r+1);if(a instanceof yt&&n===a.value){var u=t.parent(r+1);return $n(e,t,u,u,r+2)}if(a instanceof pt&&a.expression===n){var c=qn(i,a.property);return!o&&$n(e,t,a,c,r+1)}}function jn(e){return e instanceof ke||e instanceof xe}function Zn(e){if(e instanceof Qt)return!0;if(e instanceof $t)return e.definition().orig[0]instanceof Gt;if(e instanceof pt){if((e=e.expression)instanceof $t){if(e.is_immutable())return!1;e=e.fixed_value()}return!e||!(e instanceof an)&&(e instanceof tn||Zn(e))}return!1}function Jn(e,t){if(!(e instanceof $t))return!1;for(var n=e.definition().orig,i=n.length;--i>=0;)if(n[i]instanceof t)return!0}function Qn(e,t){for(var n,i=0;(n=e.parent(i++))&&!(n instanceof Fe);)if(n instanceof Qe&&n.argname){n=n.argname.definition().scope;break}return n.find_variable(t)}function ei(e,t,n){return n||(n={}),t&&(n.start||(n.start=t.start),n.end||(n.end=t.end)),new e(n)}function ti(e,t){return 1==t.length?t[0]:ei(ft,e,{expressions:t.reduce(ri,[])})}function ni(e,t){switch(typeof e){case"string":return ei(nn,t,{value:e});case"number":return isNaN(e)?ei(cn,t):isFinite(e)?1/e<0?ei(Et,t,{operator:"-",expression:ei(rn,t,{value:-e})}):ei(rn,t,{value:e}):e<0?ei(Et,t,{operator:"-",expression:ei(pn,t)}):ei(pn,t);case"boolean":return ei(e?mn:dn,t);case"undefined":return ei(ln,t);default:if(null===e)return ei(un,t,{value:null});if(e instanceof RegExp)return ei(an,t,{value:{source:A(e.source),flags:e.flags}});throw new Error(_("Can't handle constant of type: {type}",{type:typeof e}))}}function ii(e,t,n){return e instanceof Et&&"delete"==e.operator||e instanceof ct&&e.expression===t&&(n instanceof pt||n instanceof $t&&"eval"==n.name)?ti(t,[ei(rn,t,{value:0}),n]):n}function ri(e,t){return t instanceof ft?e.push.apply(e,t.expressions):e.push(t),e}function oi(e){if(null===e)return[];if(e instanceof Ee)return e.body;if(e instanceof he)return[];if(e instanceof ce)return[e];throw new Error("Can't convert thing to statement array")}function ai(e){return null===e||(e instanceof he||e instanceof Ee&&0==e.body.length)}function si(e){return!(e instanceof Rt||e instanceof Ie||e instanceof it||e instanceof rt||e instanceof st||e instanceof at)}function ui(e){return e instanceof Se&&e.body instanceof Ee?e.body:e}function ci(e){return"Call"==e.TYPE&&(e.expression instanceof xe||ci(e.expression))}function li(e){return e instanceof $t&&e.definition().undeclared}Yn(ue,(function(e,t){return e})),Me.DEFMETHOD("drop_console",(function(){return this.transform(new gn((function(e){if("Call"==e.TYPE){var t=e.expression;if(t instanceof pt){for(var n=t.expression;n.expression;)n=n.expression;if(li(n)&&"console"==n.name)return ei(ln,e)}}})))})),ue.DEFMETHOD("equivalent_to",(function(e){return this.TYPE==e.TYPE&&this.print_to_string()==e.print_to_string()})),Fe.DEFMETHOD("process_expression",(function(e,t){var n=this,i=new gn((function(r){if(e&&r instanceof pe)return ei(Ge,r,{value:r.body});if(!e&&r instanceof Ge){if(t){var o=r.value&&r.value.drop_side_effect_free(t,!0);return o?ei(pe,r,{body:o}):ei(he,r)}return ei(pe,r,{body:r.value||ei(Et,r,{operator:"void",expression:ei(rn,r,{value:0})})})}if(r instanceof Mt||r instanceof we&&r!==n)return r;if(r instanceof me){var a=r.body.length-1;a>=0&&(r.body[a]=r.body[a].transform(i))}else r instanceof Ye?(r.body=r.body.transform(i),r.alternative&&(r.alternative=r.alternative.transform(i))):r instanceof Oe&&(r.body=r.body.transform(i));return r}));n.transform(i)})),function(e){function t(e,t){t.assignments=0,t.chained=!1,t.direct_access=!1,t.escaped=0,t.recursive_refs=0,t.references=[],t.should_replace=void 0,t.single_use=void 0,t.scope.pinned()?t.fixed=!1:t.orig[0]instanceof Vt||!e.exposed(t)?t.fixed=t.init:t.fixed=!1}function n(e,n,i){i.variables.forEach((function(i){t(n,i),null===i.fixed?(e.defs_to_safe_ids.set(i,e.safe_ids),s(e,i,!0)):i.fixed&&(e.loop_ids.set(i.id,e.in_loop),s(e,i,!0))}))}function i(e,n){n.block_scope&&n.block_scope.variables.forEach((function(n){t(e,n)}))}function r(e){e.safe_ids=Object.create(e.safe_ids)}function o(e){e.safe_ids=Object.getPrototypeOf(e.safe_ids)}function s(e,t,n){e.safe_ids[t.id]=n}function u(e,t){if("m"==t.single_use)return!1;if(e.safe_ids[t.id]){if(null==t.fixed){var n=t.orig[0];if(n instanceof Bt||"arguments"==n.name)return!1;t.fixed=ei(ln,n)}return!0}return t.fixed instanceof Ie}function c(e,t,n,i){if(void 0===t.fixed)return!0;let r;return null===t.fixed&&(r=e.defs_to_safe_ids.get(t))?(r[t.id]=!1,e.defs_to_safe_ids.delete(t),!0):!!D(e.safe_ids,t.id)&&(!!u(e,t)&&(!1!==t.fixed&&(!(null!=t.fixed&&(!i||t.references.length>t.assignments))&&(t.fixed instanceof Ie?i instanceof ue&&t.fixed.parent_scope===n:t.orig.every(e=>!(e instanceof Vt||e instanceof Kt||e instanceof Gt))))))}function l(e,t,n,i,r,o,a){var s=e.parent(o);if(r){if(r.is_constant())return;if(r instanceof wt)return}if(s instanceof St&&"="==s.operator&&i===s.right||s instanceof ct&&(i!==s.expression||s instanceof lt)||s instanceof Ue&&i===s.value&&i.scope!==t.scope||s instanceof ut&&i===s.value||s instanceof hn&&i===s.value&&i.scope!==t.scope)return!(a>1)||r&&r.is_constant_expression(n)||(a=1),void((!t.escaped||t.escaped>a)&&(t.escaped=a));if(s instanceof vt||s instanceof En||s instanceof Dt&&gi.has(s.operator)||s instanceof gt&&i!==s.condition||s instanceof Re||s instanceof ft&&i===s.tail_node())l(e,t,n,s,s,o+1,a);else if(s instanceof yt&&i===s.value){var u=e.parent(o+1);l(e,t,n,u,u,o+2,a)}else if(s instanceof pt&&i===s.expression&&(l(e,t,n,s,r=qn(r,s.property),o+1,a+1),r))return;o>0||s instanceof ft&&i!==s.tail_node()||s instanceof pe||(t.direct_access=!0)}e(ue,a);var f=new Dn((function(e){if(e instanceof Nt){var t=e.definition();t&&(e instanceof $t&&t.references.push(e),t.fixed=!1)}}));function p(e,t,i){zn(this,Pn);const r=e.safe_ids;return e.safe_ids=Object.create(null),n(e,i,this),t(),e.safe_ids=r,!0}function _(e,t,i){var a,u=this;return zn(this,Pn),r(e),n(e,i,u),u.uses_arguments?(t(),void o(e)):(!u.name&&(a=e.parent())instanceof ct&&a.expression===u&&!a.args.some(e=>e instanceof Re)&&u.argnames.every(e=>e instanceof Nt)&&u.argnames.forEach((function(t,n){if(t.definition){var i=t.definition();i.orig.length>1||(void 0!==i.fixed||u.uses_arguments&&!e.has_directive("use strict")?i.fixed=!1:(i.fixed=function(){return a.args[n]||ei(ln,a)},e.loop_ids.set(i.id,e.in_loop),s(e,i,!0)))}})),t(),o(e),!0)}e(Ne,(function(e,t,i){return r(e),n(e,i,this),t(),o(e),!0})),e(St,(function(e,t,n){var i=this;if(i.left instanceof Le)i.left.walk(f);else{var r=i.left;if(r instanceof $t){var o=r.definition(),a=c(e,o,r.scope,i.right);if(o.assignments++,a){var u=o.fixed;if(u||"="==i.operator){var p="="==i.operator,_=p?i.right:i;if(!$n(n,e,i,_,0))return o.references.push(r),p||(o.chained=!0),o.fixed=p?function(){return i.right}:function(){return ei(Dt,i,{operator:i.operator.slice(0,-1),left:u instanceof ue?u:u(),right:i.right})},s(e,o,!1),i.right.walk(e),s(e,o,!0),l(e,o,r.scope,i,_,0,1),!0}}}}})),e(Dt,(function(e){if(gi.has(this.operator))return this.left.walk(e),r(e),this.right.walk(e),o(e),!0})),e(me,(function(e,t,n){i(n,this)})),e(Ze,(function(e){return r(e),this.expression.walk(e),o(e),r(e),_e(this,e),o(e),!0})),e(wt,(function(e,t){return zn(this,Pn),r(e),t(),o(e),!0})),e(gt,(function(e){return this.condition.walk(e),r(e),this.consequent.walk(e),o(e),r(e),this.alternative.walk(e),o(e),!0})),e(je,(function(e,t){return r(e),t(),o(e),!0})),e(Rt,p),e(Ie,p),e(ve,(function(e,t,n){i(n,this);const a=e.in_loop;return e.in_loop=this,r(e),this.body.walk(e),Ii(this)&&(o(e),r(e)),this.condition.walk(e),o(e),e.in_loop=a,!0})),e(be,(function(e,t,n){i(n,this),this.init&&this.init.walk(e);const a=e.in_loop;return e.in_loop=this,r(e),this.condition&&this.condition.walk(e),this.body.walk(e),this.step&&(Ii(this)&&(o(e),r(e)),this.step.walk(e)),o(e),e.in_loop=a,!0})),e(ye,(function(e,t,n){i(n,this),this.init.walk(f),this.object.walk(e);const a=e.in_loop;return e.in_loop=this,r(e),this.body.walk(e),o(e),e.in_loop=a,!0})),e(xe,_),e(ke,_),e(Ye,(function(e){return this.condition.walk(e),r(e),this.body.walk(e),o(e),this.alternative&&(r(e),this.alternative.walk(e),o(e)),!0})),e(ge,(function(e){return r(e),this.body.walk(e),o(e),!0})),e(zt,(function(){this.definition().fixed=!1})),e($t,(function(e,t,n){var i,r,o=this.definition();o.references.push(this),1==o.references.length&&!o.fixed&&o.orig[0]instanceof Kt&&e.loop_ids.set(o.id,e.in_loop),void 0!==o.fixed&&u(e,o)?o.fixed&&((i=this.fixed_value())instanceof we&&Pi(e,o)?o.recursive_refs++:i&&!n.exposed(o)&&function(e,t,n){return t.option("unused")&&!n.scope.pinned()&&n.references.length-n.recursive_refs==1&&e.loop_ids.get(n.id)===e.in_loop}(e,n,o)?o.single_use=!(i instanceof we&&function(e,t,n){let i=function(){for(let t=0;;t++){const n=e.parent(t);if(n instanceof Me)break;if(n instanceof we)return n;if(n.block_scope)return n.block_scope}}();const r=t.enclosed.filter(e=>!t.variables.has(e.name)).map(e=>e.name);if(!r.length)return!1;for(;i&&!(i instanceof Me)&&i!==n;){if(r.some(e=>i.variables.has(e)))return!0;i=i.parent_scope}return!1}(e,i,o.scope))&&(i instanceof we&&!i.pinned()||i instanceof Mt||o.scope===this.scope&&i.is_constant_expression()):o.single_use=!1,$n(n,e,this,i,0,!!(r=i)&&(r.is_constant()||r instanceof we||r instanceof Qt))&&(o.single_use?o.single_use="m":o.fixed=!1)):o.fixed=!1,l(e,o,this.scope,this,i,0,1)})),e(Me,(function(e,i,r){this.globals.forEach((function(e){t(r,e)})),n(e,r,this)})),e(Je,(function(e,t,n){return i(n,this),r(e),_e(this,e),o(e),this.bcatch&&(r(e),this.bcatch.walk(e),o(e)),this.bfinally&&this.bfinally.walk(e),!0})),e(mt,(function(e,t){var n=this;if("++"===n.operator||"--"===n.operator){var i=n.expression;if(i instanceof $t){var r=i.definition(),o=c(e,r,i.scope,!0);if(r.assignments++,o){var a=r.fixed;if(a)return r.references.push(i),r.chained=!0,r.fixed=function(){return ei(Dt,n,{operator:n.operator.slice(0,-1),left:ei(Et,n,{operator:"+",expression:a instanceof ue?a:a()}),right:ei(rn,n,{value:1})})},s(e,r,!0),!0}}}})),e(ut,(function(e,t){var n=this;if(n.name instanceof Le)n.name.walk(f);else{var i=n.name.definition();if(n.value){if(c(e,i,n.name.scope,n.value))return i.fixed=function(){return n.value},e.loop_ids.set(i.id,e.in_loop),s(e,i,!1),t(),s(e,i,!0),!0;i.fixed=!1}}})),e(Te,(function(e,t,n){i(n,this);const a=e.in_loop;return e.in_loop=this,r(e),t(),o(e),e.in_loop=a,!0}))}((function(e,t){e.DEFMETHOD("reduce_vars",t)})),Me.DEFMETHOD("reset_opt_flags",(function(e){const t=this,n=e.option("reduce_vars"),i=new Dn((function(r,o){if(zn(r,Kn),zn(r,Un),zn(r,Gn),n)return e.top_retain&&r instanceof Ie&&i.parent()===t&&Xn(r,Gn),r.reduce_vars(i,o,e)}));i.safe_ids=Object.create(null),i.in_loop=null,i.loop_ids=new Map,i.defs_to_safe_ids=new Map,t.walk(i)})),Nt.DEFMETHOD("fixed_value",(function(){var e=this.definition().fixed;return!e||e instanceof ue?e:e()})),$t.DEFMETHOD("is_immutable",(function(){var e=this.definition().orig;return 1==e.length&&e[0]instanceof Gt}));var fi=E("Array Boolean clearInterval clearTimeout console Date decodeURI decodeURIComponent encodeURI encodeURIComponent Error escape eval EvalError Function isFinite isNaN JSON Math Number parseFloat parseInt RangeError ReferenceError RegExp Object setInterval setTimeout String SyntaxError TypeError unescape URIError");$t.DEFMETHOD("is_declared",(function(e){return!this.definition().undeclared||e.option("unsafe")&&fi.has(this.name)}));var pi,_i=E("Infinity NaN undefined");function di(e){return e instanceof pn||e instanceof cn||e instanceof ln}function mi(e,t){var n,r,o=t.find_parent(Fe).get_defun_scope();!function(){var e=t.self(),i=0;do{if(e instanceof Qe||e instanceof et)i++;else if(e instanceof Se)n=!0;else{if(e instanceof Fe){o=e;break}e instanceof Je&&(r=!0)}}while(e=t.parent(i++))}();var a,s=10;do{a=!1,c(e),t.option("dead_code")&&p(e,t),t.option("if_return")&&l(e,t),t.sequences_limit>0&&(m(e,t),h(e,t)),t.option("join_vars")&&g(e),t.option("collapse_vars")&&u(e,t)}while(a&&s-- >0);function u(e,t){if(o.pinned())return e;for(var s,u=[],c=e.length,l=new gn((function(e,n){if(O)return e;if(!C)return e!==_[d]?e:++d<_.length?x(e):(C=!0,(h=function e(t,n,i){var r=l.parent(n);if(r instanceof St)return i&&!(r.left instanceof pt||S.has(r.left.name))?e(r,n+1,i):t;if(r instanceof Dt)return!i||gi.has(r.operator)&&r.left!==t?t:e(r,n+1,i);if(r instanceof ct)return t;if(r instanceof Ze)return t;if(r instanceof gt)return i&&r.condition===t?e(r,n+1,i):t;if(r instanceof tt)return e(r,n+1,!0);if(r instanceof Ue)return i?e(r,n+1,i):t;if(r instanceof Ye)return i&&r.condition===t?e(r,n+1,i):t;if(r instanceof Se)return t;if(r instanceof ft)return e(r,n+1,r.tail_node()!==t);if(r instanceof pe)return e(r,n+1,!0);if(r instanceof qe)return t;if(r instanceof ut)return t;return null}(e,0))===e&&(O=!0),e);var i,s=l.parent();if(e instanceof St&&"="!=e.operator&&g.equivalent_to(e.left)||e instanceof En||e instanceof ct&&g instanceof pt&&g.equivalent_to(e.expression)||e instanceof le||e instanceof Le||e instanceof Re&&e.expression instanceof Nt&&e.expression.definition().references.length>1||e instanceof Se&&!(e instanceof be)||e instanceof Xe||e instanceof Je||e instanceof Oe||e instanceof hn||e instanceof st||s instanceof be&&e!==s.init||!T&&e instanceof $t&&!e.is_declared(t))return O=!0,e;if(D||A&&T||!(s instanceof Dt&&gi.has(s.operator)&&s.left!==e||s instanceof gt&&s.condition!==e||s instanceof Ye&&s.condition!==e)||(D=s),M&&!(e instanceof kt)&&g.equivalent_to(e)){if(D)return O=!0,e;if(Ai(e,s))return E&&F++,e;if(F++,E&&m instanceof ut)return e;if(a=O=!0,t.info("Collapsing {name} [{file}:{line},{col}]",{name:e.print_to_string(),file:e.start.file,line:e.start.line,col:e.start.col}),m instanceof ht)return ei(Et,m,m);if(m instanceof ut){var u=m.name.definition(),c=m.value;return u.references.length-u.replaced!=1||t.exposed(u)?ei(St,m,{operator:"=",left:ei($t,m.name,m.name),right:c}):(u.replaced++,y&&di(c)?c.transform(t):ii(s,e,c))}return zn(m,Bn),m}return(e instanceof ct||e instanceof Ue&&(v||g instanceof pt||X(g))||e instanceof pt&&(v||e.expression.may_throw_on_access(t))||e instanceof $t&&(S.get(e.name)||v&&X(e))||e instanceof ut&&e.value&&(S.has(e.name.name)||v&&X(e.name))||(i=Ai(e.left,e))&&(i instanceof pt||S.has(i.name))||b&&(r?e.has_side_effects(t):function e(t,n){if(t instanceof St)return e(t.left,!0);if(t instanceof mt)return e(t.expression,!0);if(t instanceof ut)return t.value&&e(t.value);if(n){if(t instanceof _t)return e(t.expression,!0);if(t instanceof dt)return e(t.expression,!0);if(t instanceof $t)return t.definition().scope!==o}return!1}(e)))&&(h=e,e instanceof Fe&&(O=!0)),x(e)}),(function(e){O||(h===e&&(O=!0),D===e&&(D=null))})),p=new gn((function(e){if(O)return e;if(!C){if(e!==_[d])return e;if(++d<_.length)return;return C=!0,e}return e instanceof $t&&e.name==N.name?(--F||(O=!0),Ai(e,p.parent())?e:(N.replaced++,E.replaced--,m.value)):e instanceof je||e instanceof Fe?e:void 0}));--c>=0;){0==c&&t.option("unused")&&I();var _=[];for(L(e[c]);u.length>0;){_=u.pop();var d=0,m=_[_.length-1],E=null,h=null,D=null,g=V(m);if(g&&!Zn(g)&&!g.has_side_effects(t)){var S=B(m),A=U(g);g instanceof $t&&S.set(g.name,!1);var v=G(m),T=H(),b=m.may_throw(t),y=m.name instanceof Bt,C=y,O=!1,F=0,M=!s||!C;if(!M){for(var R=t.self().argnames.lastIndexOf(m.name)+1;!O&&R<s.length;R++)s[R].transform(l);M=!0}for(var w=c;!O&&w<e.length;w++)e[w].transform(l);if(E){var N=m.name.definition();if(O&&N.references.length-N.replaced>F)F=!1;else{O=!1,d=0,C=y;for(w=c;!O&&w<e.length;w++)e[w].transform(p);E.single_use=!1}}F&&!K(m)&&e.splice(c,1)}}}function x(e){if(e instanceof Fe)return e;if(e instanceof qe){e.expression=e.expression.transform(l);for(var t=0,n=e.body.length;!O&&t<n;t++){var i=e.body[t];if(i instanceof Ze){if(!C){if(i!==_[d])continue;d++}if(i.expression=i.expression.transform(l),!T)break}}return O=!0,e}}function k(e,t,n){var i=!1,r=!(e instanceof ke);return t.walk(new Dn((function(t,a){if(i)return!0;if(t instanceof $t&&(e.variables.has(t.name)||function(e,t){if(e.global)return!1;let n=e.scope;for(;n&&n!==t;){if(n.variables.has(e.name))return!0;n=n.parent_scope}return!1}(t.definition(),e))){var s=t.definition().scope;if(s!==o)for(;s=s.parent_scope;)if(s===o)return!0;return i=!0}if((n||r)&&t instanceof Qt)return i=!0;if(t instanceof Fe&&!(t instanceof ke)){var u=r;return r=!1,a(),r=u,!0}}))),i}function I(){var e,n=t.self();if(jn(n)&&!n.name&&!n.uses_arguments&&!n.pinned()&&(e=t.parent())instanceof ct&&e.expression===n&&e.args.every(e=>!(e instanceof Re))){var r=t.has_directive("use strict");r&&!i(r,n.body)&&(r=!1);var o=n.argnames.length;s=e.args.slice(o);for(var a=new Set,c=o;--c>=0;){var l=n.argnames[c],f=e.args[c];const i=l.definition&&l.definition();if(!(i&&i.orig.length>1)&&(s.unshift(ei(ut,l,{name:l,value:f})),!a.has(l.name)))if(a.add(l.name),l instanceof Re){var p=e.args.slice(c);p.every(e=>!k(n,e,r))&&u.unshift([ei(ut,l,{name:l.expression,value:ei(vt,e,{elements:p})})])}else f?(f instanceof we&&f.pinned()||k(n,f,r))&&(f=null):f=ei(ln,l).transform(t),f&&u.unshift([ei(ut,l,{name:l,value:f})])}}}function L(e){if(_.push(e),e instanceof St)e.left.has_side_effects(t)||u.push(_.slice()),L(e.right);else if(e instanceof Dt)L(e.left),L(e.right);else if(e instanceof ct)L(e.expression),e.args.forEach(L);else if(e instanceof Ze)L(e.expression);else if(e instanceof gt)L(e.condition),L(e.consequent),L(e.alternative);else if(!(e instanceof tt)||!t.option("unused")&&e instanceof rt)e instanceof Ae?(L(e.condition),e.body instanceof me||L(e.body)):e instanceof Ue?e.value&&L(e.value):e instanceof be?(e.init&&L(e.init),e.condition&&L(e.condition),e.step&&L(e.step),e.body instanceof me||L(e.body)):e instanceof ye?(L(e.object),e.body instanceof me||L(e.body)):e instanceof Ye?(L(e.condition),e.body instanceof me||L(e.body),!e.alternative||e.alternative instanceof me||L(e.alternative)):e instanceof ft?e.expressions.forEach(L):e instanceof pe?L(e.body):e instanceof qe?(L(e.expression),e.body.forEach(L)):e instanceof mt?"++"!=e.operator&&"--"!=e.operator||u.push(_.slice()):e instanceof ut&&e.value&&(u.push(_.slice()),L(e.value));else{var n=e.definitions.length,i=n-200;for(i<0&&(i=0);i<n;i++)L(e.definitions[i])}_.pop()}function V(e){if(!(e instanceof ut&&e.name instanceof kt)){var n=e[e instanceof St?"left":"expression"];return!Jn(n,Vt)&&n}var r=e.name.definition();if(i(e.name,r.orig)){var o=r.references.length-r.replaced;if(o)return r.orig.length-r.eliminated>1&&!(e.name instanceof Bt)||(o>1?function(e){var t=e.value;if(t instanceof $t&&"arguments"!=t.name){var n=t.definition();if(!n.undeclared)return E=n}}(e):!t.exposed(r))?ei($t,e.name,e.name):void 0}}function P(e){return e[e instanceof St?"right":"value"]}function B(e){var n=new Map;if(e instanceof mt)return n;var i=new Dn((function(e,r){for(var o=e;o instanceof pt;)o=o.expression;(o instanceof $t||o instanceof Qt)&&n.set(o.name,n.get(o.name)||$n(t,i,e,e,0))}));return P(e).walk(i),n}function K(n){if(n.name instanceof Bt){var i=t.parent(),r=t.self().argnames,o=r.indexOf(n.name);if(o<0)i.args.length=Math.min(i.args.length,r.length-1);else{var a=i.args;a[o]&&(a[o]=ei(rn,a[o],{value:0}))}return!0}var s=!1;return e[c].transform(new gn((function(e,t,i){return s?e:e===n||e.body===n?(s=!0,e instanceof ut?(e.value=null,e):i?f.skip:null):void 0}),(function(e){if(e instanceof ft)switch(e.expressions.length){case 0:return null;case 1:return e.expressions[0]}})))}function U(e){for(;e instanceof pt;)e=e.expression;return e instanceof $t&&e.definition().scope===o&&!(n&&(S.has(e.name)||m instanceof mt||m instanceof St&&"="!=m.operator))}function G(e){return!(e instanceof mt)&&P(e).has_side_effects(t)}function H(){if(v)return!1;if(E)return!0;if(g instanceof $t){var e=g.definition();if(e.references.length-e.replaced==(m instanceof ut?1:2))return!0}return!1}function X(e){if(!e.definition)return!0;var t=e.definition();return!(1==t.orig.length&&t.orig[0]instanceof Kt)&&(t.scope.get_defun_scope()!==o||!t.references.every(e=>{var t=e.scope.get_defun_scope();return"Scope"==t.TYPE&&(t=t.parent_scope),t===o}))}}function c(e){for(var t=[],n=0;n<e.length;){var i=e[n];i instanceof Ee&&i.body.every(si)?(a=!0,c(i.body),e.splice(n,1,...i.body),n+=i.body.length):i instanceof he?(a=!0,e.splice(n,1)):i instanceof fe?t.indexOf(i.value)<0?(n++,t.push(i.value)):(a=!0,e.splice(n,1)):n++}}function l(e,t){for(var n=t.self(),i=function(e){for(var t=0,n=e.length;--n>=0;){var i=e[n];if(i instanceof Ye&&i.body instanceof Ge&&++t>1)return!0}return!1}(e),r=n instanceof we,o=e.length;--o>=0;){var s=e[o],u=g(o),c=e[u];if(r&&!c&&s instanceof Ge){if(!s.value){a=!0,e.splice(o,1);continue}if(s.value instanceof Et&&"void"==s.value.operator){a=!0,e[o]=ei(pe,s,{body:s.value.expression});continue}}if(s instanceof Ye){var l;if(E(l=Ri(s.body))){l.label&&d(l.label.thedef.references,l),a=!0,(s=s.clone()).condition=s.condition.negate(t);var f=D(s.body,l);s.body=ei(Ee,s,{body:oi(s.alternative).concat(h())}),s.alternative=ei(Ee,s,{body:f}),e[o]=s.transform(t);continue}if(E(l=Ri(s.alternative))){l.label&&d(l.label.thedef.references,l),a=!0,(s=s.clone()).body=ei(Ee,s.body,{body:oi(s.body).concat(h())});f=D(s.alternative,l);s.alternative=ei(Ee,s.alternative,{body:f}),e[o]=s.transform(t);continue}}if(s instanceof Ye&&s.body instanceof Ge){var p=s.body.value;if(!p&&!s.alternative&&(r&&!c||c instanceof Ge&&!c.value)){a=!0,e[o]=ei(pe,s.condition,{body:s.condition});continue}if(p&&!s.alternative&&c instanceof Ge&&c.value){a=!0,(s=s.clone()).alternative=c,e[o]=s.transform(t),e.splice(u,1);continue}if(p&&!s.alternative&&(!c&&r&&i||c instanceof Ge)){a=!0,(s=s.clone()).alternative=c||ei(Ge,s,{value:null}),e[o]=s.transform(t),c&&e.splice(u,1);continue}var m=e[S(o)];if(t.option("sequences")&&r&&!s.alternative&&m instanceof Ye&&m.body instanceof Ge&&g(u)==e.length&&c instanceof pe){a=!0,(s=s.clone()).alternative=ei(Ee,c,{body:[c,ei(Ge,c,{value:null})]}),e[o]=s.transform(t),e.splice(u,1);continue}}}function E(i){if(!i)return!1;for(var a=o+1,s=e.length;a<s;a++){var u=e[a];if(u instanceof rt||u instanceof it)return!1}var c=i instanceof Xe?t.loopcontrol_target(i):null;return i instanceof Ge&&r&&function(e){return!e||e instanceof Et&&"void"==e.operator}(i.value)||i instanceof We&&n===ui(c)||i instanceof ze&&c instanceof Ee&&n===c}function h(){var t=e.slice(o+1);return e.length=o+1,t.filter((function(t){return!(t instanceof Ie)||(e.push(t),!1)}))}function D(e,t){var n=oi(e).slice(0,-1);return t.value&&n.push(ei(pe,t.value,{body:t.value.expression})),n}function g(t){for(var n=t+1,i=e.length;n<i;n++){var r=e[n];if(!(r instanceof nt&&_(r)))break}return n}function S(t){for(var n=t;--n>=0;){var i=e[n];if(!(i instanceof nt&&_(i)))break}return n}}function p(e,t){for(var n,i=t.self(),r=0,o=0,s=e.length;r<s;r++){var u=e[r];if(u instanceof Xe){var c=t.loopcontrol_target(u);u instanceof ze&&!(c instanceof Se)&&ui(c)===i||u instanceof We&&ui(c)===i?u.label&&d(u.label.thedef.references,u):e[o++]=u}else e[o++]=u;if(Ri(u)){n=e.slice(r+1);break}}e.length=o,a=o!=s,n&&n.forEach((function(n){Ei(t,n,e)}))}function _(e){return e.definitions.every(e=>!e.value)}function m(e,t){if(!(e.length<2)){for(var n=[],i=0,r=0,o=e.length;r<o;r++){var s=e[r];if(s instanceof pe){n.length>=t.sequences_limit&&c();var u=s.body;n.length>0&&(u=u.drop_side_effect_free(t)),u&&ri(n,u)}else s instanceof tt&&_(s)||s instanceof Ie?e[i++]=s:(c(),e[i++]=s)}c(),e.length=i,i!=o&&(a=!0)}function c(){if(n.length){var t=ti(n[0],n);e[i++]=ei(pe,t,{body:t}),n=[]}}}function E(e,t){if(!(e instanceof Ee))return e;for(var n=null,i=0,r=e.body.length;i<r;i++){var o=e.body[i];if(o instanceof nt&&_(o))t.push(o);else{if(n)return!1;n=o}}return n}function h(e,t){function n(e){r--,a=!0;var n=i.body;return ti(n,[n,e]).transform(t)}for(var i,r=0,o=0;o<e.length;o++){var s=e[o];if(i)if(s instanceof Ue)s.value=n(s.value||ei(ln,s).transform(t));else if(s instanceof be){if(!(s.init instanceof tt)){var u=!1;i.body.walk(new Dn((function(e){return!!(u||e instanceof Fe)||(e instanceof Dt&&"in"==e.operator?(u=!0,!0):void 0)}))),u||(s.init?s.init=n(s.init):(s.init=i.body,r--,a=!0))}}else s instanceof ye?s.init instanceof rt||s.init instanceof it||(s.object=n(s.object)):s instanceof Ye?s.condition=n(s.condition):s instanceof qe?s.expression=n(s.expression):s instanceof Oe&&(s.expression=n(s.expression));if(t.option("conditionals")&&s instanceof Ye){var c=[],l=E(s.body,c),f=E(s.alternative,c);if(!1!==l&&!1!==f&&c.length>0){var p=c.length;c.push(ei(Ye,s,{condition:s.condition,body:l||ei(he,s.body),alternative:f})),c.unshift(r,1),[].splice.apply(e,c),o+=p,r+=p+1,i=null,a=!0;continue}}e[r++]=s,i=s instanceof pe?s:null}e.length=r}function D(e,n){if(e instanceof tt){var i,r=e.definitions[e.definitions.length-1];if(r.value instanceof Tt)if(n instanceof St?i=[n]:n instanceof ft&&(i=n.expressions.slice()),i){var a=!1;do{var s=i[0];if(!(s instanceof St))break;if("="!=s.operator)break;if(!(s.left instanceof pt))break;var u=s.left.expression;if(!(u instanceof $t))break;if(r.name.name!=u.name)break;if(!s.right.is_constant_expression(o))break;var c=s.left.property;if(c instanceof ue&&(c=c.evaluate(t)),c instanceof ue)break;c=""+c;var l=t.option("ecma")<6&&t.has_directive("use strict")?function(e){return e.key!=c&&e.key&&e.key.name!=c}:function(e){return e.key&&e.key.name!=c};if(!r.value.properties.every(l))break;var f=r.value.properties.filter((function(e){return e.key===c}))[0];f?f.value=new ft({start:f.start,expressions:[f.value.clone(),s.right.clone()],end:f.end}):r.value.properties.push(ei(yt,s,{key:c,value:s.right})),i.shift(),a=!0}while(i.length);return a&&i}}}function g(e){for(var t,n=0,i=-1,r=e.length;n<r;n++){var o=e[n],s=e[i];if(o instanceof tt)s&&s.TYPE==o.TYPE?(s.definitions=s.definitions.concat(o.definitions),a=!0):t&&t.TYPE==o.TYPE&&_(o)?(t.definitions=t.definitions.concat(o.definitions),a=!0):(e[++i]=o,t=o);else if(o instanceof Ue)o.value=c(o.value);else if(o instanceof be){(u=D(s,o.init))?(a=!0,o.init=u.length?ti(o.init,u):null,e[++i]=o):s instanceof nt&&(!o.init||o.init.TYPE==s.TYPE)?(o.init&&(s.definitions=s.definitions.concat(o.init.definitions)),o.init=s,e[i]=o,a=!0):t&&o.init&&t.TYPE==o.init.TYPE&&_(o.init)?(t.definitions=t.definitions.concat(o.init.definitions),o.init=null,e[++i]=o,a=!0):e[++i]=o}else if(o instanceof ye)o.object=c(o.object);else if(o instanceof Ye)o.condition=c(o.condition);else if(o instanceof pe){var u;if(u=D(s,o.body)){if(a=!0,!u.length)continue;o.body=ti(o.body,u)}e[++i]=o}else o instanceof qe?o.expression=c(o.expression):o instanceof Oe?o.expression=c(o.expression):e[++i]=o}function c(t){e[++i]=o;var n=D(s,t);return n?(a=!0,n.length?ti(t,n):t instanceof ft?t.tail_node().left:t.left):t}e.length=i+1}}function Ei(e,t,n){t instanceof Ie||e.warn("Dropping unreachable code [{file}:{line},{col}]",t.start),t.walk(new Dn((function(i){return i instanceof nt?(e.warn("Declarations in unreachable code! [{file}:{line},{col}]",i.start),i.remove_initializers(),n.push(i),!0):i instanceof Ie&&(i===t||!e.has_directive("use strict"))?(n.push(i===t?i:ei(nt,i,{definitions:[ei(ut,i,{name:ei(It,i.name,i.name),value:null})]})),!0):i instanceof Fe||void 0})))}function hi(e){return e instanceof tn?e.getValue():e instanceof Et&&"void"==e.operator&&e.expression instanceof tn?void 0:e}function Di(e,t){return Hn(e,Vn)||e instanceof ln||e instanceof Et&&"void"==e.operator&&!e.expression.has_side_effects(t)}!function(e){function t(e){return/strict/.test(e.option("pure_getters"))}ue.DEFMETHOD("may_throw_on_access",(function(e){return!e.option("pure_getters")||this._dot_throw(e)})),e(ue,t),e(un,u),e(ln,u),e(tn,s),e(vt,s),e(Tt,(function(e){if(!t(e))return!1;for(var n=this.properties.length;--n>=0;)if(this.properties[n]._dot_throw(e))return!0;return!1})),e(bt,s),e(Ot,u),e(Re,(function(e){return this.expression._dot_throw(e)})),e(xe,s),e(ke,s),e(ht,s),e(Et,(function(){return"void"==this.operator})),e(Dt,(function(e){return("&&"==this.operator||"||"==this.operator)&&(this.left._dot_throw(e)||this.right._dot_throw(e))})),e(St,(function(e){return"="==this.operator&&this.right._dot_throw(e)})),e(gt,(function(e){return this.consequent._dot_throw(e)||this.alternative._dot_throw(e)})),e(_t,(function(e){return!!t(e)&&!(this.expression instanceof xe&&"prototype"==this.property)})),e(ft,(function(e){return this.tail_node()._dot_throw(e)})),e($t,(function(e){if(Hn(this,Vn))return!0;if(!t(e))return!1;if(li(this)&&this.is_declared(e))return!1;if(this.is_immutable())return!1;var n=this.fixed_value();return!n||n._dot_throw(e)}))}((function(e,t){e.DEFMETHOD("_dot_throw",t)})),function(e){const t=E("! delete"),n=E("in instanceof == != === !== < <= >= >");e(ue,s),e(Et,(function(){return t.has(this.operator)})),e(Dt,(function(){return n.has(this.operator)||gi.has(this.operator)&&this.left.is_boolean()&&this.right.is_boolean()})),e(gt,(function(){return this.consequent.is_boolean()&&this.alternative.is_boolean()})),e(St,(function(){return"="==this.operator&&this.right.is_boolean()})),e(ft,(function(){return this.tail_node().is_boolean()})),e(mn,u),e(dn,u)}((function(e,t){e.DEFMETHOD("is_boolean",t)})),function(e){e(ue,s),e(rn,u);var t=E("+ - ~ ++ --");e(mt,(function(){return t.has(this.operator)}));var n=E("- * / % & | ^ << >> >>>");e(Dt,(function(e){return n.has(this.operator)||"+"==this.operator&&this.left.is_number(e)&&this.right.is_number(e)})),e(St,(function(e){return n.has(this.operator.slice(0,-1))||"="==this.operator&&this.right.is_number(e)})),e(ft,(function(e){return this.tail_node().is_number(e)})),e(gt,(function(e){return this.consequent.is_number(e)&&this.alternative.is_number(e)}))}((function(e,t){e.DEFMETHOD("is_number",t)})),(pi=function(e,t){e.DEFMETHOD("is_string",t)})(ue,s),pi(nn,u),pi(Pe,(function(){return 1===this.segments.length})),pi(Et,(function(){return"typeof"==this.operator})),pi(Dt,(function(e){return"+"==this.operator&&(this.left.is_string(e)||this.right.is_string(e))})),pi(St,(function(e){return("="==this.operator||"+="==this.operator)&&this.right.is_string(e)})),pi(ft,(function(e){return this.tail_node().is_string(e)})),pi(gt,(function(e){return this.consequent.is_string(e)&&this.alternative.is_string(e)}));var gi=E("&& ||"),Si=E("delete ++ --");function Ai(e,t){return t instanceof mt&&Si.has(t.operator)?t.expression:t instanceof St&&t.left===e?e:void 0}function vi(e,t){return e.print_to_string().length>t.print_to_string().length?t:e}function Ti(e,t){return vi(ei(pe,e,{body:e}),ei(pe,t,{body:t})).body}function bi(e,t,n){return(Tn(e)?Ti:vi)(t,n)}function yi(e){for(var t of Object.keys(e))e[t]=E(e[t])}!function(e){function t(e,t){e.warn("global_defs "+t.print_to_string()+" redefined [{file}:{line},{col}]",t.start)}Me.DEFMETHOD("resolve_defines",(function(e){return e.option("global_defs")?(this.figure_out_scope({ie8:e.option("ie8")}),this.transform(new gn((function(n){var i=n._find_defs(e,"");if(i){for(var r,o=0,a=n;(r=this.parent(o++))&&r instanceof pt&&r.expression===a;)a=r;if(!Ai(a,r))return i;t(e,n)}})))):this})),e(ue,a),e(_t,(function(e,t){return this.expression._find_defs(e,"."+this.property+t)})),e(kt,(function(e){this.global()&&D(e.option("global_defs"),this.name)&&t(e,this)})),e($t,(function(e,t){if(this.global()){var n=e.option("global_defs"),i=this.name+t;return D(n,i)?function e(t,n){if(t instanceof ue)return ei(t.CTOR,n,t);if(Array.isArray(t))return ei(vt,n,{elements:t.map((function(t){return e(t,n)}))});if(t&&"object"==typeof t){var i=[];for(var r in t)D(t,r)&&i.push(ei(yt,n,{key:r,value:e(t[r],n)}));return ei(Tt,n,{properties:i})}return ni(t,n)}(n[i],this):void 0}}))}((function(e,t){e.DEFMETHOD("_find_defs",t)}));var Ci=["constructor","toString","valueOf"],Oi={Array:["indexOf","join","lastIndexOf","slice"].concat(Ci),Boolean:Ci,Function:Ci,Number:["toExponential","toFixed","toPrecision"].concat(Ci),Object:Ci,RegExp:["test"].concat(Ci),String:["charAt","charCodeAt","concat","indexOf","italics","lastIndexOf","match","replace","search","slice","split","substr","substring","toLowerCase","toUpperCase","trim"].concat(Ci)};yi(Oi);var Fi={Array:["isArray"],Math:["abs","acos","asin","atan","ceil","cos","exp","floor","log","round","sin","sqrt","tan","atan2","pow","max","min"],Number:["isFinite","isNaN"],Object:["create","getOwnPropertyDescriptor","getOwnPropertyNames","getPrototypeOf","isExtensible","isFrozen","isSealed","keys"],String:["fromCharCode"]};yi(Fi),function(e){ue.DEFMETHOD("evaluate",(function(e){if(!e.option("evaluate"))return this;var t=this._eval(e,1);return!t||t instanceof RegExp?t:"function"==typeof t||"object"==typeof t?this:t}));var t=E("! ~ - + void");ue.DEFMETHOD("is_constant",(function(){return this instanceof tn?!(this instanceof an):this instanceof Et&&this.expression instanceof tn&&t.has(this.operator)})),e(ce,(function(){throw new Error(_("Cannot evaluate a statement [{file}:{line},{col}]",this.start))})),e(we,c),e(Mt,c),e(ue,c),e(tn,(function(){return this.getValue()})),e(an,(function(e){let t=e.evaluated_regexps.get(this);if(void 0===t){try{t=(0,eval)(this.print_to_string())}catch(e){t=null}e.evaluated_regexps.set(this,t)}return t||this})),e(Pe,(function(){return 1!==this.segments.length?this:this.segments[0].value})),e(xe,(function(e){if(e.option("unsafe")){var t=function(){};return t.node=this,t.toString=function(){return this.node.print_to_string()},t}return this})),e(vt,(function(e,t){if(e.option("unsafe")){for(var n=[],i=0,r=this.elements.length;i<r;i++){var o=this.elements[i],a=o._eval(e,t);if(o===a)return this;n.push(a)}return n}return this})),e(Tt,(function(e,t){if(e.option("unsafe")){for(var n={},i=0,r=this.properties.length;i<r;i++){var o=this.properties[i];if(o instanceof Re)return this;var a=o.key;if(a instanceof Nt)a=a.name;else if(a instanceof ue&&(a=a._eval(e,t))===o.key)return this;if("function"==typeof Object.prototype[a])return this;if(!(o.value instanceof xe)&&(n[a]=o.value._eval(e,t),n[a]===o.value))return this}return n}return this}));var n=E("! typeof void");e(Et,(function(e,t){var i=this.expression;if(e.option("typeofs")&&"typeof"==this.operator&&(i instanceof we||i instanceof $t&&i.fixed_value()instanceof we))return"function";if(n.has(this.operator)||t++,(i=i._eval(e,t))===this.expression)return this;switch(this.operator){case"!":return!i;case"typeof":return i instanceof RegExp?this:typeof i;case"void":return;case"~":return~i;case"-":return-i;case"+":return+i}return this}));var i=E("&& || === !==");e(Dt,(function(e,t){i.has(this.operator)||t++;var n=this.left._eval(e,t);if(n===this.left)return this;var r,o=this.right._eval(e,t);if(o===this.right)return this;switch(this.operator){case"&&":r=n&&o;break;case"||":r=n||o;break;case"|":r=n|o;break;case"&":r=n&o;break;case"^":r=n^o;break;case"+":r=n+o;break;case"*":r=n*o;break;case"**":r=Math.pow(n,o);break;case"/":r=n/o;break;case"%":r=n%o;break;case"-":r=n-o;break;case"<<":r=n<<o;break;case">>":r=n>>o;break;case">>>":r=n>>>o;break;case"==":r=n==o;break;case"===":r=n===o;break;case"!=":r=n!=o;break;case"!==":r=n!==o;break;case"<":r=n<o;break;case"<=":r=n<=o;break;case">":r=n>o;break;case">=":r=n>=o;break;default:return this}return isNaN(r)&&e.find_parent(Oe)?this:r})),e(gt,(function(e,t){var n=this.condition._eval(e,t);if(n===this.condition)return this;var i=n?this.consequent:this.alternative,r=i._eval(e,t);return r===i?this:r})),e($t,(function(e,t){var n,i=this.fixed_value();if(!i)return this;if(D(i,"_eval"))n=i._eval();else{if(this._eval=c,n=i._eval(e,t),delete this._eval,n===i)return this;i._eval=function(){return n}}if(n&&"object"==typeof n){var r=this.definition().escaped;if(r&&t>r)return this}return n}));var r={Array:Array,Math:Math,Number:Number,Object:Object,String:String},o={Math:["E","LN10","LN2","LOG2E","LOG10E","PI","SQRT1_2","SQRT2"],Number:["MAX_VALUE","MIN_VALUE","NaN","NEGATIVE_INFINITY","POSITIVE_INFINITY"]};yi(o),e(pt,(function(e,t){if(e.option("unsafe")){var n=this.property;if(n instanceof ue&&(n=n._eval(e,t))===this.property)return this;var i,a=this.expression;if(li(a)){var s,u="hasOwnProperty"===a.name&&"call"===n&&(s=e.parent()&&e.parent().args)&&s&&s[0]&&s[0].evaluate(e);if(null==(u=u instanceof _t?u.expression:u)||u.thedef&&u.thedef.undeclared)return this.clone();var c=o[a.name];if(!c||!c.has(n))return this;i=r[a.name]}else{if(!(i=a._eval(e,t+1))||i===a||!D(i,n))return this;if("function"==typeof i)switch(n){case"name":return i.node.name?i.node.name.name:"";case"length":return i.node.argnames.length;default:return this}}return i[n]}return this})),e(ct,(function(e,t){var n=this.expression;if(e.option("unsafe")&&n instanceof pt){var i,o=n.property;if(o instanceof ue&&(o=o._eval(e,t))===n.property)return this;var a=n.expression;if(li(a)){var s="hasOwnProperty"===a.name&&"call"===o&&this.args[0]&&this.args[0].evaluate(e);if(null==(s=s instanceof _t?s.expression:s)||s.thedef&&s.thedef.undeclared)return this.clone();var u=Fi[a.name];if(!u||!u.has(o))return this;i=r[a.name]}else{if((i=a._eval(e,t+1))===a||!i)return this;var c=Oi[i.constructor.name];if(!c||!c.has(o))return this}for(var l=[],f=0,p=this.args.length;f<p;f++){var _=this.args[f],d=_._eval(e,t);if(_===d)return this;l.push(d)}try{return i[o].apply(i,l)}catch(t){e.warn("Error evaluating {code} [{file}:{line},{col}]",{code:this.print_to_string(),file:this.start.file,line:this.start.line,col:this.start.col})}}return this})),e(lt,c)}((function(e,t){e.DEFMETHOD("_eval",t)})),function(e){function t(e){return ei(Et,e,{operator:"!",expression:e})}function n(e,n,i){var r=t(e);if(i){var o=ei(pe,n,{body:n});return vi(r,o)===o?n:r}return vi(r,n)}e(ue,(function(){return t(this)})),e(ce,(function(){throw new Error("Cannot negate a statement")})),e(xe,(function(){return t(this)})),e(ke,(function(){return t(this)})),e(Et,(function(){return"!"==this.operator?this.expression:t(this)})),e(ft,(function(e){var t=this.expressions.slice();return t.push(t.pop().negate(e)),ti(this,t)})),e(gt,(function(e,t){var i=this.clone();return i.consequent=i.consequent.negate(e),i.alternative=i.alternative.negate(e),n(this,i,t)})),e(Dt,(function(e,i){var r=this.clone(),o=this.operator;if(e.option("unsafe_comps"))switch(o){case"<=":return r.operator=">",r;case"<":return r.operator=">=",r;case">=":return r.operator="<",r;case">":return r.operator="<=",r}switch(o){case"==":return r.operator="!=",r;case"!=":return r.operator="==",r;case"===":return r.operator="!==",r;case"!==":return r.operator="===",r;case"&&":return r.operator="||",r.left=r.left.negate(e,i),r.right=r.right.negate(e),n(this,r,i);case"||":return r.operator="&&",r.left=r.left.negate(e,i),r.right=r.right.negate(e),n(this,r,i)}return t(this)}))}((function(e,t){e.DEFMETHOD("negate",(function(e,n){return t.call(this,e,n)}))}));var Mi=E("Boolean decodeURI decodeURIComponent Date encodeURI encodeURIComponent Error escape EvalError isFinite isNaN Number Object parseFloat parseInt RangeError ReferenceError String SyntaxError TypeError unescape URIError");function Ri(e){return e&&e.aborts()}ct.DEFMETHOD("is_expr_pure",(function(e){if(e.option("unsafe")){var t=this.expression,n=this.args&&this.args[0]&&this.args[0].evaluate(e);if(t.expression&&"hasOwnProperty"===t.expression.name&&(null==n||n.thedef&&n.thedef.undeclared))return!1;if(li(t)&&Mi.has(t.name))return!0;if(t instanceof _t&&li(t.expression)&&Fi.hasOwnProperty(t.expression.name)&&Fi[t.expression.name].has(t.property))return!0}return this.pure||!e.pure_funcs(this)})),ue.DEFMETHOD("is_call_pure",s),_t.DEFMETHOD("is_call_pure",(function(e){if(!e.option("unsafe"))return;const t=this.expression;let n;return t instanceof vt?n=Oi.Array:t.is_boolean()?n=Oi.Boolean:t.is_number(e)?n=Oi.Number:t instanceof an?n=Oi.RegExp:t.is_string(e)?n=Oi.String:this.may_throw_on_access(e)||(n=Oi.Object),n&&n.has(this.property)})),function(e){function t(e,t){for(var n=e.length;--n>=0;)if(e[n].has_side_effects(t))return!0;return!1}e(ue,u),e(he,s),e(tn,s),e(Qt,s),e(me,(function(e){return t(this.body,e)})),e(ct,(function(e){return!(this.is_expr_pure(e)||this.expression.is_call_pure(e)&&!this.expression.has_side_effects(e))||t(this.args,e)})),e(qe,(function(e){return this.expression.has_side_effects(e)||t(this.body,e)})),e(Ze,(function(e){return this.expression.has_side_effects(e)||t(this.body,e)})),e(Je,(function(e){return t(this.body,e)||this.bcatch&&this.bcatch.has_side_effects(e)||this.bfinally&&this.bfinally.has_side_effects(e)})),e(Ye,(function(e){return this.condition.has_side_effects(e)||this.body&&this.body.has_side_effects(e)||this.alternative&&this.alternative.has_side_effects(e)})),e(ge,(function(e){return this.body.has_side_effects(e)})),e(pe,(function(e){return this.body.has_side_effects(e)})),e(we,s),e(Mt,(function(e){return!!this.extends&&this.extends.has_side_effects(e)})),e(Rt,u),e(Dt,(function(e){return this.left.has_side_effects(e)||this.right.has_side_effects(e)})),e(St,u),e(gt,(function(e){return this.condition.has_side_effects(e)||this.consequent.has_side_effects(e)||this.alternative.has_side_effects(e)})),e(mt,(function(e){return Si.has(this.operator)||this.expression.has_side_effects(e)})),e($t,(function(e){return!this.is_declared(e)})),e(kt,s),e(Tt,(function(e){return t(this.properties,e)})),e(bt,(function(e){return!!(this instanceof yt&&this.key instanceof ue&&this.key.has_side_effects(e))||this.value.has_side_effects(e)})),e(vt,(function(e){return t(this.elements,e)})),e(_t,(function(e){return this.expression.may_throw_on_access(e)||this.expression.has_side_effects(e)})),e(dt,(function(e){return this.expression.may_throw_on_access(e)||this.expression.has_side_effects(e)||this.property.has_side_effects(e)})),e(ft,(function(e){return t(this.expressions,e)})),e(tt,(function(e){return t(this.definitions,e)})),e(ut,(function(e){return this.value})),e(Be,s),e(Pe,(function(e){return t(this.segments,e)}))}((function(e,t){e.DEFMETHOD("has_side_effects",t)})),function(e){function t(e,t){for(var n=e.length;--n>=0;)if(e[n].may_throw(t))return!0;return!1}e(ue,u),e(Mt,s),e(tn,s),e(he,s),e(we,s),e(kt,s),e(Qt,s),e(vt,(function(e){return t(this.elements,e)})),e(St,(function(e){return!!this.right.may_throw(e)||!(!e.has_directive("use strict")&&"="==this.operator&&this.left instanceof $t)&&this.left.may_throw(e)})),e(Dt,(function(e){return this.left.may_throw(e)||this.right.may_throw(e)})),e(me,(function(e){return t(this.body,e)})),e(ct,(function(e){return!!t(this.args,e)||!this.is_expr_pure(e)&&(!!this.expression.may_throw(e)||(!(this.expression instanceof we)||t(this.expression.body,e)))})),e(Ze,(function(e){return this.expression.may_throw(e)||t(this.body,e)})),e(gt,(function(e){return this.condition.may_throw(e)||this.consequent.may_throw(e)||this.alternative.may_throw(e)})),e(tt,(function(e){return t(this.definitions,e)})),e(_t,(function(e){return this.expression.may_throw_on_access(e)||this.expression.may_throw(e)})),e(Ye,(function(e){return this.condition.may_throw(e)||this.body&&this.body.may_throw(e)||this.alternative&&this.alternative.may_throw(e)})),e(ge,(function(e){return this.body.may_throw(e)})),e(Tt,(function(e){return t(this.properties,e)})),e(bt,(function(e){return this.value.may_throw(e)})),e(Ge,(function(e){return this.value&&this.value.may_throw(e)})),e(ft,(function(e){return t(this.expressions,e)})),e(pe,(function(e){return this.body.may_throw(e)})),e(dt,(function(e){return this.expression.may_throw_on_access(e)||this.expression.may_throw(e)||this.property.may_throw(e)})),e(qe,(function(e){return this.expression.may_throw(e)||t(this.body,e)})),e($t,(function(e){return!this.is_declared(e)})),e(Je,(function(e){return this.bcatch?this.bcatch.may_throw(e):t(this.body,e)||this.bfinally&&this.bfinally.may_throw(e)})),e(mt,(function(e){return!("typeof"==this.operator&&this.expression instanceof $t)&&this.expression.may_throw(e)})),e(ut,(function(e){return!!this.value&&this.value.may_throw(e)}))}((function(e,t){e.DEFMETHOD("may_throw",t)})),function(e){function t(e){var t=this,n=!0;return t.walk(new Dn((function(r){if(!n)return!0;if(r instanceof $t){if(Hn(t,Pn))return n=!1,!0;var o=r.definition();if(i(o,t.enclosed)&&!t.variables.has(o.name)){if(e){var a=e.find_variable(r);if(o.undeclared?!a:a===o)return n="f",!0}n=!1}return!0}return r instanceof Qt&&t instanceof ke?(n=!1,!0):void 0}))),n}e(ue,s),e(tn,u),e(Mt,(function(e){return!(this.extends&&!this.extends.is_constant_expression(e))&&t.call(this,e)})),e(we,t),e(mt,(function(){return this.expression.is_constant_expression()})),e(Dt,(function(){return this.left.is_constant_expression()&&this.right.is_constant_expression()})),e(vt,(function(){return this.elements.every(e=>e.is_constant_expression())})),e(Tt,(function(){return this.properties.every(e=>e.is_constant_expression())})),e(bt,(function(){return!(this.key instanceof ue)&&this.value.is_constant_expression()}))}((function(e,t){e.DEFMETHOD("is_constant_expression",t)})),function(e){function t(){for(var e=0;e<this.body.length;e++)if(Ri(this.body[e]))return this.body[e];return null}e(ce,l),e(Ke,c),e(at,(function(){return null})),e(Ee,t),e($e,t),e(Ye,(function(){return this.alternative&&Ri(this.body)&&Ri(this.alternative)&&this}))}((function(e,t){e.DEFMETHOD("aborts",t)}));var wi=new Set(["use asm","use strict"]);function Ni(e,t){return mi(e.body,t),t.option("side_effects")&&1==e.body.length&&e.body[0]===t.has_directive("use strict")&&(e.body.length=0),e}Yn(fe,(function(e,t){return!t.option("directives")||wi.has(e.value)&&t.has_directive(e.value)===e?e:ei(he,e)})),Yn(le,(function(e,t){return t.option("drop_debugger")?ei(he,e):e})),Yn(ge,(function(e,t){return e.body instanceof ze&&t.loopcontrol_target(e.body)===e.body?ei(he,e):0==e.label.references.length?e.body:e})),Yn(me,(function(e,t){return mi(e.body,t),e})),Yn(Ee,(function(e,t){switch(mi(e.body,t),e.body.length){case 1:if(!t.has_directive("use strict")&&t.parent()instanceof Ye&&!((n=e.body[0])instanceof rt||n instanceof it||n instanceof Mt)||si(e.body[0]))return e.body[0];break;case 0:return ei(he,e)}var n;return e})),Yn(we,Ni);const xi=/keep_assign/;Fe.DEFMETHOD("drop_unused",(function(e){if(!e.option("unused"))return;if(e.has_directive("use asm"))return;var t=this;if(t.pinned())return;var n=!(t instanceof Me)||e.toplevel.funcs,i=!(t instanceof Me)||e.toplevel.vars;const r=xi.test(e.option("unused"))?s:function(e){return e instanceof St&&(Hn(e,Bn)||"="==e.operator)?e.left:e instanceof mt&&Hn(e,Bn)?e.expression:void 0};var o=new Map,a=new Map;t instanceof Me&&e.top_retain&&t.variables.forEach((function(t){e.top_retain(t)&&!o.has(t.id)&&o.set(t.id,t)}));var u=new Map,c=new Map,l=this,p=new Dn((function(r,s){if(r instanceof we&&r.uses_arguments&&!p.has_directive("use strict")&&r.argnames.forEach((function(e){if(e instanceof kt){var t=e.definition();o.has(t.id)||o.set(t.id,t)}})),r!==t){if(r instanceof Ie||r instanceof Rt){var f=r.name.definition();return(p.parent()instanceof st||!n&&l===t)&&f.global&&!o.has(f.id)&&o.set(f.id,f),r instanceof Rt&&r.extends&&(r.extends.has_side_effects(e)||r.extends.may_throw(e))&&r.extends.walk(p),h(c,f.id,r),!0}if(r instanceof Bt&&l===t&&h(u,r.definition().id,r),r instanceof tt&&l===t){const t=p.parent()instanceof st;return r.definitions.forEach((function(n){if(n.name instanceof It&&h(u,n.name.definition().id,n),!t&&i||n.name.walk(new Dn((function(e){if(e instanceof kt){var n=e.definition();!t&&!n.global||o.has(n.id)||o.set(n.id,n)}}))),n.value){if(n.name instanceof Le)n.walk(p);else{var r=n.name.definition();h(c,r.id,n.value),r.chained||n.name.fixed_value()!==n.value||a.set(r.id,n)}n.value.has_side_effects(e)&&n.value.walk(p)}})),!0}return m(r,s)}}));t.walk(p),p=new Dn(m),o.forEach((function(e){var t=c.get(e.id);t&&t.forEach((function(e){e.walk(p)}))}));var _=new gn((function(s,c,p){var m=_.parent();if(i){const e=r(s);if(e instanceof $t){var E=e.definition(),h=o.has(E.id);if(s instanceof St){if(!h||a.has(E.id)&&a.get(E.id)!==s)return ii(m,s,s.right.transform(_))}else if(!h)return p?f.skip:ei(rn,s,{value:0})}}if(l===t){if(s.name&&(s instanceof wt&&!g(e.option("keep_classnames"),(E=s.name.definition()).name)||s instanceof xe&&!g(e.option("keep_fnames"),(E=s.name.definition()).name))&&(!o.has(E.id)||E.orig.length>1)&&(s.name=null),s instanceof we&&!(s instanceof Ne))for(var D=!e.option("keep_fargs"),S=s.argnames,A=S.length;--A>=0;){var v=S[A];v instanceof Re&&(v=v.expression),v instanceof At&&(v=v.left),v instanceof Le||o.has(v.definition().id)?D=!1:(Xn(v,Ln),D&&(S.pop(),e[v.unreferenced()?"warn":"info"]("Dropping unused function argument {name} [{file}:{line},{col}]",M(v))))}if((s instanceof Ie||s instanceof Rt)&&s!==t){const t=s.name.definition();if(!(t.global&&!n||o.has(t.id))){if(e[s.name.unreferenced()?"warn":"info"]("Dropping unused function {name} [{file}:{line},{col}]",M(s.name)),t.eliminated++,s instanceof Rt){const t=s.drop_side_effect_free(e);if(t)return ei(pe,s,{body:t})}return p?f.skip:ei(he,s)}}if(s instanceof tt&&!(m instanceof ye&&m.init===s)){var T=!(m instanceof Me||s instanceof nt),b=[],y=[],C=[],O=[];switch(s.definitions.forEach((function(t){t.value&&(t.value=t.value.transform(_));var n=t.name instanceof Le,r=n?new Nn(null,{name:"<destructure>"}):t.name.definition();if(T&&r.global)return C.push(t);if(!i&&!T||n&&(t.name.names.length||t.name.is_array||1!=e.option("pure_getters"))||o.has(r.id)){if(t.value&&a.has(r.id)&&a.get(r.id)!==t&&(t.value=t.value.drop_side_effect_free(e)),t.name instanceof It){var c=u.get(r.id);if(c.length>1&&(!t.value||r.orig.indexOf(t.name)>r.eliminated)){if(e.warn("Dropping duplicated definition of variable {name} [{file}:{line},{col}]",M(t.name)),t.value){var l=ei($t,t.name,t.name);r.references.push(l);var f=ei(St,t,{operator:"=",left:l,right:t.value});a.get(r.id)===t&&a.set(r.id,f),O.push(f.transform(_))}return d(c,t),void r.eliminated++}}t.value?(O.length>0&&(C.length>0?(O.push(t.value),t.value=ti(t.value,O)):b.push(ei(pe,s,{body:ti(s,O)})),O=[]),C.push(t)):y.push(t)}else if(r.orig[0]instanceof zt){(p=t.value&&t.value.drop_side_effect_free(e))&&O.push(p),t.value=null,y.push(t)}else{var p;(p=t.value&&t.value.drop_side_effect_free(e))?(n||e.warn("Side effects in initialization of unused variable {name} [{file}:{line},{col}]",M(t.name)),O.push(p)):n||e[t.name.unreferenced()?"warn":"info"]("Dropping unused variable {name} [{file}:{line},{col}]",M(t.name)),r.eliminated++}})),(y.length>0||C.length>0)&&(s.definitions=y.concat(C),b.push(s)),O.length>0&&b.push(ei(pe,s,{body:ti(s,O)})),b.length){case 0:return p?f.skip:ei(he,s);case 1:return b[0];default:return p?f.splice(b):ei(Ee,s,{body:b})}}if(s instanceof be)return c(s,this),s.init instanceof Ee&&(F=s.init,s.init=F.body.pop(),F.body.push(s)),s.init instanceof pe?s.init=s.init.body:ai(s.init)&&(s.init=null),F?p?f.splice(F.body):F:s;if(s instanceof ge&&s.body instanceof be){if(c(s,this),s.body instanceof Ee){var F=s.body;return s.body=F.body.pop(),F.body.push(s),p?f.splice(F.body):F}return s}if(s instanceof Ee)return c(s,this),p&&s.body.every(si)?f.splice(s.body):s;if(s instanceof Fe){const e=l;return l=s,c(s,this),l=e,s}}function M(e){return{name:e.name,file:e.start.file,line:e.start.line,col:e.start.col}}}));function m(e,n){var i;const s=r(e);if(s instanceof $t&&!Jn(e.left,Lt)&&t.variables.get(s.name)===(i=s.definition()))return e instanceof St&&(e.right.walk(p),i.chained||e.left.fixed_value()!==e.right||a.set(i.id,e)),!0;if(e instanceof $t){if(i=e.definition(),!o.has(i.id)&&(o.set(i.id,i),i.orig[0]instanceof zt)){const e=i.scope.is_block_scope()&&i.scope.get_defun_scope().variables.get(i.name);e&&o.set(e.id,e)}return!0}if(e instanceof Fe){var u=l;return l=e,n(),l=u,!0}}t.transform(_)})),Fe.DEFMETHOD("hoist_declarations",(function(e){var t=this;if(e.has_directive("use asm"))return t;if(!Array.isArray(t.body))return t;var n=e.option("hoist_funs"),i=e.option("hoist_vars");if(n||i){var r=[],o=[],a=new Map,s=0,u=0;t.walk(new Dn((function(e){return e instanceof Fe&&e!==t||(e instanceof nt?(++u,!0):void 0)}))),i=i&&u>1;var c=new gn((function(u){if(u!==t){if(u instanceof fe)return r.push(u),ei(he,u);if(n&&u instanceof Ie&&!(c.parent()instanceof st)&&c.parent()===t)return o.push(u),ei(he,u);if(i&&u instanceof nt){u.definitions.forEach((function(e){e.name instanceof Le||(a.set(e.name.name,e),++s)}));var l=u.to_assignments(e),f=c.parent();if(f instanceof ye&&f.init===u){if(null==l){var p=u.definitions[0].name;return ei($t,p,p)}return l}return f instanceof be&&f.init===u?l:l?ei(pe,u,{body:l}):ei(he,u)}if(u instanceof Fe)return u}}));if(t=t.transform(c),s>0){var l=[];const e=t instanceof we,n=e?t.args_as_names():null;if(a.forEach((t,i)=>{e&&n.some(e=>e.name===t.name.name)?a.delete(i):((t=t.clone()).value=null,l.push(t),a.set(i,t))}),l.length>0){for(var f=0;f<t.body.length;){if(t.body[f]instanceof pe){var p,_,m=t.body[f].body;if(m instanceof St&&"="==m.operator&&(p=m.left)instanceof Nt&&a.has(p.name)){if((E=a.get(p.name)).value)break;E.value=m.right,d(l,E),l.push(E),t.body.splice(f,1);continue}if(m instanceof ft&&(_=m.expressions[0])instanceof St&&"="==_.operator&&(p=_.left)instanceof Nt&&a.has(p.name)){var E;if((E=a.get(p.name)).value)break;E.value=_.right,d(l,E),l.push(E),t.body[f].body=ti(m,m.expressions.slice(1));continue}}if(t.body[f]instanceof he)t.body.splice(f,1);else{if(!(t.body[f]instanceof Ee))break;var h=[f,1].concat(t.body[f].body);t.body.splice.apply(t.body,h)}}l=ei(nt,t,{definitions:l}),o.push(l)}}t.body=r.concat(o,t.body)}return t})),Fe.DEFMETHOD("var_names",(function e(){var t=this._var_name_cache;return t||(t=new Set(this.parent_scope?e.call(this.parent_scope):null),this._var_name_cache=t,this.enclosed.forEach((function(e){t.add(e.name)})),this.variables.forEach((function(e,n){t.add(n)}))),t})),Fe.DEFMETHOD("make_var_name",(function(e){for(var t=this.var_names(),n=e=e.replace(/(?:^[^a-z_$]|[^a-z0-9_$])/gi,"_"),i=0;t.has(n);i++)n=e+"$"+i;return t.add(n),n})),Fe.DEFMETHOD("hoist_properties",(function(e){var t=this;if(!e.option("hoist_props")||e.has_directive("use asm"))return t;var n=t instanceof Me&&e.top_retain||s,i=new Map,r=new gn((function(o,a){if(o instanceof tt&&r.parent()instanceof st)return o;if(o instanceof ut){const r=o.name;let u,c;if(r.scope===t&&1!=(u=r.definition()).escaped&&!u.assignments&&!u.direct_access&&!u.single_use&&!e.exposed(u)&&!n(u)&&(c=r.fixed_value())===o.value&&c instanceof Tt&&c.properties.every(e=>"string"==typeof e.key)){a(o,this);const e=new Map,t=[];return c.properties.forEach((function(n){t.push(ei(ut,o,{name:s(r,n.key,e),value:n.value}))})),i.set(u.id,e),f.splice(t)}}else if(o instanceof pt&&o.expression instanceof $t){const e=i.get(o.expression.definition().id);if(e){const t=e.get(String(hi(o.property))),n=ei($t,o,{name:t.name,scope:o.expression.scope,thedef:t});return n.reference({}),n}}function s(e,n,i){const r=ei(e.CTOR,e,{name:t.make_var_name(e.name+"_"+n),scope:t}),o=t.def_variable(r);return i.set(String(n),o),t.enclosed.push(o),r}}));return t.transform(r)})),function(e){function t(e,t,n){var i=e.length;if(!i)return null;for(var r=[],o=!1,a=0;a<i;a++){var s=e[a].drop_side_effect_free(t,n);o|=s!==e[a],s&&(r.push(s),n=!1)}return o?r.length?r:null:e}e(ue,c),e(tn,l),e(Qt,l),e(ct,(function(e,n){if(!this.is_expr_pure(e)){if(this.expression.is_call_pure(e)){var i=this.args.slice();return i.unshift(this.expression.expression),(i=t(i,e,n))&&ti(this,i)}if(jn(this.expression)&&(!this.expression.name||!this.expression.name.definition().references.length)){var r=this.clone();return r.expression.process_expression(!1,e),r}return this}this.pure&&e.warn("Dropping __PURE__ call [{file}:{line},{col}]",this.start);var o=t(this.args,e,n);return o&&ti(this,o)})),e(Ne,l),e(xe,l),e(ke,l),e(Mt,(function(e){return this.extends?this.extends.drop_side_effect_free(e):null})),e(Dt,(function(e,t){var n=this.right.drop_side_effect_free(e);if(!n)return this.left.drop_side_effect_free(e,t);if(gi.has(this.operator)){if(n===this.right)return this;var i=this.clone();return i.right=n,i}var r=this.left.drop_side_effect_free(e,t);return r?ti(this,[r,n]):this.right.drop_side_effect_free(e,t)})),e(St,(function(e){var t=this.left;if(t.has_side_effects(e)||e.has_directive("use strict")&&t instanceof pt&&t.expression.is_constant())return this;for(Xn(this,Bn);t instanceof pt;)t=t.expression;return t.is_constant_expression(e.find_parent(Fe))?this.right.drop_side_effect_free(e):this})),e(gt,(function(e){var t=this.consequent.drop_side_effect_free(e),n=this.alternative.drop_side_effect_free(e);if(t===this.consequent&&n===this.alternative)return this;if(!t)return n?ei(Dt,this,{operator:"||",left:this.condition,right:n}):this.condition.drop_side_effect_free(e);if(!n)return ei(Dt,this,{operator:"&&",left:this.condition,right:t});var i=this.clone();return i.consequent=t,i.alternative=n,i})),e(mt,(function(e,t){if(Si.has(this.operator))return this.expression.has_side_effects(e)?zn(this,Bn):Xn(this,Bn),this;if("typeof"==this.operator&&this.expression instanceof $t)return null;var n=this.expression.drop_side_effect_free(e,t);return t&&n&&ci(n)?n===this.expression&&"!"==this.operator?this:n.negate(e,t):n})),e($t,(function(e){return this.is_declared(e)?null:this})),e(Tt,(function(e,n){var i=t(this.properties,e,n);return i&&ti(this,i)})),e(bt,(function(e,t){const n=this instanceof yt&&this.key instanceof ue&&this.key.drop_side_effect_free(e,t),i=this.value.drop_side_effect_free(e,t);return n&&i?ti(this,[n,i]):n||i})),e(vt,(function(e,n){var i=t(this.elements,e,n);return i&&ti(this,i)})),e(_t,(function(e,t){return this.expression.may_throw_on_access(e)?this:this.expression.drop_side_effect_free(e,t)})),e(dt,(function(e,t){if(this.expression.may_throw_on_access(e))return this;var n=this.expression.drop_side_effect_free(e,t);if(!n)return this.property.drop_side_effect_free(e,t);var i=this.property.drop_side_effect_free(e);return i?ti(this,[n,i]):n})),e(ft,(function(e){var t=this.tail_node(),n=t.drop_side_effect_free(e);if(n===t)return this;var i=this.expressions.slice(0,-1);return n&&i.push(n),ti(this,i)})),e(Re,(function(e,t){return this.expression.drop_side_effect_free(e,t)})),e(Be,l),e(Pe,(function(e){var n=t(this.segments,e,Tn);return n&&ti(this,n)}))}((function(e,t){e.DEFMETHOD("drop_side_effect_free",t)}));var ki=["Number","String","Array","Object","Function","Promise","global","window","document","location"];function Ii(e,t){var n=!1,i=new Dn((function(t){return!!(n||t instanceof Fe)||(t instanceof Xe&&i.loopcontrol_target(t)===e?n=!0:void 0)}));return t instanceof ge&&i.push(t),i.push(e),e.body.walk(i),n}function Li(e,t){return t.top_retain&&e instanceof Ie&&Hn(e,Gn)&&e.name&&t.top_retain(e.name)}Yn(pe,(function(e,t){if(e.body instanceof $t&&-1!==ki.indexOf(e.body.name))return ei(he,e);if(t.option("side_effects")){var n=e.body,i=n.drop_side_effect_free(t,!0);if(!i)return t.warn("Dropping side-effect-free statement [{file}:{line},{col}]",e.start),ei(he,e);if(i!==n)return ei(pe,e,{body:i})}return e})),Yn(Te,(function(e,t){return t.option("loops")?ei(be,e,e).optimize(t):e})),Yn(ve,(function(e,t){if(!t.option("loops"))return e;var n=e.condition.tail_node().evaluate(t);if(!(n instanceof ue)){if(n)return ei(be,e,{body:ei(Ee,e.body,{body:[e.body,ei(pe,e.condition,{body:e.condition})]})}).optimize(t);if(!Ii(e,t.parent()))return ei(Ee,e.body,{body:[e.body,ei(pe,e.condition,{body:e.condition})]}).optimize(t)}return e})),Yn(be,(function(e,t){if(!t.option("loops"))return e;if(t.option("side_effects")&&e.init&&(e.init=e.init.drop_side_effect_free(t)),e.condition){var n=e.condition.evaluate(t);if(!(n instanceof ue))if(n)e.condition=null;else if(!t.option("dead_code")){var i=e.condition;e.condition=ni(n,e.condition),e.condition=vi(e.condition.transform(t),i)}if(t.option("dead_code")&&(n instanceof ue&&(n=e.condition.tail_node().evaluate(t)),!n)){var r=[];return Ei(t,e.body,r),e.init instanceof ce?r.push(e.init):e.init&&r.push(ei(pe,e.init,{body:e.init})),r.push(ei(pe,e.condition,{body:e.condition})),ei(Ee,e,{body:r}).optimize(t)}}return function e(t,n){var i=t.body instanceof Ee?t.body.body[0]:t.body;if(n.option("dead_code")&&o(i)){var r=[];return t.init instanceof ce?r.push(t.init):t.init&&r.push(ei(pe,t.init,{body:t.init})),t.condition&&r.push(ei(pe,t.condition,{body:t.condition})),Ei(n,t.body,r),ei(Ee,t,{body:r})}return i instanceof Ye&&(o(i.body)?(t.condition?t.condition=ei(Dt,t.condition,{left:t.condition,operator:"&&",right:i.condition.negate(n)}):t.condition=i.condition.negate(n),a(i.alternative)):o(i.alternative)&&(t.condition?t.condition=ei(Dt,t.condition,{left:t.condition,operator:"&&",right:i.condition}):t.condition=i.condition,a(i.body))),t;function o(e){return e instanceof ze&&n.loopcontrol_target(e)===n.self()}function a(i){i=oi(i),t.body instanceof Ee?(t.body=t.body.clone(),t.body.body=i.concat(t.body.body.slice(1)),t.body=t.body.transform(n)):t.body=ei(Ee,t.body,{body:i}).transform(n),t=e(t,n)}}(e,t)})),Yn(Ye,(function(e,t){if(ai(e.alternative)&&(e.alternative=null),!t.option("conditionals"))return e;var n=e.condition.evaluate(t);if(!(t.option("dead_code")||n instanceof ue)){var i=e.condition;e.condition=ni(n,i),e.condition=vi(e.condition.transform(t),i)}if(t.option("dead_code")){if(n instanceof ue&&(n=e.condition.tail_node().evaluate(t)),!n){t.warn("Condition always false [{file}:{line},{col}]",e.condition.start);var r=[];return Ei(t,e.body,r),r.push(ei(pe,e.condition,{body:e.condition})),e.alternative&&r.push(e.alternative),ei(Ee,e,{body:r}).optimize(t)}if(!(n instanceof ue))return t.warn("Condition always true [{file}:{line},{col}]",e.condition.start),(r=[]).push(ei(pe,e.condition,{body:e.condition})),r.push(e.body),e.alternative&&Ei(t,e.alternative,r),ei(Ee,e,{body:r}).optimize(t)}var o=e.condition.negate(t),a=e.condition.print_to_string().length,s=o.print_to_string().length,u=s<a;if(e.alternative&&u){u=!1,e.condition=o;var c=e.body;e.body=e.alternative||ei(he,e),e.alternative=c}if(ai(e.body)&&ai(e.alternative))return ei(pe,e.condition,{body:e.condition.clone()}).optimize(t);if(e.body instanceof pe&&e.alternative instanceof pe)return ei(pe,e,{body:ei(gt,e,{condition:e.condition,consequent:e.body.body,alternative:e.alternative.body})}).optimize(t);if(ai(e.alternative)&&e.body instanceof pe)return a===s&&!u&&e.condition instanceof Dt&&"||"==e.condition.operator&&(u=!0),u?ei(pe,e,{body:ei(Dt,e,{operator:"||",left:o,right:e.body.body})}).optimize(t):ei(pe,e,{body:ei(Dt,e,{operator:"&&",left:e.condition,right:e.body.body})}).optimize(t);if(e.body instanceof he&&e.alternative instanceof pe)return ei(pe,e,{body:ei(Dt,e,{operator:"||",left:e.condition,right:e.alternative.body})}).optimize(t);if(e.body instanceof Ue&&e.alternative instanceof Ue&&e.body.TYPE==e.alternative.TYPE)return ei(e.body.CTOR,e,{value:ei(gt,e,{condition:e.condition,consequent:e.body.value||ei(ln,e.body),alternative:e.alternative.value||ei(ln,e.alternative)}).transform(t)}).optimize(t);if(e.body instanceof Ye&&!e.body.alternative&&!e.alternative&&(e=ei(Ye,e,{condition:ei(Dt,e.condition,{operator:"&&",left:e.condition,right:e.body.condition}),body:e.body.body,alternative:null})),Ri(e.body)&&e.alternative){var l=e.alternative;return e.alternative=null,ei(Ee,e,{body:[e,l]}).optimize(t)}if(Ri(e.alternative)){r=e.body;return e.body=e.alternative,e.condition=u?o:e.condition.negate(t),e.alternative=null,ei(Ee,e,{body:[e,r]}).optimize(t)}return e})),Yn(qe,(function(e,t){if(!t.option("switches"))return e;var n,i=e.expression.evaluate(t);if(!(i instanceof ue)){var r=e.expression;e.expression=ni(i,r),e.expression=vi(e.expression.transform(t),r)}if(!t.option("dead_code"))return e;i instanceof ue&&(i=e.expression.tail_node().evaluate(t));for(var o,a,s=[],u=[],c=0,l=e.body.length;c<l&&!a;c++){if((n=e.body[c])instanceof je)o?D(n,u[u.length-1]):o=n;else if(!(i instanceof ue)){if(!((E=n.expression.evaluate(t))instanceof ue)&&E!==i){D(n,u[u.length-1]);continue}if(E instanceof ue&&(E=n.expression.tail_node().evaluate(t)),E===i&&(a=n,o)){var f=u.indexOf(o);u.splice(f,1),D(o,u[f-1]),o=null}}if(Ri(n)){var p=u[u.length-1];Ri(p)&&p.body.length==n.body.length&&ei(Ee,p,p).equivalent_to(ei(Ee,n,n))&&(p.body=[])}u.push(n)}for(;c<l;)D(e.body[c++],u[u.length-1]);for(u.length>0&&(u[0].body=s.concat(u[0].body)),e.body=u;n=u[u.length-1];){var _=n.body[n.body.length-1];if(_ instanceof ze&&t.loopcontrol_target(_)===e&&n.body.pop(),n.body.length||n instanceof Ze&&(o||n.expression.has_side_effects(t)))break;u.pop()===o&&(o=null)}if(0==u.length)return ei(Ee,e,{body:s.concat(ei(pe,e.expression,{body:e.expression}))}).optimize(t);if(1==u.length&&(u[0]===a||u[0]===o)){var d=!1,m=new Dn((function(t){if(d||t instanceof we||t instanceof pe)return!0;t instanceof ze&&m.loopcontrol_target(t)===e&&(d=!0)}));if(e.walk(m),!d){var E,h=u[0].body.slice();return(E=u[0].expression)&&h.unshift(ei(pe,E,{body:E})),h.unshift(ei(pe,e.expression,{body:e.expression})),ei(Ee,e,{body:h}).optimize(t)}}return e;function D(e,n){n&&!Ri(n)?n.body=n.body.concat(e.body):Ei(t,e,s)}})),Yn(Je,(function(e,t){if(mi(e.body,t),e.bcatch&&e.bfinally&&e.bfinally.body.every(ai)&&(e.bfinally=null),t.option("dead_code")&&e.body.every(ai)){var n=[];return e.bcatch&&Ei(t,e.bcatch,n),e.bfinally&&n.push(...e.bfinally.body),ei(Ee,e,{body:n}).optimize(t)}return e})),tt.DEFMETHOD("remove_initializers",(function(){var e=[];this.definitions.forEach((function(t){t.name instanceof kt?(t.value=null,e.push(t)):t.name.walk(new Dn((function(n){n instanceof kt&&e.push(ei(ut,t,{name:n,value:null}))})))})),this.definitions=e})),tt.DEFMETHOD("to_assignments",(function(e){var t=e.option("reduce_vars"),n=this.definitions.reduce((function(e,n){if(!n.value||n.name instanceof Le){if(n.value){var i=ei(ut,n,{name:n.name,value:n.value}),r=ei(nt,n,{definitions:[i]});e.push(r)}}else{var o=ei($t,n.name,n.name);e.push(ei(St,n,{operator:"=",left:o,right:n.value})),t&&(o.definition().fixed=!1)}return(n=n.name.definition()).eliminated++,n.replaced--,e}),[]);return 0==n.length?null:ti(this,n)})),Yn(tt,(function(e,t){return 0==e.definitions.length?ei(he,e):e})),Yn(at,(function(e,t){return e})),Yn(ct,(function(e,t){var n=e.expression,i=n;zi(e,t,e.args);var r=e.args.every(e=>!(e instanceof Re));if(t.option("reduce_vars")&&i instanceof $t){const e=i.fixed_value();Li(e,t)||(i=e)}var o=i instanceof we;if(t.option("unused")&&r&&o&&!i.uses_arguments&&!i.pinned()){for(var a=0,s=0,u=0,c=e.args.length;u<c;u++){if(i.argnames[u]instanceof Re){if(Hn(i.argnames[u].expression,Ln))for(;u<c;){(D=e.args[u++].drop_side_effect_free(t))&&(e.args[a++]=D)}else for(;u<c;)e.args[a++]=e.args[u++];s=a;break}var l=u>=i.argnames.length;if(l||Hn(i.argnames[u],Ln)){if(D=e.args[u].drop_side_effect_free(t))e.args[a++]=D;else if(!l){e.args[a++]=ei(rn,e.args[u],{value:0});continue}}else e.args[a++]=e.args[u];s=a}e.args.length=s}if(t.option("unsafe"))if(li(n))switch(n.name){case"Array":if(1!=e.args.length)return ei(vt,e,{elements:e.args}).optimize(t);if(e.args[0]instanceof rn&&e.args[0].value<=11){const t=[];for(let n=0;n<e.args[0].value;n++)t.push(new fn);return new vt({elements:t})}break;case"Object":if(0==e.args.length)return ei(Tt,e,{properties:[]});break;case"String":if(0==e.args.length)return ei(nn,e,{value:""});if(e.args.length<=1)return ei(Dt,e,{left:e.args[0],operator:"+",right:ei(nn,e,{value:""})}).optimize(t);break;case"Number":if(0==e.args.length)return ei(rn,e,{value:0});if(1==e.args.length)return ei(Et,e,{expression:e.args[0],operator:"+"}).optimize(t);case"Boolean":if(0==e.args.length)return ei(dn,e);if(1==e.args.length)return ei(Et,e,{expression:ei(Et,e,{expression:e.args[0],operator:"!"}),operator:"!"}).optimize(t);break;case"RegExp":var f=[];if(e.args.length>=1&&e.args.length<=2&&e.args.every(e=>{var n=e.evaluate(t);return f.push(n),e!==n})){const[n,i]=f,r=ei(an,e,{value:{source:n,flags:i}});if(r._eval(t)!==r)return r;t.warn("Error converting {expr} [{file}:{line},{col}]",{expr:e.print_to_string(),file:e.start.file,line:e.start.line,col:e.start.col})}}else if(n instanceof _t)switch(n.property){case"toString":if(0==e.args.length&&!n.expression.may_throw_on_access(t))return ei(Dt,e,{left:ei(nn,e,{value:""}),operator:"+",right:n.expression}).optimize(t);break;case"join":if(n.expression instanceof vt)e:{var p;if(!(e.args.length>0&&(p=e.args[0].evaluate(t))===e.args[0])){var _,d=[],m=[];for(u=0,c=n.expression.elements.length;u<c;u++){var E=n.expression.elements[u];if(E instanceof Re)break e;var h=E.evaluate(t);h!==E?m.push(h):(m.length>0&&(d.push(ei(nn,e,{value:m.join(p)})),m.length=0),d.push(E))}return m.length>0&&d.push(ei(nn,e,{value:m.join(p)})),0==d.length?ei(nn,e,{value:""}):1==d.length?d[0].is_string(t)?d[0]:ei(Dt,d[0],{operator:"+",left:ei(nn,e,{value:""}),right:d[0]}):""==p?(_=d[0].is_string(t)||d[1].is_string(t)?d.shift():ei(nn,e,{value:""}),d.reduce((function(e,t){return ei(Dt,t,{operator:"+",left:e,right:t})}),_).optimize(t)):((D=e.clone()).expression=D.expression.clone(),D.expression.expression=D.expression.expression.clone(),D.expression.expression.elements=d,bi(t,e,D));var D}}break;case"charAt":if(n.expression.is_string(t)){var g=e.args[0],S=g?g.evaluate(t):0;if(S!==g)return ei(dt,n,{expression:n.expression,property:ni(0|S,g||n)}).optimize(t)}break;case"apply":if(2==e.args.length&&e.args[1]instanceof vt)return(R=e.args[1].elements.slice()).unshift(e.args[0]),ei(ct,e,{expression:ei(_t,n,{expression:n.expression,property:"call"}),args:R}).optimize(t);break;case"call":var A=n.expression;if(A instanceof $t&&(A=A.fixed_value()),A instanceof we&&!A.contains_this())return(e.args.length?ti(this,[e.args[0],ei(ct,e,{expression:n.expression,args:e.args.slice(1)})]):ei(ct,e,{expression:n.expression,args:[]})).optimize(t)}if(t.option("unsafe_Function")&&li(n)&&"Function"==n.name){if(0==e.args.length)return ei(xe,e,{argnames:[],body:[]}).optimize(t);if(e.args.every(e=>e instanceof nn))try{var v=oe(C="n(function("+e.args.slice(0,-1).map((function(e){return e.value})).join(",")+"){"+e.args[e.args.length-1].value+"})"),T={ie8:t.option("ie8")};v.figure_out_scope(T);var b,y=new Wn(t.options);(v=v.transform(y)).figure_out_scope(T),In.reset(),v.compute_char_frequency(T),v.mangle_names(T),v.walk(new Dn((function(e){return!!b||(jn(e)?(b=e,!0):void 0)}))),b.body instanceof ue&&(b.body=[ei(Ge,b.body,{value:b.body})]);var C=Fn();return Ee.prototype._codegen.call(b,b,C),e.args=[ei(nn,e,{value:b.argnames.map((function(e){return e.print_to_string()})).join(",")}),ei(nn,e.args[e.args.length-1],{value:C.get().replace(/^{|}$/g,"")})],e}catch(n){if(!(n instanceof $))throw n;t.warn("Error parsing code passed to new Function [{file}:{line},{col}]",e.args[e.args.length-1].start),t.warn(n.toString())}}var O=o&&i.body;O instanceof ue?O=ei(Ge,O,{value:O}):O&&(O=O[0]);var F=o&&!i.is_generator&&!i.async,M=F&&t.option("inline")&&!e.is_expr_pure(t);if(M&&O instanceof Ge){let n=O.value;if(!n||n.is_constant_expression()){n=n?n.clone(!0):ei(ln,e);var R=e.args.concat(n);return ti(e,R).optimize(t)}}if(M){var w,N,x=-1;let o,a;if(r&&!i.uses_arguments&&!i.pinned()&&!(t.parent()instanceof Mt)&&!(i.name&&i instanceof xe)&&(!(t.find_parent(we)instanceof ke)||0==i.argnames.length&&(i.body instanceof ue||1==i.body.length))&&(a=function(e){var n=i.body instanceof ue?[i.body]:i.body,r=n.length;if(t.option("inline")<3)return 1==r&&I(e);e=null;for(var o=0;o<r;o++){var a=n[o];if(a instanceof nt){if(e&&!a.definitions.every(e=>!e.value))return!1}else{if(e)return!1;a instanceof he||(e=a)}}return I(e)}(O))&&(n===i||t.option("unused")&&1==(o=n.definition()).references.length&&!Pi(t,o)&&i.is_constant_expression(n.scope))&&!e.pure&&!i.contains_this()&&function(){var n=new Set;do{if(!(w=t.parent(++x)).is_block_scope()||t.parent(x-1)instanceof Fe||w.block_scope&&w.block_scope.variables.forEach((function(e){n.add(e.name)})),w instanceof Qe)w.argname&&n.add(w.argname.name);else if(w instanceof Se)N=[];else if(w instanceof $t&&w.fixed_value()instanceof Fe)return!1}while(!(w instanceof Fe)||w instanceof ke);var r=!(w instanceof Me)||t.toplevel.vars,o=t.option("inline");return!!function(e,t){for(var n=i.body.length,r=0;r<n;r++){var o=i.body[r];if(o instanceof nt){if(!t)return!1;for(var a=o.definitions.length;--a>=0;){var s=o.definitions[a].name;if(s instanceof Le||e.has(s.name)||_i.has(s.name)||w.var_names().has(s.name))return!1;N&&N.push(s.definition())}}}return!0}(n,o>=3&&r)&&(!!function(e,t){for(var n=0,r=i.argnames.length;n<r;n++){var o=i.argnames[n];if(o instanceof At){if(Hn(o.left,Ln))continue;return!1}if(o instanceof Le)return!1;if(o instanceof Re){if(Hn(o.expression,Ln))continue;return!1}if(!Hn(o,Ln)){if(!t||e.has(o.name)||_i.has(o.name)||w.var_names().has(o.name))return!1;N&&N.push(o.definition())}}return!0}(n,o>=2&&r)&&(!!function(){var t=new Set,n=new Dn((function(e){if(e instanceof Fe){var n=new Set;return e.enclosed.forEach((function(e){n.add(e.name)})),e.variables.forEach((function(e){n.delete(e)})),n.forEach((function(e){t.add(e)})),!0}return!1}));if(e.args.forEach((function(e){e.walk(n)})),0==t.size)return!0;for(var r=0,o=i.argnames.length;r<o;r++){var a=i.argnames[r];if(!(a instanceof At&&Hn(a.left,Ln))&&(!(a instanceof Re&&Hn(a.expression,Ln))&&!Hn(a,Ln)&&t.has(a.name)))return!1}for(r=0,o=i.body.length;r<o;r++){var s=i.body[r];if(s instanceof nt)for(var u=s.definitions.length;--u>=0;){var c=s.definitions[u].name;if(c instanceof Le||t.has(c.name))return!1}}return!0}()&&(!N||0==N.length||!Ki(i,N))))}()&&!(w instanceof Mt))return Xn(i,Kn),ti(e,function(n){var r=[],o=[];(function(t,n){for(var r=i.argnames.length,o=e.args.length;--o>=r;)n.push(e.args[o]);for(o=r;--o>=0;){var a=i.argnames[o],s=e.args[o];if(Hn(a,Ln)||!a.name||w.var_names().has(a.name))s&&n.push(s);else{var u=ei(It,a,a);a.definition().orig.push(u),!s&&N&&(s=ei(ln,e)),L(t,n,u,s)}}t.reverse(),n.reverse()})(r,o),function(e,t){for(var n=t.length,r=0,o=i.body.length;r<o;r++){var a=i.body[r];if(a instanceof nt)for(var s=0,u=a.definitions.length;s<u;s++){var c=a.definitions[s],l=c.name;if(L(e,t,l,c.value),N&&i.argnames.every(e=>e.name!=l.name)){var f=i.variables.get(l.name),p=ei($t,l,l);f.references.push(p),t.splice(n++,0,ei(St,c,{operator:"=",left:p,right:ei(ln,l)}))}}}}(r,o),o.push(n),r.length&&(u=w.body.indexOf(t.parent(x-1))+1,w.body.splice(u,0,ei(nt,i,{definitions:r})));return o.map(e=>e.clone(!0))}(a)).optimize(t)}if(F&&t.option("side_effects")&&!(i.body instanceof ue)&&i.body.every(ai)){R=e.args.concat(ei(ln,e));return ti(e,R).optimize(t)}if(t.option("negate_iife")&&t.parent()instanceof pe&&ci(e))return e.negate(t,!0);var k=e.evaluate(t);return k!==e?(k=ni(k,e).optimize(t),bi(t,k,e)):e;function I(t){return t?t instanceof Ge?t.value?t.value.clone(!0):ei(ln,e):t instanceof pe?ei(Et,t,{operator:"void",expression:t.body.clone(!0)}):void 0:ei(ln,e)}function L(t,n,i,r){var o=i.definition();w.variables.set(i.name,o),w.enclosed.push(o),w.var_names().has(i.name)||(w.var_names().add(i.name),t.push(ei(ut,i,{name:i,value:null})));var a=ei($t,i,i);o.references.push(a),r&&n.push(ei(St,e,{operator:"=",left:a,right:r.clone()}))}})),Yn(lt,(function(e,t){return t.option("unsafe")&&li(e.expression)&&["Object","RegExp","Function","Error","Array"].includes(e.expression.name)?ei(ct,e,e).transform(t):e})),Yn(ft,(function(e,t){if(!t.option("side_effects"))return e;var n,i,r=[];n=Tn(t),i=e.expressions.length-1,e.expressions.forEach((function(e,o){o<i&&(e=e.drop_side_effect_free(t,n)),e&&(ri(r,e),n=!1)}));var o=r.length-1;return function(){for(;o>0&&Di(r[o],t);)o--;o<r.length-1&&(r[o]=ei(Et,e,{operator:"void",expression:r[o]}),r.length=o+1)}(),0==o?((e=ii(t.parent(),t.self(),r[0]))instanceof ft||(e=e.optimize(t)),e):(e.expressions=r,e)})),mt.DEFMETHOD("lift_sequences",(function(e){if(e.option("sequences")&&this.expression instanceof ft){var t=this.expression.expressions.slice(),n=this.clone();return n.expression=t.pop(),t.push(n),ti(this,t).optimize(e)}return this})),Yn(ht,(function(e,t){return e.lift_sequences(t)})),Yn(Et,(function(e,t){var n=e.expression;if("delete"==e.operator&&!(n instanceof $t||n instanceof pt||di(n))){if(n instanceof ft){const i=n.expressions.slice();return i.push(ei(mn,e)),ti(e,i).optimize(t)}return ti(e,[n,ei(mn,e)]).optimize(t)}var i=e.lift_sequences(t);if(i!==e)return i;if(t.option("side_effects")&&"void"==e.operator)return(n=n.drop_side_effect_free(t))?(e.expression=n,e):ei(ln,e).optimize(t);if(t.in_boolean_context())switch(e.operator){case"!":if(n instanceof Et&&"!"==n.operator)return n.expression;n instanceof Dt&&(e=bi(t,e,n.negate(t,Tn(t))));break;case"typeof":return t.warn("Boolean expression always true [{file}:{line},{col}]",e.start),(n instanceof $t?ei(mn,e):ti(e,[n,ei(mn,e)])).optimize(t)}if("-"==e.operator&&n instanceof pn&&(n=n.transform(t)),n instanceof Dt&&("+"==e.operator||"-"==e.operator)&&("*"==n.operator||"/"==n.operator||"%"==n.operator))return ei(Dt,e,{operator:n.operator,left:ei(Et,n.left,{operator:e.operator,expression:n.left}),right:n.right});if("-"!=e.operator||!(n instanceof rn||n instanceof pn||n instanceof on)){var r=e.evaluate(t);if(r!==e)return bi(t,r=ni(r,e).optimize(t),e)}return e})),Dt.DEFMETHOD("lift_sequences",(function(e){if(e.option("sequences")){if(this.left instanceof ft){var t=this.left.expressions.slice();return(n=this.clone()).left=t.pop(),t.push(n),ti(this,t).optimize(e)}if(this.right instanceof ft&&!this.left.has_side_effects(e)){for(var n,i="="==this.operator&&this.left instanceof $t,r=(t=this.right.expressions).length-1,o=0;o<r&&(i||!t[o].has_side_effects(e));o++);if(o==r)return t=t.slice(),(n=this.clone()).right=t.pop(),t.push(n),ti(this,t).optimize(e);if(o>0)return(n=this.clone()).right=ti(this.right,t.slice(o)),(t=t.slice(0,o)).push(n),ti(this,t).optimize(e)}}return this}));var Vi=E("== === != !== * & | ^");function Pi(e,t){for(var n,i=0;n=e.parent(i);i++)if(n instanceof we){var r=n.name;if(r&&r.definition()===t)break}return n}function Bi(e,t){return e instanceof $t||e.TYPE===t.TYPE}function Ki(e,t){var n=!1,r=new Dn((function(e){return!!n||(e instanceof $t&&i(e.definition(),t)?n=!0:void 0)})),o=new Dn((function(t){if(n)return!0;if(t instanceof Fe&&t!==e){var i=o.parent();if(i instanceof ct&&i.expression===t)return;return t.walk(r),!0}}));return e.walk(o),n}Yn(Dt,(function(e,t){function n(){return e.left.is_constant()||e.right.is_constant()||!e.left.has_side_effects(t)&&!e.right.has_side_effects(t)}function i(t){if(n()){t&&(e.operator=t);var i=e.left;e.left=e.right,e.right=i}}if(Vi.has(e.operator)&&e.right.is_constant()&&!e.left.is_constant()&&(e.left instanceof Dt&&ie[e.left.operator]>=ie[e.operator]||i()),e=e.lift_sequences(t),t.option("comparisons"))switch(e.operator){case"===":case"!==":var r=!0;(e.left.is_string(t)&&e.right.is_string(t)||e.left.is_number(t)&&e.right.is_number(t)||e.left.is_boolean()&&e.right.is_boolean()||e.left.equivalent_to(e.right))&&(e.operator=e.operator.substr(0,2));case"==":case"!=":if(!r&&Di(e.left,t))e.left=ei(un,e.left);else if(t.option("typeofs")&&e.left instanceof nn&&"undefined"==e.left.value&&e.right instanceof Et&&"typeof"==e.right.operator){var o=e.right.expression;(o instanceof $t?!o.is_declared(t):o instanceof pt&&t.option("ie8"))||(e.right=o,e.left=ei(ln,e.left).optimize(t),2==e.operator.length&&(e.operator+="="))}else if(e.left instanceof $t&&e.right instanceof $t&&e.left.definition()===e.right.definition()&&((u=e.left.fixed_value())instanceof vt||u instanceof we||u instanceof Tt||u instanceof Mt))return ei("="==e.operator[0]?mn:dn,e);break;case"&&":case"||":var a=e.left;if(a.operator==e.operator&&(a=a.right),a instanceof Dt&&a.operator==("&&"==e.operator?"!==":"===")&&e.right instanceof Dt&&a.operator==e.right.operator&&(Di(a.left,t)&&e.right.left instanceof un||a.left instanceof un&&Di(e.right.left,t))&&!a.right.has_side_effects(t)&&a.right.equivalent_to(e.right.right)){var s=ei(Dt,e,{operator:a.operator.slice(0,-1),left:ei(un,e),right:a.right});return a!==e.left&&(s=ei(Dt,e,{operator:e.operator,left:e.left.left,right:s})),s}}var u;if("+"==e.operator&&t.in_boolean_context()){var c=e.left.evaluate(t),l=e.right.evaluate(t);if(c&&"string"==typeof c)return t.warn("+ in boolean context always true [{file}:{line},{col}]",e.start),ti(e,[e.right,ei(mn,e)]).optimize(t);if(l&&"string"==typeof l)return t.warn("+ in boolean context always true [{file}:{line},{col}]",e.start),ti(e,[e.left,ei(mn,e)]).optimize(t)}if(t.option("comparisons")&&e.is_boolean()){if(!(t.parent()instanceof Dt)||t.parent()instanceof St){var f=ei(Et,e,{operator:"!",expression:e.negate(t,Tn(t))});e=bi(t,e,f)}if(t.option("unsafe_comps"))switch(e.operator){case"<":i(">");break;case"<=":i(">=")}}if("+"==e.operator){if(e.right instanceof nn&&""==e.right.getValue()&&e.left.is_string(t))return e.left;if(e.left instanceof nn&&""==e.left.getValue()&&e.right.is_string(t))return e.right;if(e.left instanceof Dt&&"+"==e.left.operator&&e.left.left instanceof nn&&""==e.left.left.getValue()&&e.right.is_string(t))return e.left=e.left.right,e.transform(t)}if(t.option("evaluate")){switch(e.operator){case"&&":if(!(c=!!Hn(e.left,2)||!Hn(e.left,4)&&e.left.evaluate(t)))return t.warn("Condition left of && always false [{file}:{line},{col}]",e.start),ii(t.parent(),t.self(),e.left).optimize(t);if(!(c instanceof ue))return t.warn("Condition left of && always true [{file}:{line},{col}]",e.start),ti(e,[e.left,e.right]).optimize(t);if(l=e.right.evaluate(t)){if(!(l instanceof ue)){if("&&"==(p=t.parent()).operator&&p.left===t.self()||t.in_boolean_context())return t.warn("Dropping side-effect-free && [{file}:{line},{col}]",e.start),e.left.optimize(t)}}else{if(t.in_boolean_context())return t.warn("Boolean && always false [{file}:{line},{col}]",e.start),ti(e,[e.left,ei(dn,e)]).optimize(t);Xn(e,4)}if("||"==e.left.operator)if(!(_=e.left.right.evaluate(t)))return ei(gt,e,{condition:e.left.left,consequent:e.right,alternative:e.left.right}).optimize(t);break;case"||":var p,_;if(!(c=!!Hn(e.left,2)||!Hn(e.left,4)&&e.left.evaluate(t)))return t.warn("Condition left of || always false [{file}:{line},{col}]",e.start),ti(e,[e.left,e.right]).optimize(t);if(!(c instanceof ue))return t.warn("Condition left of || always true [{file}:{line},{col}]",e.start),ii(t.parent(),t.self(),e.left).optimize(t);if(l=e.right.evaluate(t)){if(!(l instanceof ue)){if(t.in_boolean_context())return t.warn("Boolean || always true [{file}:{line},{col}]",e.start),ti(e,[e.left,ei(mn,e)]).optimize(t);Xn(e,2)}}else if("||"==(p=t.parent()).operator&&p.left===t.self()||t.in_boolean_context())return t.warn("Dropping side-effect-free || [{file}:{line},{col}]",e.start),e.left.optimize(t);if("&&"==e.left.operator)if((_=e.left.right.evaluate(t))&&!(_ instanceof ue))return ei(gt,e,{condition:e.left.left,consequent:e.left.right,alternative:e.right}).optimize(t)}var d=!0;switch(e.operator){case"+":if(e.left instanceof tn&&e.right instanceof Dt&&"+"==e.right.operator&&e.right.left instanceof tn&&e.right.is_string(t)&&(e=ei(Dt,e,{operator:"+",left:ei(nn,e.left,{value:""+e.left.getValue()+e.right.left.getValue(),start:e.left.start,end:e.right.left.end}),right:e.right.right})),e.right instanceof tn&&e.left instanceof Dt&&"+"==e.left.operator&&e.left.right instanceof tn&&e.left.is_string(t)&&(e=ei(Dt,e,{operator:"+",left:e.left.left,right:ei(nn,e.right,{value:""+e.left.right.getValue()+e.right.getValue(),start:e.left.right.start,end:e.right.end})})),e.left instanceof Dt&&"+"==e.left.operator&&e.left.is_string(t)&&e.left.right instanceof tn&&e.right instanceof Dt&&"+"==e.right.operator&&e.right.left instanceof tn&&e.right.is_string(t)&&(e=ei(Dt,e,{operator:"+",left:ei(Dt,e.left,{operator:"+",left:e.left.left,right:ei(nn,e.left.right,{value:""+e.left.right.getValue()+e.right.left.getValue(),start:e.left.right.start,end:e.right.left.end})}),right:e.right.right})),e.right instanceof Et&&"-"==e.right.operator&&e.left.is_number(t)){e=ei(Dt,e,{operator:"-",left:e.left,right:e.right.expression});break}if(e.left instanceof Et&&"-"==e.left.operator&&n()&&e.right.is_number(t)){e=ei(Dt,e,{operator:"-",left:e.right,right:e.left.expression});break}case"*":d=t.option("unsafe_math");case"&":case"|":case"^":if(e.left.is_number(t)&&e.right.is_number(t)&&n()&&!(e.left instanceof Dt&&e.left.operator!=e.operator&&ie[e.left.operator]>=ie[e.operator])){var m=ei(Dt,e,{operator:e.operator,left:e.right,right:e.left});e=e.right instanceof tn&&!(e.left instanceof tn)?bi(t,m,e):bi(t,e,m)}d&&e.is_number(t)&&(e.right instanceof Dt&&e.right.operator==e.operator&&(e=ei(Dt,e,{operator:e.operator,left:ei(Dt,e.left,{operator:e.operator,left:e.left,right:e.right.left,start:e.left.start,end:e.right.left.end}),right:e.right.right})),e.right instanceof tn&&e.left instanceof Dt&&e.left.operator==e.operator&&(e.left.left instanceof tn?e=ei(Dt,e,{operator:e.operator,left:ei(Dt,e.left,{operator:e.operator,left:e.left.left,right:e.right,start:e.left.left.start,end:e.right.end}),right:e.left.right}):e.left.right instanceof tn&&(e=ei(Dt,e,{operator:e.operator,left:ei(Dt,e.left,{operator:e.operator,left:e.left.right,right:e.right,start:e.left.right.start,end:e.right.end}),right:e.left.left}))),e.left instanceof Dt&&e.left.operator==e.operator&&e.left.right instanceof tn&&e.right instanceof Dt&&e.right.operator==e.operator&&e.right.left instanceof tn&&(e=ei(Dt,e,{operator:e.operator,left:ei(Dt,e.left,{operator:e.operator,left:ei(Dt,e.left.left,{operator:e.operator,left:e.left.right,right:e.right.left,start:e.left.right.start,end:e.right.left.end}),right:e.left.left}),right:e.right.right})))}}if(e.right instanceof Dt&&e.right.operator==e.operator&&(gi.has(e.operator)||"+"==e.operator&&(e.right.left.is_string(t)||e.left.is_string(t)&&e.right.right.is_string(t))))return e.left=ei(Dt,e.left,{operator:e.operator,left:e.left,right:e.right.left}),e.right=e.right.right,e.transform(t);var E=e.evaluate(t);return E!==e?(E=ni(E,e).optimize(t),bi(t,E,e)):e})),Yn(jt,(function(e,t){return e})),Yn($t,(function(e,t){if(!t.option("ie8")&&li(e)&&(!e.scope.uses_with||!t.find_parent(Oe)))switch(e.name){case"undefined":return ei(ln,e).optimize(t);case"NaN":return ei(cn,e).optimize(t);case"Infinity":return ei(pn,e).optimize(t)}var n,i=t.parent();if(t.option("reduce_vars")&&Ai(e,i)!==e){const p=e.definition();if(t.top_retain&&p.global&&t.top_retain(p))return p.fixed=!1,p.should_replace=!1,p.single_use=!1,e;var r=e.fixed_value(),o=p.single_use&&!(i instanceof ct&&i.is_expr_pure(t));if(o&&(r instanceof we||r instanceof Mt))if(Li(r,t))o=!1;else if(p.scope!==e.scope&&(1==p.escaped||Hn(r,Pn)||function(e){for(var t,n=0;t=e.parent(n++);){if(t instanceof ce)return!1;if(t instanceof vt||t instanceof yt||t instanceof Tt)return!0}return!1}(t)))o=!1;else if(Pi(t,p))o=!1;else if((p.scope!==e.scope||p.orig[0]instanceof Bt)&&"f"==(o=r.is_constant_expression(e.scope))){var a=e.scope;do{(a instanceof Ie||jn(a))&&Xn(a,Pn)}while(a=a.parent_scope)}if(o&&r instanceof we&&(o=p.scope===e.scope||i instanceof ct&&i.expression===e),o&&r instanceof Mt&&r.extends&&(o=!r.extends.may_throw(t)&&(!(r.extends instanceof ct)||r.extends.is_expr_pure(t))),o&&r){if(r instanceof Rt&&(r=ei(wt,r,r)),r instanceof Ie&&(Xn(r,Kn),r=ei(xe,r,r)),p.recursive_refs>0&&r.name instanceof Kt){const e=r.name.definition();let t=r.variables.get(r.name.name),n=t&&t.orig[0];return n instanceof Gt||((n=ei(Gt,r.name,r.name)).scope=r,r.name=n,t=r.def_function(n)),r.walk(new Dn((function(n){n instanceof $t&&n.definition()===e&&(n.thedef=t,t.references.push(n))}))),r}return r.optimize(t)}if(r&&void 0===p.should_replace){let e;if(r instanceof Qt)p.orig[0]instanceof Bt||!p.references.every(e=>p.scope===e.scope)||(e=r);else{var s=r.evaluate(t);s===r||!t.option("unsafe_regexp")&&s instanceof RegExp||(e=ni(s,r))}if(e){var u,c=e.optimize(t).print_to_string().length;r.walk(new Dn((function(e){if(e instanceof $t&&(n=!0),n)return!0}))),n?u=function(){var n=e.optimize(t);return n===e?n.clone(!0):n}:(c=Math.min(c,r.print_to_string().length),u=function(){var n=vi(e.optimize(t),r);return n===e||n===r?n.clone(!0):n});var l=p.name.length,f=0;t.option("unused")&&!t.exposed(p)&&(f=(l+2+c)/(p.references.length-p.assignments)),p.should_replace=c<=l+f&&u}else p.should_replace=!1}if(p.should_replace)return p.should_replace()}return e})),Yn(ln,(function(e,t){if(t.option("unsafe_undefined")){var n=Qn(t,"undefined");if(n){var i=ei($t,e,{name:"undefined",scope:n.scope,thedef:n});return Xn(i,Vn),i}}var r=Ai(t.self(),t.parent());return r&&Bi(r,e)?e:ei(Et,e,{operator:"void",expression:ei(rn,e,{value:0})})})),Yn(pn,(function(e,t){var n=Ai(t.self(),t.parent());return n&&Bi(n,e)?e:!t.option("keep_infinity")||n&&!Bi(n,e)||Qn(t,"Infinity")?ei(Dt,e,{operator:"/",left:ei(rn,e,{value:1}),right:ei(rn,e,{value:0})}):e})),Yn(cn,(function(e,t){var n=Ai(t.self(),t.parent());return n&&!Bi(n,e)||Qn(t,"NaN")?ei(Dt,e,{operator:"/",left:ei(rn,e,{value:0}),right:ei(rn,e,{value:0})}):e}));const Ui=E("+ - / * % >> << >>> | ^ &"),Gi=E("* | ^ &");function Hi(e,t){return e instanceof $t&&(e=e.fixed_value()),!!e&&(!(e instanceof we||e instanceof Mt)||t.parent()instanceof lt||!e.contains_this())}function Xi(e,t){return t.in_boolean_context()?bi(t,e,ti(e,[e,ei(mn,e)]).optimize(t)):e}function zi(e,t,n){for(var i=0;i<n.length;i++){var r=n[i];if(r instanceof Re){var o=r.expression;o instanceof vt&&(n.splice(i,1,...o.elements),i--)}}return e}function Wi(e,t){if(!t.option("computed_props"))return e;if(!(e.key instanceof tn))return e;if(e.key instanceof nn||e.key instanceof rn){if("__proto__"===e.key.value)return e;if("constructor"==e.key.value&&t.parent()instanceof Mt)return e;e.key=e instanceof yt?e.key.value:ei(Ut,e.key,{name:e.key.value})}return e}Yn(St,(function(e,t){var n;if(t.option("dead_code")&&e.left instanceof $t&&(n=e.left.definition()).scope===t.find_parent(we)){var i,r=0,o=e;do{if(i=o,(o=t.parent(r++))instanceof Ue){if(a(r,o))break;if(Ki(n.scope,[n]))break;return"="==e.operator?e.right:(n.fixed=!1,ei(Dt,e,{operator:e.operator.slice(0,-1),left:e.left,right:e.right}).optimize(t))}}while(o instanceof Dt&&o.right===i||o instanceof ft&&o.tail_node()===i)}return"="==(e=e.lift_sequences(t)).operator&&e.left instanceof $t&&e.right instanceof Dt&&(e.right.left instanceof $t&&e.right.left.name==e.left.name&&Ui.has(e.right.operator)?(e.operator=e.right.operator+"=",e.right=e.right.right):e.right.right instanceof $t&&e.right.right.name==e.left.name&&Gi.has(e.right.operator)&&!e.right.left.has_side_effects(t)&&(e.operator=e.right.operator+"=",e.right=e.right.left)),e;function a(n,i){var r=e.right;e.right=ei(un,r);var o=i.may_throw(t);e.right=r;for(var a,s=e.left.definition().scope;(a=t.parent(n++))!==s;)if(a instanceof Je){if(a.bfinally)return!0;if(o&&a.bcatch)return!0}}})),Yn(At,(function(e,t){if(!t.option("evaluate"))return e;var n=e.right.evaluate(t);return void 0===n?e=e.left:n!==e.right&&(n=ni(n,e.right),e.right=vi(n,e.right)),e})),Yn(gt,(function(e,t){if(!t.option("conditionals"))return e;if(e.condition instanceof ft){var n=e.condition.expressions.slice();return e.condition=n.pop(),n.push(e),ti(e,n)}var i=e.condition.evaluate(t);if(i!==e.condition)return i?(t.warn("Condition always true [{file}:{line},{col}]",e.start),ii(t.parent(),t.self(),e.consequent)):(t.warn("Condition always false [{file}:{line},{col}]",e.start),ii(t.parent(),t.self(),e.alternative));var r=i.negate(t,Tn(t));bi(t,i,r)===r&&(e=ei(gt,e,{condition:r,consequent:e.alternative,alternative:e.consequent}));var o,a=e.condition,s=e.consequent,u=e.alternative;if(a instanceof $t&&s instanceof $t&&a.definition()===s.definition())return ei(Dt,e,{operator:"||",left:a,right:u});if(s instanceof St&&u instanceof St&&s.operator==u.operator&&s.left.equivalent_to(u.left)&&(!e.condition.has_side_effects(t)||"="==s.operator&&!s.left.has_side_effects(t)))return ei(St,e,{operator:s.operator,left:s.left,right:ei(gt,e,{condition:e.condition,consequent:s.right,alternative:u.right})});if(s instanceof ct&&u.TYPE===s.TYPE&&s.args.length>0&&s.args.length==u.args.length&&s.expression.equivalent_to(u.expression)&&!e.condition.has_side_effects(t)&&!s.expression.has_side_effects(t)&&"number"==typeof(o=function(){for(var e=s.args,t=u.args,n=0,i=e.length;n<i;n++){if(e[n]instanceof Re)return;if(!e[n].equivalent_to(t[n])){if(t[n]instanceof Re)return;for(var r=n+1;r<i;r++){if(e[r]instanceof Re)return;if(!e[r].equivalent_to(t[r]))return}return n}}}())){var c=s.clone();return c.args[o]=ei(gt,e,{condition:e.condition,consequent:s.args[o],alternative:u.args[o]}),c}if(s instanceof gt&&s.alternative.equivalent_to(u))return ei(gt,e,{condition:ei(Dt,e,{left:e.condition,operator:"&&",right:s.condition}),consequent:s.consequent,alternative:u});if(s.equivalent_to(u))return ti(e,[e.condition,s]).optimize(t);if(s instanceof Dt&&"||"==s.operator&&s.right.equivalent_to(u))return ei(Dt,e,{operator:"||",left:ei(Dt,e,{operator:"&&",left:e.condition,right:s.left}),right:u}).optimize(t);var l=t.in_boolean_context();return p(e.consequent)?_(e.alternative)?f(e.condition):ei(Dt,e,{operator:"||",left:f(e.condition),right:e.alternative}):_(e.consequent)?p(e.alternative)?f(e.condition.negate(t)):ei(Dt,e,{operator:"&&",left:f(e.condition.negate(t)),right:e.alternative}):p(e.alternative)?ei(Dt,e,{operator:"||",left:f(e.condition.negate(t)),right:e.consequent}):_(e.alternative)?ei(Dt,e,{operator:"&&",left:f(e.condition),right:e.consequent}):e;function f(e){return e.is_boolean()?e:ei(Et,e,{operator:"!",expression:e.negate(t)})}function p(e){return e instanceof mn||l&&e instanceof tn&&e.getValue()||e instanceof Et&&"!"==e.operator&&e.expression instanceof tn&&!e.expression.getValue()}function _(e){return e instanceof dn||l&&e instanceof tn&&!e.getValue()||e instanceof Et&&"!"==e.operator&&e.expression instanceof tn&&e.expression.getValue()}})),Yn(_n,(function(e,t){if(t.in_boolean_context())return ei(rn,e,{value:+e.value});var n=t.parent();return t.option("booleans_as_integers")?(n instanceof Dt&&("==="==n.operator||"!=="==n.operator)&&(n.operator=n.operator.replace(/=$/,"")),ei(rn,e,{value:+e.value})):t.option("booleans")?n instanceof Dt&&("=="==n.operator||"!="==n.operator)?(t.warn("Non-strict equality against boolean: {operator} {value} [{file}:{line},{col}]",{operator:n.operator,value:e.value,file:n.start.file,line:n.start.line,col:n.start.col}),ei(rn,e,{value:+e.value})):ei(Et,e,{operator:"!",expression:ei(rn,e,{value:1-e.value})}):e})),Yn(dt,(function(e,t){var n,i=e.expression,r=e.property;if(t.option("properties")){var o=r.evaluate(t);if(o!==r){if("string"==typeof o)if("undefined"==o)o=void 0;else(A=parseFloat(o)).toString()==o&&(o=A);r=e.property=vi(r,ni(o,r).transform(t));var a=""+o;if(q(a)&&a.length<=r.print_to_string().length+1)return ei(_t,e,{expression:i,property:a,quote:r.quote}).optimize(t)}}e:if(t.option("arguments")&&i instanceof $t&&"arguments"==i.name&&1==i.definition().orig.length&&(n=i.scope)instanceof we&&n.uses_arguments&&!(n instanceof ke)&&r instanceof rn){for(var s=r.getValue(),u=new Set,c=n.argnames,l=0;l<c.length;l++){if(!(c[l]instanceof Bt))break e;var f=c[l].name;if(u.has(f))break e;u.add(f)}var p=n.argnames[s];if(p&&t.has_directive("use strict")){var _=p.definition();(!t.option("reduce_vars")||_.assignments||_.orig.length>1)&&(p=null)}else if(!p&&!t.option("keep_fargs")&&s<n.argnames.length+5)for(;s>=n.argnames.length;)p=ei(Bt,n,{name:n.make_var_name("argument_"+n.argnames.length),scope:n}),n.argnames.push(p),n.enclosed.push(n.def_variable(p));if(p){var d=ei($t,e,p);return d.reference({}),zn(p,Ln),d}}if(Ai(e,t.parent()))return e;if(o!==r){var m=e.flatten_object(a,t);m&&(i=e.expression=m.expression,r=e.property=m.property)}if(t.option("properties")&&t.option("side_effects")&&r instanceof rn&&i instanceof vt){s=r.getValue();var E=i.elements,h=E[s];e:if(Hi(h,t)){for(var D=!0,g=[],S=E.length;--S>s;){(A=E[S].drop_side_effect_free(t))&&(g.unshift(A),D&&A.has_side_effects(t)&&(D=!1))}if(h instanceof Re)break e;for(h=h instanceof fn?ei(ln,h):h,D||g.unshift(h);--S>=0;){var A;if((A=E[S])instanceof Re)break e;(A=A.drop_side_effect_free(t))?g.unshift(A):s--}return D?(g.push(h),ti(e,g).optimize(t)):ei(dt,e,{expression:ei(vt,i,{elements:g}),property:ei(rn,r,{value:s})})}}var v=e.evaluate(t);return v!==e?bi(t,v=ni(v,e).optimize(t),e):e})),we.DEFMETHOD("contains_this",(function(){var e,t=this;return t.walk(new Dn((function(n){return!!e||(n instanceof Qt?e=!0:n!==t&&n instanceof Fe&&!(n instanceof ke)||void 0)}))),e})),pt.DEFMETHOD("flatten_object",(function(e,t){if(t.option("properties")){var n=t.option("unsafe_arrows")&&t.option("ecma")>=6,i=this.expression;if(i instanceof Tt)for(var r=i.properties,o=r.length;--o>=0;){var a=r[o];if(""+(a instanceof Ft?a.key.name:a.key)==e){if(!r.every(e=>e instanceof yt||n&&e instanceof Ft&&!e.is_generator))break;if(!Hi(a.value,t))break;return ei(dt,this,{expression:ei(vt,i,{elements:r.map((function(e){var t=e.value;t instanceof Ne&&(t=ei(xe,t,t));var n=e.key;return n instanceof ue&&!(n instanceof Ut)?ti(e,[n,t]):t}))}),property:ei(rn,this,{value:o})})}}}})),Yn(_t,(function(e,t){if("arguments"!=e.property&&"caller"!=e.property||t.warn("Function.prototype.{prop} not supported [{file}:{line},{col}]",{prop:e.property,file:e.start.file,line:e.start.line,col:e.start.col}),Ai(e,t.parent()))return e;if(t.option("unsafe_proto")&&e.expression instanceof _t&&"prototype"==e.expression.property){var n=e.expression.expression;if(li(n))switch(n.name){case"Array":e.expression=ei(vt,e.expression,{elements:[]});break;case"Function":e.expression=ei(xe,e.expression,{argnames:[],body:[]});break;case"Number":e.expression=ei(rn,e.expression,{value:0});break;case"Object":e.expression=ei(Tt,e.expression,{properties:[]});break;case"RegExp":e.expression=ei(an,e.expression,{value:{source:"t",flags:""}});break;case"String":e.expression=ei(nn,e.expression,{value:""})}}var i=e.flatten_object(e.property,t);if(i)return i.optimize(t);var r=e.evaluate(t);return r!==e?bi(t,r=ni(r,e).optimize(t),e):e})),Yn(vt,(function(e,t){var n=Xi(e,t);return n!==e?n:zi(e,0,e.elements)})),Yn(Tt,(function(e,t){var n=Xi(e,t);if(n!==e)return n;for(var i=e.properties,r=0;r<i.length;r++){var o=i[r];if(o instanceof Re){var a=o.expression;a instanceof Tt?(i.splice.apply(i,[r,1].concat(o.expression.properties)),r--):a instanceof tn&&!(a instanceof nn)&&i.splice(r,1)}}return e})),Yn(an,Xi),Yn(Ge,(function(e,t){return e.value&&Di(e.value,t)&&(e.value=null),e})),Yn(ke,(function(e,t){if(e.body instanceof ue||(e=Ni(e,t)),t.option("arrows")&&1==e.body.length&&e.body[0]instanceof Ge){var n=e.body[0].value;e.body=n||[]}return e})),Yn(xe,(function(e,t){if(e=Ni(e,t),t.option("unsafe_arrows")&&t.option("ecma")>=6&&!e.name&&!e.is_generator&&!e.uses_arguments&&!e.pinned()){var n=!1;if(e.walk(new Dn((function(e){return!!n||(e instanceof Qt?(n=!0,!0):void 0)}))),!n)return ei(ke,e,e).optimize(t)}return e})),Yn(Mt,(function(e,t){return e})),Yn(hn,(function(e,t){return e.expression&&!e.is_star&&Di(e.expression,t)&&(e.expression=null),e})),Yn(Pe,(function(e,t){if(!t.option("evaluate")||t.parent()instanceof Ve)return e;for(var n=[],i=0;i<e.segments.length;i++){var r=e.segments[i];if(r instanceof ue){var o=r.evaluate(t);if(o!==r&&(o+"").length<=r.print_to_string().length+"${}".length){n[n.length-1].value=n[n.length-1].value+o+e.segments[++i].value;continue}}n.push(r)}return e.segments=n,1==n.length?ei(nn,e,n[0]):e})),Yn(Ve,(function(e,t){return e})),Yn(bt,Wi),Yn(Ft,(function(e,t){if(Wi(e,t),t.option("arrows")&&t.parent()instanceof Tt&&!e.is_generator&&!e.value.uses_arguments&&!e.value.pinned()&&1==e.value.body.length&&e.value.body[0]instanceof Ge&&e.value.body[0].value&&!e.value.contains_this()){var n=ei(ke,e.value,e.value);return n.async=e.async,n.is_generator=e.is_generator,ei(yt,e,{key:e.key instanceof Ut?e.key.name:e.key,value:n,quote:e.quote})}return e})),Yn(yt,(function(e,t){Wi(e,t);var n=t.option("unsafe_methods");if(n&&t.option("ecma")>=6&&(!(n instanceof RegExp)||n.test(e.key+""))){var i=e.key,r=e.value;if((r instanceof ke&&Array.isArray(r.body)&&!r.contains_this()||r instanceof xe)&&!r.name)return ei(Ft,e,{async:r.async,is_generator:r.is_generator,key:i instanceof ue?i:ei(Ut,e,{name:i}),value:ei(Ne,r,r),quote:e.quote})}return e})),Yn(Le,(function(e,t){if(1==t.option("pure_getters")&&t.option("unused")&&!e.is_array&&Array.isArray(e.names)&&!function(e){for(var t=[/^VarDef$/,/^(Const|Let|Var)$/,/^Export$/],n=0,i=0,r=t.length;n<r;i++){var o=e.parent(i);if(!o)return!1;if(0!==n||"Destructuring"!=o.TYPE){if(!t[n].test(o.TYPE))return!1;n++}}return!0}(t)){for(var n=[],i=0;i<e.names.length;i++){var r=e.names[i];r instanceof yt&&"string"==typeof r.key&&r.value instanceof kt&&!o(t,r.value.definition())||n.push(r)}n.length!=e.names.length&&(e.names=n)}return e;function o(e,t){return!!t.references.length||!!t.global&&(!e.toplevel.vars||!!e.top_retain&&e.top_retain(t))}}));var Yi=["$&","$'","$*","$+","$1","$2","$3","$4","$5","$6","$7","$8","$9","$_","$`","$input","@@iterator","ABORT_ERR","ACTIVE","ACTIVE_ATTRIBUTES","ACTIVE_TEXTURE","ACTIVE_UNIFORMS","ADDITION","ALIASED_LINE_WIDTH_RANGE","ALIASED_POINT_SIZE_RANGE","ALLOW_KEYBOARD_INPUT","ALLPASS","ALPHA","ALPHA_BITS","ALT_MASK","ALWAYS","ANY_TYPE","ANY_UNORDERED_NODE_TYPE","ARRAY_BUFFER","ARRAY_BUFFER_BINDING","ATTACHED_SHADERS","ATTRIBUTE_NODE","AT_TARGET","AddSearchProvider","AnalyserNode","AnimationEvent","AnonXMLHttpRequest","ApplicationCache","ApplicationCacheErrorEvent","Array","ArrayBuffer","Attr","Audio","AudioBuffer","AudioBufferSourceNode","AudioContext","AudioDestinationNode","AudioListener","AudioNode","AudioParam","AudioProcessingEvent","AudioStreamTrack","AutocompleteErrorEvent","BACK","BAD_BOUNDARYPOINTS_ERR","BANDPASS","BLEND","BLEND_COLOR","BLEND_DST_ALPHA","BLEND_DST_RGB","BLEND_EQUATION","BLEND_EQUATION_ALPHA","BLEND_EQUATION_RGB","BLEND_SRC_ALPHA","BLEND_SRC_RGB","BLUE_BITS","BLUR","BOOL","BOOLEAN_TYPE","BOOL_VEC2","BOOL_VEC3","BOOL_VEC4","BOTH","BROWSER_DEFAULT_WEBGL","BUBBLING_PHASE","BUFFER_SIZE","BUFFER_USAGE","BYTE","BYTES_PER_ELEMENT","BarProp","BaseHref","BatteryManager","BeforeLoadEvent","BeforeUnloadEvent","BiquadFilterNode","Blob","BlobEvent","Boolean","CAPTURING_PHASE","CCW","CDATASection","CDATA_SECTION_NODE","CHANGE","CHARSET_RULE","CHECKING","CLAMP_TO_EDGE","CLICK","CLOSED","CLOSING","COLOR_ATTACHMENT0","COLOR_BUFFER_BIT","COLOR_CLEAR_VALUE","COLOR_WRITEMASK","COMMENT_NODE","COMPILE_STATUS","COMPRESSED_RGBA_S3TC_DXT1_EXT","COMPRESSED_RGBA_S3TC_DXT3_EXT","COMPRESSED_RGBA_S3TC_DXT5_EXT","COMPRESSED_RGB_S3TC_DXT1_EXT","COMPRESSED_TEXTURE_FORMATS","CONNECTING","CONSTANT_ALPHA","CONSTANT_COLOR","CONSTRAINT_ERR","CONTEXT_LOST_WEBGL","CONTROL_MASK","COUNTER_STYLE_RULE","CSS","CSS2Properties","CSSCharsetRule","CSSConditionRule","CSSCounterStyleRule","CSSFontFaceRule","CSSFontFeatureValuesRule","CSSGroupingRule","CSSImportRule","CSSKeyframeRule","CSSKeyframesRule","CSSMediaRule","CSSMozDocumentRule","CSSNameSpaceRule","CSSPageRule","CSSPrimitiveValue","CSSRule","CSSRuleList","CSSStyleDeclaration","CSSStyleRule","CSSStyleSheet","CSSSupportsRule","CSSUnknownRule","CSSValue","CSSValueList","CSSVariablesDeclaration","CSSVariablesRule","CSSViewportRule","CSS_ATTR","CSS_CM","CSS_COUNTER","CSS_CUSTOM","CSS_DEG","CSS_DIMENSION","CSS_EMS","CSS_EXS","CSS_FILTER_BLUR","CSS_FILTER_BRIGHTNESS","CSS_FILTER_CONTRAST","CSS_FILTER_CUSTOM","CSS_FILTER_DROP_SHADOW","CSS_FILTER_GRAYSCALE","CSS_FILTER_HUE_ROTATE","CSS_FILTER_INVERT","CSS_FILTER_OPACITY","CSS_FILTER_REFERENCE","CSS_FILTER_SATURATE","CSS_FILTER_SEPIA","CSS_GRAD","CSS_HZ","CSS_IDENT","CSS_IN","CSS_INHERIT","CSS_KHZ","CSS_MATRIX","CSS_MATRIX3D","CSS_MM","CSS_MS","CSS_NUMBER","CSS_PC","CSS_PERCENTAGE","CSS_PERSPECTIVE","CSS_PRIMITIVE_VALUE","CSS_PT","CSS_PX","CSS_RAD","CSS_RECT","CSS_RGBCOLOR","CSS_ROTATE","CSS_ROTATE3D","CSS_ROTATEX","CSS_ROTATEY","CSS_ROTATEZ","CSS_S","CSS_SCALE","CSS_SCALE3D","CSS_SCALEX","CSS_SCALEY","CSS_SCALEZ","CSS_SKEW","CSS_SKEWX","CSS_SKEWY","CSS_STRING","CSS_TRANSLATE","CSS_TRANSLATE3D","CSS_TRANSLATEX","CSS_TRANSLATEY","CSS_TRANSLATEZ","CSS_UNKNOWN","CSS_URI","CSS_VALUE_LIST","CSS_VH","CSS_VMAX","CSS_VMIN","CSS_VW","CULL_FACE","CULL_FACE_MODE","CURRENT_PROGRAM","CURRENT_VERTEX_ATTRIB","CUSTOM","CW","CanvasGradient","CanvasPattern","CanvasRenderingContext2D","CaretPosition","ChannelMergerNode","ChannelSplitterNode","CharacterData","ClientRect","ClientRectList","Clipboard","ClipboardEvent","CloseEvent","Collator","CommandEvent","Comment","CompositionEvent","Console","Controllers","ConvolverNode","Counter","Crypto","CryptoKey","CustomEvent","DATABASE_ERR","DATA_CLONE_ERR","DATA_ERR","DBLCLICK","DECR","DECR_WRAP","DELETE_STATUS","DEPTH_ATTACHMENT","DEPTH_BITS","DEPTH_BUFFER_BIT","DEPTH_CLEAR_VALUE","DEPTH_COMPONENT","DEPTH_COMPONENT16","DEPTH_FUNC","DEPTH_RANGE","DEPTH_STENCIL","DEPTH_STENCIL_ATTACHMENT","DEPTH_TEST","DEPTH_WRITEMASK","DIRECTION_DOWN","DIRECTION_LEFT","DIRECTION_RIGHT","DIRECTION_UP","DISABLED","DISPATCH_REQUEST_ERR","DITHER","DOCUMENT_FRAGMENT_NODE","DOCUMENT_NODE","DOCUMENT_POSITION_CONTAINED_BY","DOCUMENT_POSITION_CONTAINS","DOCUMENT_POSITION_DISCONNECTED","DOCUMENT_POSITION_FOLLOWING","DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC","DOCUMENT_POSITION_PRECEDING","DOCUMENT_TYPE_NODE","DOMCursor","DOMError","DOMException","DOMImplementation","DOMImplementationLS","DOMMatrix","DOMMatrixReadOnly","DOMParser","DOMPoint","DOMPointReadOnly","DOMQuad","DOMRect","DOMRectList","DOMRectReadOnly","DOMRequest","DOMSTRING_SIZE_ERR","DOMSettableTokenList","DOMStringList","DOMStringMap","DOMTokenList","DOMTransactionEvent","DOM_DELTA_LINE","DOM_DELTA_PAGE","DOM_DELTA_PIXEL","DOM_INPUT_METHOD_DROP","DOM_INPUT_METHOD_HANDWRITING","DOM_INPUT_METHOD_IME","DOM_INPUT_METHOD_KEYBOARD","DOM_INPUT_METHOD_MULTIMODAL","DOM_INPUT_METHOD_OPTION","DOM_INPUT_METHOD_PASTE","DOM_INPUT_METHOD_SCRIPT","DOM_INPUT_METHOD_UNKNOWN","DOM_INPUT_METHOD_VOICE","DOM_KEY_LOCATION_JOYSTICK","DOM_KEY_LOCATION_LEFT","DOM_KEY_LOCATION_MOBILE","DOM_KEY_LOCATION_NUMPAD","DOM_KEY_LOCATION_RIGHT","DOM_KEY_LOCATION_STANDARD","DOM_VK_0","DOM_VK_1","DOM_VK_2","DOM_VK_3","DOM_VK_4","DOM_VK_5","DOM_VK_6","DOM_VK_7","DOM_VK_8","DOM_VK_9","DOM_VK_A","DOM_VK_ACCEPT","DOM_VK_ADD","DOM_VK_ALT","DOM_VK_ALTGR","DOM_VK_AMPERSAND","DOM_VK_ASTERISK","DOM_VK_AT","DOM_VK_ATTN","DOM_VK_B","DOM_VK_BACKSPACE","DOM_VK_BACK_QUOTE","DOM_VK_BACK_SLASH","DOM_VK_BACK_SPACE","DOM_VK_C","DOM_VK_CANCEL","DOM_VK_CAPS_LOCK","DOM_VK_CIRCUMFLEX","DOM_VK_CLEAR","DOM_VK_CLOSE_BRACKET","DOM_VK_CLOSE_CURLY_BRACKET","DOM_VK_CLOSE_PAREN","DOM_VK_COLON","DOM_VK_COMMA","DOM_VK_CONTEXT_MENU","DOM_VK_CONTROL","DOM_VK_CONVERT","DOM_VK_CRSEL","DOM_VK_CTRL","DOM_VK_D","DOM_VK_DECIMAL","DOM_VK_DELETE","DOM_VK_DIVIDE","DOM_VK_DOLLAR","DOM_VK_DOUBLE_QUOTE","DOM_VK_DOWN","DOM_VK_E","DOM_VK_EISU","DOM_VK_END","DOM_VK_ENTER","DOM_VK_EQUALS","DOM_VK_EREOF","DOM_VK_ESCAPE","DOM_VK_EXCLAMATION","DOM_VK_EXECUTE","DOM_VK_EXSEL","DOM_VK_F","DOM_VK_F1","DOM_VK_F10","DOM_VK_F11","DOM_VK_F12","DOM_VK_F13","DOM_VK_F14","DOM_VK_F15","DOM_VK_F16","DOM_VK_F17","DOM_VK_F18","DOM_VK_F19","DOM_VK_F2","DOM_VK_F20","DOM_VK_F21","DOM_VK_F22","DOM_VK_F23","DOM_VK_F24","DOM_VK_F25","DOM_VK_F26","DOM_VK_F27","DOM_VK_F28","DOM_VK_F29","DOM_VK_F3","DOM_VK_F30","DOM_VK_F31","DOM_VK_F32","DOM_VK_F33","DOM_VK_F34","DOM_VK_F35","DOM_VK_F36","DOM_VK_F4","DOM_VK_F5","DOM_VK_F6","DOM_VK_F7","DOM_VK_F8","DOM_VK_F9","DOM_VK_FINAL","DOM_VK_FRONT","DOM_VK_G","DOM_VK_GREATER_THAN","DOM_VK_H","DOM_VK_HANGUL","DOM_VK_HANJA","DOM_VK_HASH","DOM_VK_HELP","DOM_VK_HK_TOGGLE","DOM_VK_HOME","DOM_VK_HYPHEN_MINUS","DOM_VK_I","DOM_VK_INSERT","DOM_VK_J","DOM_VK_JUNJA","DOM_VK_K","DOM_VK_KANA","DOM_VK_KANJI","DOM_VK_L","DOM_VK_LEFT","DOM_VK_LEFT_TAB","DOM_VK_LESS_THAN","DOM_VK_M","DOM_VK_META","DOM_VK_MODECHANGE","DOM_VK_MULTIPLY","DOM_VK_N","DOM_VK_NONCONVERT","DOM_VK_NUMPAD0","DOM_VK_NUMPAD1","DOM_VK_NUMPAD2","DOM_VK_NUMPAD3","DOM_VK_NUMPAD4","DOM_VK_NUMPAD5","DOM_VK_NUMPAD6","DOM_VK_NUMPAD7","DOM_VK_NUMPAD8","DOM_VK_NUMPAD9","DOM_VK_NUM_LOCK","DOM_VK_O","DOM_VK_OEM_1","DOM_VK_OEM_102","DOM_VK_OEM_2","DOM_VK_OEM_3","DOM_VK_OEM_4","DOM_VK_OEM_5","DOM_VK_OEM_6","DOM_VK_OEM_7","DOM_VK_OEM_8","DOM_VK_OEM_COMMA","DOM_VK_OEM_MINUS","DOM_VK_OEM_PERIOD","DOM_VK_OEM_PLUS","DOM_VK_OPEN_BRACKET","DOM_VK_OPEN_CURLY_BRACKET","DOM_VK_OPEN_PAREN","DOM_VK_P","DOM_VK_PA1","DOM_VK_PAGEDOWN","DOM_VK_PAGEUP","DOM_VK_PAGE_DOWN","DOM_VK_PAGE_UP","DOM_VK_PAUSE","DOM_VK_PERCENT","DOM_VK_PERIOD","DOM_VK_PIPE","DOM_VK_PLAY","DOM_VK_PLUS","DOM_VK_PRINT","DOM_VK_PRINTSCREEN","DOM_VK_PROCESSKEY","DOM_VK_PROPERITES","DOM_VK_Q","DOM_VK_QUESTION_MARK","DOM_VK_QUOTE","DOM_VK_R","DOM_VK_REDO","DOM_VK_RETURN","DOM_VK_RIGHT","DOM_VK_S","DOM_VK_SCROLL_LOCK","DOM_VK_SELECT","DOM_VK_SEMICOLON","DOM_VK_SEPARATOR","DOM_VK_SHIFT","DOM_VK_SLASH","DOM_VK_SLEEP","DOM_VK_SPACE","DOM_VK_SUBTRACT","DOM_VK_T","DOM_VK_TAB","DOM_VK_TILDE","DOM_VK_U","DOM_VK_UNDERSCORE","DOM_VK_UNDO","DOM_VK_UNICODE","DOM_VK_UP","DOM_VK_V","DOM_VK_VOLUME_DOWN","DOM_VK_VOLUME_MUTE","DOM_VK_VOLUME_UP","DOM_VK_W","DOM_VK_WIN","DOM_VK_WINDOW","DOM_VK_WIN_ICO_00","DOM_VK_WIN_ICO_CLEAR","DOM_VK_WIN_ICO_HELP","DOM_VK_WIN_OEM_ATTN","DOM_VK_WIN_OEM_AUTO","DOM_VK_WIN_OEM_BACKTAB","DOM_VK_WIN_OEM_CLEAR","DOM_VK_WIN_OEM_COPY","DOM_VK_WIN_OEM_CUSEL","DOM_VK_WIN_OEM_ENLW","DOM_VK_WIN_OEM_FINISH","DOM_VK_WIN_OEM_FJ_JISHO","DOM_VK_WIN_OEM_FJ_LOYA","DOM_VK_WIN_OEM_FJ_MASSHOU","DOM_VK_WIN_OEM_FJ_ROYA","DOM_VK_WIN_OEM_FJ_TOUROKU","DOM_VK_WIN_OEM_JUMP","DOM_VK_WIN_OEM_PA1","DOM_VK_WIN_OEM_PA2","DOM_VK_WIN_OEM_PA3","DOM_VK_WIN_OEM_RESET","DOM_VK_WIN_OEM_WSCTRL","DOM_VK_X","DOM_VK_XF86XK_ADD_FAVORITE","DOM_VK_XF86XK_APPLICATION_LEFT","DOM_VK_XF86XK_APPLICATION_RIGHT","DOM_VK_XF86XK_AUDIO_CYCLE_TRACK","DOM_VK_XF86XK_AUDIO_FORWARD","DOM_VK_XF86XK_AUDIO_LOWER_VOLUME","DOM_VK_XF86XK_AUDIO_MEDIA","DOM_VK_XF86XK_AUDIO_MUTE","DOM_VK_XF86XK_AUDIO_NEXT","DOM_VK_XF86XK_AUDIO_PAUSE","DOM_VK_XF86XK_AUDIO_PLAY","DOM_VK_XF86XK_AUDIO_PREV","DOM_VK_XF86XK_AUDIO_RAISE_VOLUME","DOM_VK_XF86XK_AUDIO_RANDOM_PLAY","DOM_VK_XF86XK_AUDIO_RECORD","DOM_VK_XF86XK_AUDIO_REPEAT","DOM_VK_XF86XK_AUDIO_REWIND","DOM_VK_XF86XK_AUDIO_STOP","DOM_VK_XF86XK_AWAY","DOM_VK_XF86XK_BACK","DOM_VK_XF86XK_BACK_FORWARD","DOM_VK_XF86XK_BATTERY","DOM_VK_XF86XK_BLUE","DOM_VK_XF86XK_BLUETOOTH","DOM_VK_XF86XK_BOOK","DOM_VK_XF86XK_BRIGHTNESS_ADJUST","DOM_VK_XF86XK_CALCULATOR","DOM_VK_XF86XK_CALENDAR","DOM_VK_XF86XK_CD","DOM_VK_XF86XK_CLOSE","DOM_VK_XF86XK_COMMUNITY","DOM_VK_XF86XK_CONTRAST_ADJUST","DOM_VK_XF86XK_COPY","DOM_VK_XF86XK_CUT","DOM_VK_XF86XK_CYCLE_ANGLE","DOM_VK_XF86XK_DISPLAY","DOM_VK_XF86XK_DOCUMENTS","DOM_VK_XF86XK_DOS","DOM_VK_XF86XK_EJECT","DOM_VK_XF86XK_EXCEL","DOM_VK_XF86XK_EXPLORER","DOM_VK_XF86XK_FAVORITES","DOM_VK_XF86XK_FINANCE","DOM_VK_XF86XK_FORWARD","DOM_VK_XF86XK_FRAME_BACK","DOM_VK_XF86XK_FRAME_FORWARD","DOM_VK_XF86XK_GAME","DOM_VK_XF86XK_GO","DOM_VK_XF86XK_GREEN","DOM_VK_XF86XK_HIBERNATE","DOM_VK_XF86XK_HISTORY","DOM_VK_XF86XK_HOME_PAGE","DOM_VK_XF86XK_HOT_LINKS","DOM_VK_XF86XK_I_TOUCH","DOM_VK_XF86XK_KBD_BRIGHTNESS_DOWN","DOM_VK_XF86XK_KBD_BRIGHTNESS_UP","DOM_VK_XF86XK_KBD_LIGHT_ON_OFF","DOM_VK_XF86XK_LAUNCH0","DOM_VK_XF86XK_LAUNCH1","DOM_VK_XF86XK_LAUNCH2","DOM_VK_XF86XK_LAUNCH3","DOM_VK_XF86XK_LAUNCH4","DOM_VK_XF86XK_LAUNCH5","DOM_VK_XF86XK_LAUNCH6","DOM_VK_XF86XK_LAUNCH7","DOM_VK_XF86XK_LAUNCH8","DOM_VK_XF86XK_LAUNCH9","DOM_VK_XF86XK_LAUNCH_A","DOM_VK_XF86XK_LAUNCH_B","DOM_VK_XF86XK_LAUNCH_C","DOM_VK_XF86XK_LAUNCH_D","DOM_VK_XF86XK_LAUNCH_E","DOM_VK_XF86XK_LAUNCH_F","DOM_VK_XF86XK_LIGHT_BULB","DOM_VK_XF86XK_LOG_OFF","DOM_VK_XF86XK_MAIL","DOM_VK_XF86XK_MAIL_FORWARD","DOM_VK_XF86XK_MARKET","DOM_VK_XF86XK_MEETING","DOM_VK_XF86XK_MEMO","DOM_VK_XF86XK_MENU_KB","DOM_VK_XF86XK_MENU_PB","DOM_VK_XF86XK_MESSENGER","DOM_VK_XF86XK_MON_BRIGHTNESS_DOWN","DOM_VK_XF86XK_MON_BRIGHTNESS_UP","DOM_VK_XF86XK_MUSIC","DOM_VK_XF86XK_MY_COMPUTER","DOM_VK_XF86XK_MY_SITES","DOM_VK_XF86XK_NEW","DOM_VK_XF86XK_NEWS","DOM_VK_XF86XK_OFFICE_HOME","DOM_VK_XF86XK_OPEN","DOM_VK_XF86XK_OPEN_URL","DOM_VK_XF86XK_OPTION","DOM_VK_XF86XK_PASTE","DOM_VK_XF86XK_PHONE","DOM_VK_XF86XK_PICTURES","DOM_VK_XF86XK_POWER_DOWN","DOM_VK_XF86XK_POWER_OFF","DOM_VK_XF86XK_RED","DOM_VK_XF86XK_REFRESH","DOM_VK_XF86XK_RELOAD","DOM_VK_XF86XK_REPLY","DOM_VK_XF86XK_ROCKER_DOWN","DOM_VK_XF86XK_ROCKER_ENTER","DOM_VK_XF86XK_ROCKER_UP","DOM_VK_XF86XK_ROTATE_WINDOWS","DOM_VK_XF86XK_ROTATION_KB","DOM_VK_XF86XK_ROTATION_PB","DOM_VK_XF86XK_SAVE","DOM_VK_XF86XK_SCREEN_SAVER","DOM_VK_XF86XK_SCROLL_CLICK","DOM_VK_XF86XK_SCROLL_DOWN","DOM_VK_XF86XK_SCROLL_UP","DOM_VK_XF86XK_SEARCH","DOM_VK_XF86XK_SEND","DOM_VK_XF86XK_SHOP","DOM_VK_XF86XK_SPELL","DOM_VK_XF86XK_SPLIT_SCREEN","DOM_VK_XF86XK_STANDBY","DOM_VK_XF86XK_START","DOM_VK_XF86XK_STOP","DOM_VK_XF86XK_SUBTITLE","DOM_VK_XF86XK_SUPPORT","DOM_VK_XF86XK_SUSPEND","DOM_VK_XF86XK_TASK_PANE","DOM_VK_XF86XK_TERMINAL","DOM_VK_XF86XK_TIME","DOM_VK_XF86XK_TOOLS","DOM_VK_XF86XK_TOP_MENU","DOM_VK_XF86XK_TO_DO_LIST","DOM_VK_XF86XK_TRAVEL","DOM_VK_XF86XK_USER1KB","DOM_VK_XF86XK_USER2KB","DOM_VK_XF86XK_USER_PB","DOM_VK_XF86XK_UWB","DOM_VK_XF86XK_VENDOR_HOME","DOM_VK_XF86XK_VIDEO","DOM_VK_XF86XK_VIEW","DOM_VK_XF86XK_WAKE_UP","DOM_VK_XF86XK_WEB_CAM","DOM_VK_XF86XK_WHEEL_BUTTON","DOM_VK_XF86XK_WLAN","DOM_VK_XF86XK_WORD","DOM_VK_XF86XK_WWW","DOM_VK_XF86XK_XFER","DOM_VK_XF86XK_YELLOW","DOM_VK_XF86XK_ZOOM_IN","DOM_VK_XF86XK_ZOOM_OUT","DOM_VK_Y","DOM_VK_Z","DOM_VK_ZOOM","DONE","DONT_CARE","DOWNLOADING","DRAGDROP","DST_ALPHA","DST_COLOR","DYNAMIC_DRAW","DataChannel","DataTransfer","DataTransferItem","DataTransferItemList","DataView","Date","DateTimeFormat","DelayNode","DesktopNotification","DesktopNotificationCenter","DeviceLightEvent","DeviceMotionEvent","DeviceOrientationEvent","DeviceProximityEvent","DeviceStorage","DeviceStorageChangeEvent","Document","DocumentFragment","DocumentType","DragEvent","DynamicsCompressorNode","E","ELEMENT_ARRAY_BUFFER","ELEMENT_ARRAY_BUFFER_BINDING","ELEMENT_NODE","EMPTY","ENCODING_ERR","ENDED","END_TO_END","END_TO_START","ENTITY_NODE","ENTITY_REFERENCE_NODE","EPSILON","EQUAL","EQUALPOWER","ERROR","EXPONENTIAL_DISTANCE","Element","ElementQuery","Entity","EntityReference","Error","ErrorEvent","EvalError","Event","EventException","EventSource","EventTarget","External","FASTEST","FIDOSDK","FILTER_ACCEPT","FILTER_INTERRUPT","FILTER_REJECT","FILTER_SKIP","FINISHED_STATE","FIRST_ORDERED_NODE_TYPE","FLOAT","FLOAT_MAT2","FLOAT_MAT3","FLOAT_MAT4","FLOAT_VEC2","FLOAT_VEC3","FLOAT_VEC4","FOCUS","FONT_FACE_RULE","FONT_FEATURE_VALUES_RULE","FRAGMENT_SHADER","FRAGMENT_SHADER_DERIVATIVE_HINT_OES","FRAMEBUFFER","FRAMEBUFFER_ATTACHMENT_OBJECT_NAME","FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE","FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE","FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL","FRAMEBUFFER_BINDING","FRAMEBUFFER_COMPLETE","FRAMEBUFFER_INCOMPLETE_ATTACHMENT","FRAMEBUFFER_INCOMPLETE_DIMENSIONS","FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT","FRAMEBUFFER_UNSUPPORTED","FRONT","FRONT_AND_BACK","FRONT_FACE","FUNC_ADD","FUNC_REVERSE_SUBTRACT","FUNC_SUBTRACT","Feed","FeedEntry","File","FileError","FileList","FileReader","FindInPage","Float32Array","Float64Array","FocusEvent","FontFace","FormData","Function","GENERATE_MIPMAP_HINT","GEQUAL","GREATER","GREEN_BITS","GainNode","Gamepad","GamepadButton","GamepadEvent","GestureEvent","HAVE_CURRENT_DATA","HAVE_ENOUGH_DATA","HAVE_FUTURE_DATA","HAVE_METADATA","HAVE_NOTHING","HEADERS_RECEIVED","HIDDEN","HIERARCHY_REQUEST_ERR","HIGHPASS","HIGHSHELF","HIGH_FLOAT","HIGH_INT","HORIZONTAL","HORIZONTAL_AXIS","HRTF","HTMLAllCollection","HTMLAnchorElement","HTMLAppletElement","HTMLAreaElement","HTMLAudioElement","HTMLBRElement","HTMLBaseElement","HTMLBaseFontElement","HTMLBlockquoteElement","HTMLBodyElement","HTMLButtonElement","HTMLCanvasElement","HTMLCollection","HTMLCommandElement","HTMLContentElement","HTMLDListElement","HTMLDataElement","HTMLDataListElement","HTMLDetailsElement","HTMLDialogElement","HTMLDirectoryElement","HTMLDivElement","HTMLDocument","HTMLElement","HTMLEmbedElement","HTMLFieldSetElement","HTMLFontElement","HTMLFormControlsCollection","HTMLFormElement","HTMLFrameElement","HTMLFrameSetElement","HTMLHRElement","HTMLHeadElement","HTMLHeadingElement","HTMLHtmlElement","HTMLIFrameElement","HTMLImageElement","HTMLInputElement","HTMLIsIndexElement","HTMLKeygenElement","HTMLLIElement","HTMLLabelElement","HTMLLegendElement","HTMLLinkElement","HTMLMapElement","HTMLMarqueeElement","HTMLMediaElement","HTMLMenuElement","HTMLMenuItemElement","HTMLMetaElement","HTMLMeterElement","HTMLModElement","HTMLOListElement","HTMLObjectElement","HTMLOptGroupElement","HTMLOptionElement","HTMLOptionsCollection","HTMLOutputElement","HTMLParagraphElement","HTMLParamElement","HTMLPictureElement","HTMLPreElement","HTMLProgressElement","HTMLPropertiesCollection","HTMLQuoteElement","HTMLScriptElement","HTMLSelectElement","HTMLShadowElement","HTMLSourceElement","HTMLSpanElement","HTMLStyleElement","HTMLTableCaptionElement","HTMLTableCellElement","HTMLTableColElement","HTMLTableElement","HTMLTableRowElement","HTMLTableSectionElement","HTMLTemplateElement","HTMLTextAreaElement","HTMLTimeElement","HTMLTitleElement","HTMLTrackElement","HTMLUListElement","HTMLUnknownElement","HTMLVideoElement","HashChangeEvent","Headers","History","ICE_CHECKING","ICE_CLOSED","ICE_COMPLETED","ICE_CONNECTED","ICE_FAILED","ICE_GATHERING","ICE_WAITING","IDBCursor","IDBCursorWithValue","IDBDatabase","IDBDatabaseException","IDBFactory","IDBFileHandle","IDBFileRequest","IDBIndex","IDBKeyRange","IDBMutableFile","IDBObjectStore","IDBOpenDBRequest","IDBRequest","IDBTransaction","IDBVersionChangeEvent","IDLE","IMPLEMENTATION_COLOR_READ_FORMAT","IMPLEMENTATION_COLOR_READ_TYPE","IMPORT_RULE","INCR","INCR_WRAP","INDEX_SIZE_ERR","INT","INT_VEC2","INT_VEC3","INT_VEC4","INUSE_ATTRIBUTE_ERR","INVALID_ACCESS_ERR","INVALID_CHARACTER_ERR","INVALID_ENUM","INVALID_EXPRESSION_ERR","INVALID_FRAMEBUFFER_OPERATION","INVALID_MODIFICATION_ERR","INVALID_NODE_TYPE_ERR","INVALID_OPERATION","INVALID_STATE_ERR","INVALID_VALUE","INVERSE_DISTANCE","INVERT","IceCandidate","Image","ImageBitmap","ImageData","Infinity","InputEvent","InputMethodContext","InstallTrigger","Int16Array","Int32Array","Int8Array","Intent","InternalError","Intl","IsSearchProviderInstalled","Iterator","JSON","KEEP","KEYDOWN","KEYFRAMES_RULE","KEYFRAME_RULE","KEYPRESS","KEYUP","KeyEvent","KeyboardEvent","LENGTHADJUST_SPACING","LENGTHADJUST_SPACINGANDGLYPHS","LENGTHADJUST_UNKNOWN","LEQUAL","LESS","LINEAR","LINEAR_DISTANCE","LINEAR_MIPMAP_LINEAR","LINEAR_MIPMAP_NEAREST","LINES","LINE_LOOP","LINE_STRIP","LINE_WIDTH","LINK_STATUS","LIVE","LN10","LN2","LOADED","LOADING","LOG10E","LOG2E","LOWPASS","LOWSHELF","LOW_FLOAT","LOW_INT","LSException","LSParserFilter","LUMINANCE","LUMINANCE_ALPHA","LocalMediaStream","Location","MAX_COMBINED_TEXTURE_IMAGE_UNITS","MAX_CUBE_MAP_TEXTURE_SIZE","MAX_FRAGMENT_UNIFORM_VECTORS","MAX_RENDERBUFFER_SIZE","MAX_SAFE_INTEGER","MAX_TEXTURE_IMAGE_UNITS","MAX_TEXTURE_MAX_ANISOTROPY_EXT","MAX_TEXTURE_SIZE","MAX_VALUE","MAX_VARYING_VECTORS","MAX_VERTEX_ATTRIBS","MAX_VERTEX_TEXTURE_IMAGE_UNITS","MAX_VERTEX_UNIFORM_VECTORS","MAX_VIEWPORT_DIMS","MEDIA_ERR_ABORTED","MEDIA_ERR_DECODE","MEDIA_ERR_ENCRYPTED","MEDIA_ERR_NETWORK","MEDIA_ERR_SRC_NOT_SUPPORTED","MEDIA_KEYERR_CLIENT","MEDIA_KEYERR_DOMAIN","MEDIA_KEYERR_HARDWARECHANGE","MEDIA_KEYERR_OUTPUT","MEDIA_KEYERR_SERVICE","MEDIA_KEYERR_UNKNOWN","MEDIA_RULE","MEDIUM_FLOAT","MEDIUM_INT","META_MASK","MIN_SAFE_INTEGER","MIN_VALUE","MIRRORED_REPEAT","MODE_ASYNCHRONOUS","MODE_SYNCHRONOUS","MODIFICATION","MOUSEDOWN","MOUSEDRAG","MOUSEMOVE","MOUSEOUT","MOUSEOVER","MOUSEUP","MOZ_KEYFRAMES_RULE","MOZ_KEYFRAME_RULE","MOZ_SOURCE_CURSOR","MOZ_SOURCE_ERASER","MOZ_SOURCE_KEYBOARD","MOZ_SOURCE_MOUSE","MOZ_SOURCE_PEN","MOZ_SOURCE_TOUCH","MOZ_SOURCE_UNKNOWN","MSGESTURE_FLAG_BEGIN","MSGESTURE_FLAG_CANCEL","MSGESTURE_FLAG_END","MSGESTURE_FLAG_INERTIA","MSGESTURE_FLAG_NONE","MSPOINTER_TYPE_MOUSE","MSPOINTER_TYPE_PEN","MSPOINTER_TYPE_TOUCH","MS_ASYNC_CALLBACK_STATUS_ASSIGN_DELEGATE","MS_ASYNC_CALLBACK_STATUS_CANCEL","MS_ASYNC_CALLBACK_STATUS_CHOOSEANY","MS_ASYNC_CALLBACK_STATUS_ERROR","MS_ASYNC_CALLBACK_STATUS_JOIN","MS_ASYNC_OP_STATUS_CANCELED","MS_ASYNC_OP_STATUS_ERROR","MS_ASYNC_OP_STATUS_SUCCESS","MS_MANIPULATION_STATE_ACTIVE","MS_MANIPULATION_STATE_CANCELLED","MS_MANIPULATION_STATE_COMMITTED","MS_MANIPULATION_STATE_DRAGGING","MS_MANIPULATION_STATE_INERTIA","MS_MANIPULATION_STATE_PRESELECT","MS_MANIPULATION_STATE_SELECTING","MS_MANIPULATION_STATE_STOPPED","MS_MEDIA_ERR_ENCRYPTED","MS_MEDIA_KEYERR_CLIENT","MS_MEDIA_KEYERR_DOMAIN","MS_MEDIA_KEYERR_HARDWARECHANGE","MS_MEDIA_KEYERR_OUTPUT","MS_MEDIA_KEYERR_SERVICE","MS_MEDIA_KEYERR_UNKNOWN","Map","Math","MediaController","MediaDevices","MediaElementAudioSourceNode","MediaEncryptedEvent","MediaError","MediaKeyError","MediaKeyEvent","MediaKeyMessageEvent","MediaKeyNeededEvent","MediaKeySession","MediaKeyStatusMap","MediaKeySystemAccess","MediaKeys","MediaList","MediaQueryList","MediaQueryListEvent","MediaRecorder","MediaSource","MediaStream","MediaStreamAudioDestinationNode","MediaStreamAudioSourceNode","MediaStreamEvent","MediaStreamTrack","MediaStreamTrackEvent","MessageChannel","MessageEvent","MessagePort","Methods","MimeType","MimeTypeArray","MouseEvent","MouseScrollEvent","MozAnimation","MozAnimationDelay","MozAnimationDirection","MozAnimationDuration","MozAnimationFillMode","MozAnimationIterationCount","MozAnimationName","MozAnimationPlayState","MozAnimationTimingFunction","MozAppearance","MozBackfaceVisibility","MozBinding","MozBorderBottomColors","MozBorderEnd","MozBorderEndColor","MozBorderEndStyle","MozBorderEndWidth","MozBorderImage","MozBorderLeftColors","MozBorderRightColors","MozBorderStart","MozBorderStartColor","MozBorderStartStyle","MozBorderStartWidth","MozBorderTopColors","MozBoxAlign","MozBoxDirection","MozBoxFlex","MozBoxOrdinalGroup","MozBoxOrient","MozBoxPack","MozBoxSizing","MozCSSKeyframeRule","MozCSSKeyframesRule","MozColumnCount","MozColumnFill","MozColumnGap","MozColumnRule","MozColumnRuleColor","MozColumnRuleStyle","MozColumnRuleWidth","MozColumnWidth","MozColumns","MozContactChangeEvent","MozFloatEdge","MozFontFeatureSettings","MozFontLanguageOverride","MozForceBrokenImageIcon","MozHyphens","MozImageRegion","MozMarginEnd","MozMarginStart","MozMmsEvent","MozMmsMessage","MozMobileMessageThread","MozOSXFontSmoothing","MozOrient","MozOutlineRadius","MozOutlineRadiusBottomleft","MozOutlineRadiusBottomright","MozOutlineRadiusTopleft","MozOutlineRadiusTopright","MozPaddingEnd","MozPaddingStart","MozPerspective","MozPerspectiveOrigin","MozPowerManager","MozSettingsEvent","MozSmsEvent","MozSmsMessage","MozStackSizing","MozTabSize","MozTextAlignLast","MozTextDecorationColor","MozTextDecorationLine","MozTextDecorationStyle","MozTextSizeAdjust","MozTransform","MozTransformOrigin","MozTransformStyle","MozTransition","MozTransitionDelay","MozTransitionDuration","MozTransitionProperty","MozTransitionTimingFunction","MozUserFocus","MozUserInput","MozUserModify","MozUserSelect","MozWindowDragging","MozWindowShadow","MutationEvent","MutationObserver","MutationRecord","NAMESPACE_ERR","NAMESPACE_RULE","NEAREST","NEAREST_MIPMAP_LINEAR","NEAREST_MIPMAP_NEAREST","NEGATIVE_INFINITY","NETWORK_EMPTY","NETWORK_ERR","NETWORK_IDLE","NETWORK_LOADED","NETWORK_LOADING","NETWORK_NO_SOURCE","NEVER","NEW","NEXT","NEXT_NO_DUPLICATE","NICEST","NODE_AFTER","NODE_BEFORE","NODE_BEFORE_AND_AFTER","NODE_INSIDE","NONE","NON_TRANSIENT_ERR","NOTATION_NODE","NOTCH","NOTEQUAL","NOT_ALLOWED_ERR","NOT_FOUND_ERR","NOT_READABLE_ERR","NOT_SUPPORTED_ERR","NO_DATA_ALLOWED_ERR","NO_ERR","NO_ERROR","NO_MODIFICATION_ALLOWED_ERR","NUMBER_TYPE","NUM_COMPRESSED_TEXTURE_FORMATS","NaN","NamedNodeMap","Navigator","NearbyLinks","NetworkInformation","Node","NodeFilter","NodeIterator","NodeList","Notation","Notification","NotifyPaintEvent","Number","NumberFormat","OBSOLETE","ONE","ONE_MINUS_CONSTANT_ALPHA","ONE_MINUS_CONSTANT_COLOR","ONE_MINUS_DST_ALPHA","ONE_MINUS_DST_COLOR","ONE_MINUS_SRC_ALPHA","ONE_MINUS_SRC_COLOR","OPEN","OPENED","OPENING","ORDERED_NODE_ITERATOR_TYPE","ORDERED_NODE_SNAPSHOT_TYPE","OUT_OF_MEMORY","Object","OfflineAudioCompletionEvent","OfflineAudioContext","OfflineResourceList","Option","OscillatorNode","OverflowEvent","PACK_ALIGNMENT","PAGE_RULE","PARSE_ERR","PATHSEG_ARC_ABS","PATHSEG_ARC_REL","PATHSEG_CLOSEPATH","PATHSEG_CURVETO_CUBIC_ABS","PATHSEG_CURVETO_CUBIC_REL","PATHSEG_CURVETO_CUBIC_SMOOTH_ABS","PATHSEG_CURVETO_CUBIC_SMOOTH_REL","PATHSEG_CURVETO_QUADRATIC_ABS","PATHSEG_CURVETO_QUADRATIC_REL","PATHSEG_CURVETO_QUADRATIC_SMOOTH_ABS","PATHSEG_CURVETO_QUADRATIC_SMOOTH_REL","PATHSEG_LINETO_ABS","PATHSEG_LINETO_HORIZONTAL_ABS","PATHSEG_LINETO_HORIZONTAL_REL","PATHSEG_LINETO_REL","PATHSEG_LINETO_VERTICAL_ABS","PATHSEG_LINETO_VERTICAL_REL","PATHSEG_MOVETO_ABS","PATHSEG_MOVETO_REL","PATHSEG_UNKNOWN","PATH_EXISTS_ERR","PEAKING","PERMISSION_DENIED","PERSISTENT","PI","PLAYING_STATE","POINTS","POLYGON_OFFSET_FACTOR","POLYGON_OFFSET_FILL","POLYGON_OFFSET_UNITS","POSITION_UNAVAILABLE","POSITIVE_INFINITY","PREV","PREV_NO_DUPLICATE","PROCESSING_INSTRUCTION_NODE","PageChangeEvent","PageTransitionEvent","PaintRequest","PaintRequestList","PannerNode","Path2D","Performance","PerformanceEntry","PerformanceMark","PerformanceMeasure","PerformanceNavigation","PerformanceResourceTiming","PerformanceTiming","PeriodicWave","Plugin","PluginArray","PopStateEvent","PopupBlockedEvent","ProcessingInstruction","ProgressEvent","Promise","PropertyNodeList","Proxy","PushManager","PushSubscription","Q","QUOTA_ERR","QUOTA_EXCEEDED_ERR","QueryInterface","READ_ONLY","READ_ONLY_ERR","READ_WRITE","RED_BITS","REMOVAL","RENDERBUFFER","RENDERBUFFER_ALPHA_SIZE","RENDERBUFFER_BINDING","RENDERBUFFER_BLUE_SIZE","RENDERBUFFER_DEPTH_SIZE","RENDERBUFFER_GREEN_SIZE","RENDERBUFFER_HEIGHT","RENDERBUFFER_INTERNAL_FORMAT","RENDERBUFFER_RED_SIZE","RENDERBUFFER_STENCIL_SIZE","RENDERBUFFER_WIDTH","RENDERER","RENDERING_INTENT_ABSOLUTE_COLORIMETRIC","RENDERING_INTENT_AUTO","RENDERING_INTENT_PERCEPTUAL","RENDERING_INTENT_RELATIVE_COLORIMETRIC","RENDERING_INTENT_SATURATION","RENDERING_INTENT_UNKNOWN","REPEAT","REPLACE","RGB","RGB565","RGB5_A1","RGBA","RGBA4","RGBColor","ROTATION_CLOCKWISE","ROTATION_COUNTERCLOCKWISE","RTCDataChannelEvent","RTCIceCandidate","RTCPeerConnectionIceEvent","RTCRtpReceiver","RTCRtpSender","RTCSessionDescription","RTCStatsReport","RadioNodeList","Range","RangeError","RangeException","RecordErrorEvent","Rect","ReferenceError","RegExp","Request","Response","SAMPLER_2D","SAMPLER_CUBE","SAMPLES","SAMPLE_ALPHA_TO_COVERAGE","SAMPLE_BUFFERS","SAMPLE_COVERAGE","SAMPLE_COVERAGE_INVERT","SAMPLE_COVERAGE_VALUE","SAWTOOTH","SCHEDULED_STATE","SCISSOR_BOX","SCISSOR_TEST","SCROLL_PAGE_DOWN","SCROLL_PAGE_UP","SDP_ANSWER","SDP_OFFER","SDP_PRANSWER","SECURITY_ERR","SELECT","SERIALIZE_ERR","SEVERITY_ERROR","SEVERITY_FATAL_ERROR","SEVERITY_WARNING","SHADER_COMPILER","SHADER_TYPE","SHADING_LANGUAGE_VERSION","SHIFT_MASK","SHORT","SHOWING","SHOW_ALL","SHOW_ATTRIBUTE","SHOW_CDATA_SECTION","SHOW_COMMENT","SHOW_DOCUMENT","SHOW_DOCUMENT_FRAGMENT","SHOW_DOCUMENT_TYPE","SHOW_ELEMENT","SHOW_ENTITY","SHOW_ENTITY_REFERENCE","SHOW_NOTATION","SHOW_PROCESSING_INSTRUCTION","SHOW_TEXT","SINE","SOUNDFIELD","SQLException","SQRT1_2","SQRT2","SQUARE","SRC_ALPHA","SRC_ALPHA_SATURATE","SRC_COLOR","START_TO_END","START_TO_START","STATIC_DRAW","STENCIL_ATTACHMENT","STENCIL_BACK_FAIL","STENCIL_BACK_FUNC","STENCIL_BACK_PASS_DEPTH_FAIL","STENCIL_BACK_PASS_DEPTH_PASS","STENCIL_BACK_REF","STENCIL_BACK_VALUE_MASK","STENCIL_BACK_WRITEMASK","STENCIL_BITS","STENCIL_BUFFER_BIT","STENCIL_CLEAR_VALUE","STENCIL_FAIL","STENCIL_FUNC","STENCIL_INDEX","STENCIL_INDEX8","STENCIL_PASS_DEPTH_FAIL","STENCIL_PASS_DEPTH_PASS","STENCIL_REF","STENCIL_TEST","STENCIL_VALUE_MASK","STENCIL_WRITEMASK","STREAM_DRAW","STRING_TYPE","STYLE_RULE","SUBPIXEL_BITS","SUPPORTS_RULE","SVGAElement","SVGAltGlyphDefElement","SVGAltGlyphElement","SVGAltGlyphItemElement","SVGAngle","SVGAnimateColorElement","SVGAnimateElement","SVGAnimateMotionElement","SVGAnimateTransformElement","SVGAnimatedAngle","SVGAnimatedBoolean","SVGAnimatedEnumeration","SVGAnimatedInteger","SVGAnimatedLength","SVGAnimatedLengthList","SVGAnimatedNumber","SVGAnimatedNumberList","SVGAnimatedPreserveAspectRatio","SVGAnimatedRect","SVGAnimatedString","SVGAnimatedTransformList","SVGAnimationElement","SVGCircleElement","SVGClipPathElement","SVGColor","SVGComponentTransferFunctionElement","SVGCursorElement","SVGDefsElement","SVGDescElement","SVGDiscardElement","SVGDocument","SVGElement","SVGElementInstance","SVGElementInstanceList","SVGEllipseElement","SVGException","SVGFEBlendElement","SVGFEColorMatrixElement","SVGFEComponentTransferElement","SVGFECompositeElement","SVGFEConvolveMatrixElement","SVGFEDiffuseLightingElement","SVGFEDisplacementMapElement","SVGFEDistantLightElement","SVGFEDropShadowElement","SVGFEFloodElement","SVGFEFuncAElement","SVGFEFuncBElement","SVGFEFuncGElement","SVGFEFuncRElement","SVGFEGaussianBlurElement","SVGFEImageElement","SVGFEMergeElement","SVGFEMergeNodeElement","SVGFEMorphologyElement","SVGFEOffsetElement","SVGFEPointLightElement","SVGFESpecularLightingElement","SVGFESpotLightElement","SVGFETileElement","SVGFETurbulenceElement","SVGFilterElement","SVGFontElement","SVGFontFaceElement","SVGFontFaceFormatElement","SVGFontFaceNameElement","SVGFontFaceSrcElement","SVGFontFaceUriElement","SVGForeignObjectElement","SVGGElement","SVGGeometryElement","SVGGlyphElement","SVGGlyphRefElement","SVGGradientElement","SVGGraphicsElement","SVGHKernElement","SVGImageElement","SVGLength","SVGLengthList","SVGLineElement","SVGLinearGradientElement","SVGMPathElement","SVGMarkerElement","SVGMaskElement","SVGMatrix","SVGMetadataElement","SVGMissingGlyphElement","SVGNumber","SVGNumberList","SVGPaint","SVGPathElement","SVGPathSeg","SVGPathSegArcAbs","SVGPathSegArcRel","SVGPathSegClosePath","SVGPathSegCurvetoCubicAbs","SVGPathSegCurvetoCubicRel","SVGPathSegCurvetoCubicSmoothAbs","SVGPathSegCurvetoCubicSmoothRel","SVGPathSegCurvetoQuadraticAbs","SVGPathSegCurvetoQuadraticRel","SVGPathSegCurvetoQuadraticSmoothAbs","SVGPathSegCurvetoQuadraticSmoothRel","SVGPathSegLinetoAbs","SVGPathSegLinetoHorizontalAbs","SVGPathSegLinetoHorizontalRel","SVGPathSegLinetoRel","SVGPathSegLinetoVerticalAbs","SVGPathSegLinetoVerticalRel","SVGPathSegList","SVGPathSegMovetoAbs","SVGPathSegMovetoRel","SVGPatternElement","SVGPoint","SVGPointList","SVGPolygonElement","SVGPolylineElement","SVGPreserveAspectRatio","SVGRadialGradientElement","SVGRect","SVGRectElement","SVGRenderingIntent","SVGSVGElement","SVGScriptElement","SVGSetElement","SVGStopElement","SVGStringList","SVGStyleElement","SVGSwitchElement","SVGSymbolElement","SVGTRefElement","SVGTSpanElement","SVGTextContentElement","SVGTextElement","SVGTextPathElement","SVGTextPositioningElement","SVGTitleElement","SVGTransform","SVGTransformList","SVGUnitTypes","SVGUseElement","SVGVKernElement","SVGViewElement","SVGViewSpec","SVGZoomAndPan","SVGZoomEvent","SVG_ANGLETYPE_DEG","SVG_ANGLETYPE_GRAD","SVG_ANGLETYPE_RAD","SVG_ANGLETYPE_UNKNOWN","SVG_ANGLETYPE_UNSPECIFIED","SVG_CHANNEL_A","SVG_CHANNEL_B","SVG_CHANNEL_G","SVG_CHANNEL_R","SVG_CHANNEL_UNKNOWN","SVG_COLORTYPE_CURRENTCOLOR","SVG_COLORTYPE_RGBCOLOR","SVG_COLORTYPE_RGBCOLOR_ICCCOLOR","SVG_COLORTYPE_UNKNOWN","SVG_EDGEMODE_DUPLICATE","SVG_EDGEMODE_NONE","SVG_EDGEMODE_UNKNOWN","SVG_EDGEMODE_WRAP","SVG_FEBLEND_MODE_COLOR","SVG_FEBLEND_MODE_COLOR_BURN","SVG_FEBLEND_MODE_COLOR_DODGE","SVG_FEBLEND_MODE_DARKEN","SVG_FEBLEND_MODE_DIFFERENCE","SVG_FEBLEND_MODE_EXCLUSION","SVG_FEBLEND_MODE_HARD_LIGHT","SVG_FEBLEND_MODE_HUE","SVG_FEBLEND_MODE_LIGHTEN","SVG_FEBLEND_MODE_LUMINOSITY","SVG_FEBLEND_MODE_MULTIPLY","SVG_FEBLEND_MODE_NORMAL","SVG_FEBLEND_MODE_OVERLAY","SVG_FEBLEND_MODE_SATURATION","SVG_FEBLEND_MODE_SCREEN","SVG_FEBLEND_MODE_SOFT_LIGHT","SVG_FEBLEND_MODE_UNKNOWN","SVG_FECOLORMATRIX_TYPE_HUEROTATE","SVG_FECOLORMATRIX_TYPE_LUMINANCETOALPHA","SVG_FECOLORMATRIX_TYPE_MATRIX","SVG_FECOLORMATRIX_TYPE_SATURATE","SVG_FECOLORMATRIX_TYPE_UNKNOWN","SVG_FECOMPONENTTRANSFER_TYPE_DISCRETE","SVG_FECOMPONENTTRANSFER_TYPE_GAMMA","SVG_FECOMPONENTTRANSFER_TYPE_IDENTITY","SVG_FECOMPONENTTRANSFER_TYPE_LINEAR","SVG_FECOMPONENTTRANSFER_TYPE_TABLE","SVG_FECOMPONENTTRANSFER_TYPE_UNKNOWN","SVG_FECOMPOSITE_OPERATOR_ARITHMETIC","SVG_FECOMPOSITE_OPERATOR_ATOP","SVG_FECOMPOSITE_OPERATOR_IN","SVG_FECOMPOSITE_OPERATOR_OUT","SVG_FECOMPOSITE_OPERATOR_OVER","SVG_FECOMPOSITE_OPERATOR_UNKNOWN","SVG_FECOMPOSITE_OPERATOR_XOR","SVG_INVALID_VALUE_ERR","SVG_LENGTHTYPE_CM","SVG_LENGTHTYPE_EMS","SVG_LENGTHTYPE_EXS","SVG_LENGTHTYPE_IN","SVG_LENGTHTYPE_MM","SVG_LENGTHTYPE_NUMBER","SVG_LENGTHTYPE_PC","SVG_LENGTHTYPE_PERCENTAGE","SVG_LENGTHTYPE_PT","SVG_LENGTHTYPE_PX","SVG_LENGTHTYPE_UNKNOWN","SVG_MARKERUNITS_STROKEWIDTH","SVG_MARKERUNITS_UNKNOWN","SVG_MARKERUNITS_USERSPACEONUSE","SVG_MARKER_ORIENT_ANGLE","SVG_MARKER_ORIENT_AUTO","SVG_MARKER_ORIENT_UNKNOWN","SVG_MASKTYPE_ALPHA","SVG_MASKTYPE_LUMINANCE","SVG_MATRIX_NOT_INVERTABLE","SVG_MEETORSLICE_MEET","SVG_MEETORSLICE_SLICE","SVG_MEETORSLICE_UNKNOWN","SVG_MORPHOLOGY_OPERATOR_DILATE","SVG_MORPHOLOGY_OPERATOR_ERODE","SVG_MORPHOLOGY_OPERATOR_UNKNOWN","SVG_PAINTTYPE_CURRENTCOLOR","SVG_PAINTTYPE_NONE","SVG_PAINTTYPE_RGBCOLOR","SVG_PAINTTYPE_RGBCOLOR_ICCCOLOR","SVG_PAINTTYPE_UNKNOWN","SVG_PAINTTYPE_URI","SVG_PAINTTYPE_URI_CURRENTCOLOR","SVG_PAINTTYPE_URI_NONE","SVG_PAINTTYPE_URI_RGBCOLOR","SVG_PAINTTYPE_URI_RGBCOLOR_ICCCOLOR","SVG_PRESERVEASPECTRATIO_NONE","SVG_PRESERVEASPECTRATIO_UNKNOWN","SVG_PRESERVEASPECTRATIO_XMAXYMAX","SVG_PRESERVEASPECTRATIO_XMAXYMID","SVG_PRESERVEASPECTRATIO_XMAXYMIN","SVG_PRESERVEASPECTRATIO_XMIDYMAX","SVG_PRESERVEASPECTRATIO_XMIDYMID","SVG_PRESERVEASPECTRATIO_XMIDYMIN","SVG_PRESERVEASPECTRATIO_XMINYMAX","SVG_PRESERVEASPECTRATIO_XMINYMID","SVG_PRESERVEASPECTRATIO_XMINYMIN","SVG_SPREADMETHOD_PAD","SVG_SPREADMETHOD_REFLECT","SVG_SPREADMETHOD_REPEAT","SVG_SPREADMETHOD_UNKNOWN","SVG_STITCHTYPE_NOSTITCH","SVG_STITCHTYPE_STITCH","SVG_STITCHTYPE_UNKNOWN","SVG_TRANSFORM_MATRIX","SVG_TRANSFORM_ROTATE","SVG_TRANSFORM_SCALE","SVG_TRANSFORM_SKEWX","SVG_TRANSFORM_SKEWY","SVG_TRANSFORM_TRANSLATE","SVG_TRANSFORM_UNKNOWN","SVG_TURBULENCE_TYPE_FRACTALNOISE","SVG_TURBULENCE_TYPE_TURBULENCE","SVG_TURBULENCE_TYPE_UNKNOWN","SVG_UNIT_TYPE_OBJECTBOUNDINGBOX","SVG_UNIT_TYPE_UNKNOWN","SVG_UNIT_TYPE_USERSPACEONUSE","SVG_WRONG_TYPE_ERR","SVG_ZOOMANDPAN_DISABLE","SVG_ZOOMANDPAN_MAGNIFY","SVG_ZOOMANDPAN_UNKNOWN","SYNTAX_ERR","SavedPages","Screen","ScreenOrientation","Script","ScriptProcessorNode","ScrollAreaEvent","SecurityPolicyViolationEvent","Selection","ServiceWorker","ServiceWorkerContainer","ServiceWorkerRegistration","SessionDescription","Set","ShadowRoot","SharedWorker","SimpleGestureEvent","SpeechSynthesisEvent","SpeechSynthesisUtterance","StopIteration","Storage","StorageEvent","String","StyleSheet","StyleSheetList","SubtleCrypto","Symbol","SyntaxError","TEMPORARY","TEXTPATH_METHODTYPE_ALIGN","TEXTPATH_METHODTYPE_STRETCH","TEXTPATH_METHODTYPE_UNKNOWN","TEXTPATH_SPACINGTYPE_AUTO","TEXTPATH_SPACINGTYPE_EXACT","TEXTPATH_SPACINGTYPE_UNKNOWN","TEXTURE","TEXTURE0","TEXTURE1","TEXTURE10","TEXTURE11","TEXTURE12","TEXTURE13","TEXTURE14","TEXTURE15","TEXTURE16","TEXTURE17","TEXTURE18","TEXTURE19","TEXTURE2","TEXTURE20","TEXTURE21","TEXTURE22","TEXTURE23","TEXTURE24","TEXTURE25","TEXTURE26","TEXTURE27","TEXTURE28","TEXTURE29","TEXTURE3","TEXTURE30","TEXTURE31","TEXTURE4","TEXTURE5","TEXTURE6","TEXTURE7","TEXTURE8","TEXTURE9","TEXTURE_2D","TEXTURE_BINDING_2D","TEXTURE_BINDING_CUBE_MAP","TEXTURE_CUBE_MAP","TEXTURE_CUBE_MAP_NEGATIVE_X","TEXTURE_CUBE_MAP_NEGATIVE_Y","TEXTURE_CUBE_MAP_NEGATIVE_Z","TEXTURE_CUBE_MAP_POSITIVE_X","TEXTURE_CUBE_MAP_POSITIVE_Y","TEXTURE_CUBE_MAP_POSITIVE_Z","TEXTURE_MAG_FILTER","TEXTURE_MAX_ANISOTROPY_EXT","TEXTURE_MIN_FILTER","TEXTURE_WRAP_S","TEXTURE_WRAP_T","TEXT_NODE","TIMEOUT","TIMEOUT_ERR","TOO_LARGE_ERR","TRANSACTION_INACTIVE_ERR","TRIANGLE","TRIANGLES","TRIANGLE_FAN","TRIANGLE_STRIP","TYPE_BACK_FORWARD","TYPE_ERR","TYPE_MISMATCH_ERR","TYPE_NAVIGATE","TYPE_RELOAD","TYPE_RESERVED","Text","TextDecoder","TextEncoder","TextEvent","TextMetrics","TextTrack","TextTrackCue","TextTrackCueList","TextTrackList","TimeEvent","TimeRanges","Touch","TouchEvent","TouchList","TrackEvent","TransitionEvent","TreeWalker","TypeError","UIEvent","UNCACHED","UNKNOWN_ERR","UNKNOWN_RULE","UNMASKED_RENDERER_WEBGL","UNMASKED_VENDOR_WEBGL","UNORDERED_NODE_ITERATOR_TYPE","UNORDERED_NODE_SNAPSHOT_TYPE","UNPACK_ALIGNMENT","UNPACK_COLORSPACE_CONVERSION_WEBGL","UNPACK_FLIP_Y_WEBGL","UNPACK_PREMULTIPLY_ALPHA_WEBGL","UNSCHEDULED_STATE","UNSENT","UNSIGNED_BYTE","UNSIGNED_INT","UNSIGNED_SHORT","UNSIGNED_SHORT_4_4_4_4","UNSIGNED_SHORT_5_5_5_1","UNSIGNED_SHORT_5_6_5","UNSPECIFIED_EVENT_TYPE_ERR","UPDATEREADY","URIError","URL","URLSearchParams","URLUnencoded","URL_MISMATCH_ERR","UTC","Uint16Array","Uint32Array","Uint8Array","Uint8ClampedArray","UserMessageHandler","UserMessageHandlersNamespace","UserProximityEvent","VALIDATE_STATUS","VALIDATION_ERR","VARIABLES_RULE","VENDOR","VERSION","VERSION_CHANGE","VERSION_ERR","VERTEX_ATTRIB_ARRAY_BUFFER_BINDING","VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE","VERTEX_ATTRIB_ARRAY_ENABLED","VERTEX_ATTRIB_ARRAY_NORMALIZED","VERTEX_ATTRIB_ARRAY_POINTER","VERTEX_ATTRIB_ARRAY_SIZE","VERTEX_ATTRIB_ARRAY_STRIDE","VERTEX_ATTRIB_ARRAY_TYPE","VERTEX_SHADER","VERTICAL","VERTICAL_AXIS","VER_ERR","VIEWPORT","VIEWPORT_RULE","VTTCue","VTTRegion","ValidityState","VideoStreamTrack","WEBKIT_FILTER_RULE","WEBKIT_KEYFRAMES_RULE","WEBKIT_KEYFRAME_RULE","WEBKIT_REGION_RULE","WRONG_DOCUMENT_ERR","WaveShaperNode","WeakMap","WeakSet","WebGLActiveInfo","WebGLBuffer","WebGLContextEvent","WebGLFramebuffer","WebGLProgram","WebGLRenderbuffer","WebGLRenderingContext","WebGLShader","WebGLShaderPrecisionFormat","WebGLTexture","WebGLUniformLocation","WebGLVertexArray","WebKitAnimationEvent","WebKitBlobBuilder","WebKitCSSFilterRule","WebKitCSSFilterValue","WebKitCSSKeyframeRule","WebKitCSSKeyframesRule","WebKitCSSMatrix","WebKitCSSRegionRule","WebKitCSSTransformValue","WebKitDataCue","WebKitGamepad","WebKitMediaKeyError","WebKitMediaKeyMessageEvent","WebKitMediaKeySession","WebKitMediaKeys","WebKitMediaSource","WebKitMutationObserver","WebKitNamespace","WebKitPlaybackTargetAvailabilityEvent","WebKitPoint","WebKitShadowRoot","WebKitSourceBuffer","WebKitSourceBufferList","WebKitTransitionEvent","WebSocket","WheelEvent","Window","Worker","XMLDocument","XMLHttpRequest","XMLHttpRequestEventTarget","XMLHttpRequestException","XMLHttpRequestProgressEvent","XMLHttpRequestUpload","XMLSerializer","XMLStylesheetProcessingInstruction","XPathEvaluator","XPathException","XPathExpression","XPathNSResolver","XPathResult","XSLTProcessor","ZERO","_XD0M_","_YD0M_","__defineGetter__","__defineSetter__","__lookupGetter__","__lookupSetter__","__opera","__proto__","_browserjsran","a","aLink","abbr","abort","abs","absolute","acceleration","accelerationIncludingGravity","accelerator","accept","acceptCharset","acceptNode","accessKey","accessKeyLabel","accuracy","acos","acosh","action","actionURL","active","activeCues","activeElement","activeSourceBuffers","activeSourceCount","activeTexture","add","addBehavior","addCandidate","addColorStop","addCue","addElement","addEventListener","addFilter","addFromString","addFromUri","addIceCandidate","addImport","addListener","addNamed","addPageRule","addPath","addPointer","addRange","addRegion","addRule","addSearchEngine","addSourceBuffer","addStream","addTextTrack","addTrack","addWakeLockListener","addedNodes","additionalName","additiveSymbols","addons","adoptNode","adr","advance","alert","algorithm","align","align-content","align-items","align-self","alignContent","alignItems","alignSelf","alignmentBaseline","alinkColor","all","allSettled","allowFullscreen","allowedDirections","alpha","alt","altGraphKey","altHtml","altKey","altLeft","altitude","altitudeAccuracy","amplitude","ancestorOrigins","anchor","anchorNode","anchorOffset","anchors","angle","animVal","animate","animatedInstanceRoot","animatedNormalizedPathSegList","animatedPathSegList","animatedPoints","animation","animation-delay","animation-direction","animation-duration","animation-fill-mode","animation-iteration-count","animation-name","animation-play-state","animation-timing-function","animationDelay","animationDirection","animationDuration","animationFillMode","animationIterationCount","animationName","animationPlayState","animationStartTime","animationTimingFunction","animationsPaused","anniversary","any","app","appCodeName","appMinorVersion","appName","appNotifications","appVersion","append","appendBuffer","appendChild","appendData","appendItem","appendMedium","appendNamed","appendRule","appendStream","appendWindowEnd","appendWindowStart","applets","applicationCache","apply","applyElement","arc","arcTo","archive","areas","arguments","arrayBuffer","asin","asinh","assert","assign","async","atEnd","atan","atan2","atanh","atob","attachEvent","attachShader","attachShadow","attachments","attack","attrChange","attrName","attributeFilter","attributeName","attributeNamespace","attributeOldValue","attributes","audioTracks","autoIncrement","autobuffer","autocapitalize","autocomplete","autocorrect","autofocus","autoplay","availHeight","availLeft","availTop","availWidth","availability","available","aversion","axes","axis","azimuth","b","back","backface-visibility","backfaceVisibility","background","background-attachment","background-blend-mode","background-clip","background-color","background-image","background-origin","background-position","background-repeat","background-size","backgroundAttachment","backgroundBlendMode","backgroundClip","backgroundColor","backgroundImage","backgroundOrigin","backgroundPosition","backgroundPositionX","backgroundPositionY","backgroundRepeat","backgroundSize","badInput","balance","baseFrequencyX","baseFrequencyY","baseNode","baseOffset","baseURI","baseVal","baselineShift","battery","bday","beginElement","beginElementAt","beginPath","behavior","behaviorCookie","behaviorPart","behaviorUrns","beta","bezierCurveTo","bgColor","bgProperties","bias","big","binaryType","bind","bindAttribLocation","bindBuffer","bindFramebuffer","bindRenderbuffer","bindTexture","blendColor","blendEquation","blendEquationSeparate","blendFunc","blendFuncSeparate","blink","blob","blockDirection","blue","blur","body","bodyUsed","bold","bookmarks","booleanValue","border","border-bottom","border-bottom-color","border-bottom-left-radius","border-bottom-right-radius","border-bottom-style","border-bottom-width","border-collapse","border-color","border-image","border-image-outset","border-image-repeat","border-image-slice","border-image-source","border-image-width","border-left","border-left-color","border-left-style","border-left-width","border-radius","border-right","border-right-color","border-right-style","border-right-width","border-spacing","border-style","border-top","border-top-color","border-top-left-radius","border-top-right-radius","border-top-style","border-top-width","border-width","borderBottom","borderBottomColor","borderBottomLeftRadius","borderBottomRightRadius","borderBottomStyle","borderBottomWidth","borderCollapse","borderColor","borderColorDark","borderColorLight","borderImage","borderImageOutset","borderImageRepeat","borderImageSlice","borderImageSource","borderImageWidth","borderLeft","borderLeftColor","borderLeftStyle","borderLeftWidth","borderRadius","borderRight","borderRightColor","borderRightStyle","borderRightWidth","borderSpacing","borderStyle","borderTop","borderTopColor","borderTopLeftRadius","borderTopRightRadius","borderTopStyle","borderTopWidth","borderWidth","bottom","bottomMargin","bound","boundElements","boundingClientRect","boundingHeight","boundingLeft","boundingTop","boundingWidth","bounds","box-decoration-break","box-shadow","box-sizing","boxDecorationBreak","boxShadow","boxSizing","breakAfter","breakBefore","breakInside","browserLanguage","btoa","bubbles","buffer","bufferData","bufferDepth","bufferSize","bufferSubData","buffered","bufferedAmount","buildID","buildNumber","button","buttonID","buttons","byteLength","byteOffset","c","call","caller","canBeFormatted","canBeMounted","canBeShared","canHaveChildren","canHaveHTML","canPlayType","cancel","cancelAnimationFrame","cancelBubble","cancelScheduledValues","cancelable","candidate","canvas","caption","caption-side","captionSide","capture","captureEvents","captureStackTrace","caretPositionFromPoint","caretRangeFromPoint","cast","catch","category","cbrt","cd","ceil","cellIndex","cellPadding","cellSpacing","cells","ch","chOff","chain","challenge","changedTouches","channel","channelCount","channelCountMode","channelInterpretation","char","charAt","charCode","charCodeAt","charIndex","characterSet","characterData","characterDataOldValue","charging","chargingTime","charset","checkEnclosure","checkFramebufferStatus","checkIntersection","checkValidity","checked","childElementCount","childList","childNodes","children","chrome","ciphertext","cite","classList","className","classid","clear","clearAttributes","clearColor","clearData","clearDepth","clearImmediate","clearInterval","clearMarks","clearMeasures","clearParameters","clearRect","clearResourceTimings","clearShadow","clearStencil","clearTimeout","clearWatch","click","clickCount","clientHeight","clientInformation","clientLeft","clientRect","clientRects","clientTop","clientWidth","clientX","clientY","clip","clip-path","clip-rule","clipBottom","clipLeft","clipPath","clipPathUnits","clipRight","clipRule","clipTop","clipboardData","clone","cloneContents","cloneNode","cloneRange","close","closePath","closed","closest","clz","clz32","cmp","code","codeBase","codePointAt","codeType","colSpan","collapse","collapseToEnd","collapseToStart","collapsed","collect","colno","color","color-interpolation","color-interpolation-filters","colorDepth","colorInterpolation","colorInterpolationFilters","colorMask","colorType","cols","columnCount","columnFill","columnGap","columnNumber","columnRule","columnRuleColor","columnRuleStyle","columnRuleWidth","columnSpan","columnWidth","columns","command","commitPreferences","commonAncestorContainer","compact","compareBoundaryPoints","compareDocumentPosition","compareEndPoints","compareNode","comparePoint","compatMode","compatible","compile","compileShader","complete","componentFromPoint","compositionEndOffset","compositionStartOffset","compressedTexImage2D","compressedTexSubImage2D","concat","conditionText","coneInnerAngle","coneOuterAngle","coneOuterGain","confirm","confirmComposition","confirmSiteSpecificTrackingException","confirmWebWideTrackingException","connect","connectEnd","connectStart","connected","connection","connectionSpeed","console","consolidate","constrictionActive","constructor","contactID","contains","containsNode","content","contentDocument","contentEditable","contentOverflow","contentScriptType","contentStyleType","contentType","contentWindow","context","contextMenu","contextmenu","continue","continuous","control","controller","controls","convertToSpecifiedUnits","cookie","cookieEnabled","coords","copyFromChannel","copyTexImage2D","copyTexSubImage2D","copyToChannel","copyWithin","correspondingElement","correspondingUseElement","cos","cosh","count","counter-increment","counter-reset","counterIncrement","counterReset","cpuClass","cpuSleepAllowed","create","createAnalyser","createAnswer","createAttribute","createAttributeNS","createBiquadFilter","createBuffer","createBufferSource","createCDATASection","createCSSStyleSheet","createCaption","createChannelMerger","createChannelSplitter","createComment","createContextualFragment","createControlRange","createConvolver","createDTMFSender","createDataChannel","createDelay","createDelayNode","createDocument","createDocumentFragment","createDocumentType","createDynamicsCompressor","createElement","createElementNS","createEntityReference","createEvent","createEventObject","createExpression","createFramebuffer","createFunction","createGain","createGainNode","createHTMLDocument","createImageBitmap","createImageData","createIndex","createJavaScriptNode","createLinearGradient","createMediaElementSource","createMediaKeys","createMediaStreamDestination","createMediaStreamSource","createMutableFile","createNSResolver","createNodeIterator","createNotification","createObjectStore","createObjectURL","createOffer","createOscillator","createPanner","createPattern","createPeriodicWave","createPopup","createProcessingInstruction","createProgram","createRadialGradient","createRange","createRangeCollection","createRenderbuffer","createSVGAngle","createSVGLength","createSVGMatrix","createSVGNumber","createSVGPathSegArcAbs","createSVGPathSegArcRel","createSVGPathSegClosePath","createSVGPathSegCurvetoCubicAbs","createSVGPathSegCurvetoCubicRel","createSVGPathSegCurvetoCubicSmoothAbs","createSVGPathSegCurvetoCubicSmoothRel","createSVGPathSegCurvetoQuadraticAbs","createSVGPathSegCurvetoQuadraticRel","createSVGPathSegCurvetoQuadraticSmoothAbs","createSVGPathSegCurvetoQuadraticSmoothRel","createSVGPathSegLinetoAbs","createSVGPathSegLinetoHorizontalAbs","createSVGPathSegLinetoHorizontalRel","createSVGPathSegLinetoRel","createSVGPathSegLinetoVerticalAbs","createSVGPathSegLinetoVerticalRel","createSVGPathSegMovetoAbs","createSVGPathSegMovetoRel","createSVGPoint","createSVGRect","createSVGTransform","createSVGTransformFromMatrix","createScriptProcessor","createSession","createShader","createShadowRoot","createStereoPanner","createStyleSheet","createTBody","createTFoot","createTHead","createTextNode","createTextRange","createTexture","createTouch","createTouchList","createTreeWalker","createWaveShaper","creationTime","crossOrigin","crypto","csi","cssFloat","cssRules","cssText","cssValueType","ctrlKey","ctrlLeft","cues","cullFace","currentNode","currentPage","currentScale","currentScript","currentSrc","currentState","currentStyle","currentTarget","currentTime","currentTranslate","currentView","cursor","curve","customError","cx","cy","d","data","dataFld","dataFormatAs","dataPageSize","dataSrc","dataTransfer","database","dataset","dateTime","db","debug","debuggerEnabled","declare","decode","decodeAudioData","decodingInfo","decodeURI","decodeURIComponent","decrypt","default","defaultCharset","defaultChecked","defaultMuted","defaultPlaybackRate","defaultPrevented","defaultSelected","defaultStatus","defaultURL","defaultValue","defaultView","defaultstatus","defer","defineMagicFunction","defineMagicVariable","defineProperties","defineProperty","delayTime","delete","deleteBuffer","deleteCaption","deleteCell","deleteContents","deleteData","deleteDatabase","deleteFramebuffer","deleteFromDocument","deleteIndex","deleteMedium","deleteObjectStore","deleteProgram","deleteRenderbuffer","deleteRow","deleteRule","deleteShader","deleteTFoot","deleteTHead","deleteTexture","deliverChangeRecords","delivery","deliveryInfo","deliveryStatus","deliveryTimestamp","delta","deltaMode","deltaX","deltaY","deltaZ","depthFunc","depthMask","depthRange","deriveBits","deriveKey","description","deselectAll","designMode","destination","destinationURL","detach","detachEvent","detachShader","detail","detune","devicePixelRatio","deviceXDPI","deviceYDPI","diffuseConstant","digest","dimensions","dir","dirName","direction","dirxml","disable","disableVertexAttribArray","disabled","dischargingTime","disconnect","dispatchEvent","display","distanceModel","divisor","djsapi","djsproxy","doImport","doNotTrack","doScroll","doctype","document","documentElement","documentMode","documentURI","dolphin","dolphinGameCenter","dolphininfo","dolphinmeta","domComplete","domContentLoadedEventEnd","domContentLoadedEventStart","domInteractive","domLoading","domain","domainLookupEnd","domainLookupStart","dominant-baseline","dominantBaseline","done","dopplerFactor","download","dragDrop","draggable","drawArrays","drawArraysInstancedANGLE","drawCustomFocusRing","drawElements","drawElementsInstancedANGLE","drawFocusIfNeeded","drawImage","drawImageFromRect","drawSystemFocusRing","drawingBufferHeight","drawingBufferWidth","dropEffect","droppedVideoFrames","dropzone","dump","duplicate","duration","dvname","dvnum","dx","dy","dynsrc","e","edgeMode","effectAllowed","elapsedTime","elementFromPoint","elements","elevation","ellipse","email","embeds","empty","empty-cells","emptyCells","enable","enableBackground","enableStyleSheetsForSet","enableVertexAttribArray","enabled","enabledPlugin","encode","encodeURI","encodeURIComponent","encoding","encrypt","enctype","end","endContainer","endElement","endElementAt","endOfStream","endOffset","endTime","ended","endsWith","entities","entries","entryType","enumerate","enumerateEditable","error","errorCode","escape","eval","evaluate","event","eventPhase","every","exception","exec","execCommand","execCommandShowHelp","execScript","exitFullscreen","exitPointerLock","exp","expand","expandEntityReferences","expando","expansion","expiryDate","explicitOriginalTarget","expm1","exponent","exponentialRampToValueAtTime","exportKey","extend","extensions","extentNode","extentOffset","external","externalResourcesRequired","extractContents","extractable","f","face","factoryReset","fallback","familyName","farthestViewportElement","fastSeek","fatal","fetch","fetchStart","fftSize","fgColor","fileCreatedDate","fileHandle","fileModifiedDate","fileName","fileSize","fileUpdatedDate","filename","files","fill","fill-opacity","fill-rule","fillOpacity","fillRect","fillRule","fillStyle","fillText","filter","filterResX","filterResY","filterUnits","filters","finally","find","findIndex","findRule","findText","finish","fireEvent","firstChild","firstElementChild","firstPage","fixed","flex","flex-basis","flex-direction","flex-flow","flex-grow","flex-shrink","flex-wrap","flexBasis","flexDirection","flexFlow","flexGrow","flexShrink","flexWrap","flipX","flipY","float","flood-color","flood-opacity","floodColor","floodOpacity","floor","flush","focus","focusNode","focusOffset","font","font-family","font-feature-settings","font-kerning","font-language-override","font-size","font-size-adjust","font-stretch","font-style","font-synthesis","font-variant","font-variant-alternates","font-variant-caps","font-variant-east-asian","font-variant-ligatures","font-variant-numeric","font-variant-position","font-weight","fontFamily","fontFeatureSettings","fontKerning","fontLanguageOverride","fontSize","fontSizeAdjust","fontSmoothingEnabled","fontStretch","fontStyle","fontSynthesis","fontVariant","fontVariantAlternates","fontVariantCaps","fontVariantEastAsian","fontVariantLigatures","fontVariantNumeric","fontVariantPosition","fontWeight","fontcolor","fonts","fontsize","for","forEach","forceRedraw","form","formAction","formEnctype","formMethod","formNoValidate","formTarget","format","formatToParts","forms","forward","fr","frame","frameBorder","frameElement","frameSpacing","framebufferRenderbuffer","framebufferTexture2D","frames","freeSpace","freeze","frequency","frequencyBinCount","from","fromCharCode","fromCodePoint","fromElement","frontFace","fround","fullScreen","fullscreenElement","fullscreenEnabled","fx","fy","gain","gamepad","gamma","genderIdentity","generateKey","generateMipmap","generateRequest","geolocation","gestureObject","get","getActiveAttrib","getActiveUniform","getAdjacentText","getAll","getAllResponseHeaders","getAsFile","getAsString","getAttachedShaders","getAttribLocation","getAttribute","getAttributeNS","getAttributeNode","getAttributeNodeNS","getAudioTracks","getBBox","getBattery","getBlob","getBookmark","getBoundingClientRect","getBufferParameter","getByteFrequencyData","getByteTimeDomainData","getCSSCanvasContext","getCTM","getCandidateWindowClientRect","getChannelData","getCharNumAtPosition","getClientRect","getClientRects","getCompositionAlternatives","getComputedStyle","getComputedTextLength","getConfiguration","getContext","getContextAttributes","getCounterValue","getCueAsHTML","getCueById","getCurrentPosition","getCurrentTime","getData","getDatabaseNames","getDate","getDay","getDefaultComputedStyle","getDestinationInsertionPoints","getDistributedNodes","getEditable","getElementById","getElementsByClassName","getElementsByName","getElementsByTagName","getElementsByTagNameNS","getEnclosureList","getEndPositionOfChar","getEntries","getEntriesByName","getEntriesByType","getError","getExtension","getExtentOfChar","getFeature","getFile","getFloat32","getFloat64","getFloatFrequencyData","getFloatTimeDomainData","getFloatValue","getFramebufferAttachmentParameter","getFrequencyResponse","getFullYear","getGamepads","getHours","getImageData","getInt16","getInt32","getInt8","getIntersectionList","getItem","getItems","getKey","getLineDash","getLocalStreams","getMarks","getMatchedCSSRules","getMeasures","getMetadata","getMilliseconds","getMinutes","getModifierState","getMonth","getNamedItem","getNamedItemNS","getNotifier","getNumberOfChars","getOverrideHistoryNavigationMode","getOverrideStyle","getOwnPropertyDescriptor","getOwnPropertyNames","getOwnPropertySymbols","getParameter","getPathSegAtLength","getPointAtLength","getPreference","getPreferenceDefault","getPresentationAttribute","getPreventDefault","getProgramInfoLog","getProgramParameter","getPropertyCSSValue","getPropertyPriority","getPropertyShorthand","getPropertyValue","getPrototypeOf","getRGBColorValue","getRandomValues","getRangeAt","getReceivers","getRectValue","getRegistration","getRemoteStreams","getRenderbufferParameter","getResponseHeader","getRoot","getRotationOfChar","getSVGDocument","getScreenCTM","getSeconds","getSelection","getSenders","getShaderInfoLog","getShaderParameter","getShaderPrecisionFormat","getShaderSource","getSimpleDuration","getSiteIcons","getSources","getSpeculativeParserUrls","getStartPositionOfChar","getStartTime","getStats","getStorageUpdates","getStreamById","getStringValue","getSubStringLength","getSubscription","getSupportedExtensions","getTexParameter","getTime","getTimezoneOffset","getTotalLength","getTrackById","getTracks","getTransformToElement","getUTCDate","getUTCDay","getUTCFullYear","getUTCHours","getUTCMilliseconds","getUTCMinutes","getUTCMonth","getUTCSeconds","getUint16","getUint32","getUint8","getUniform","getUniformLocation","getUserMedia","getValues","getVarDate","getVariableValue","getVertexAttrib","getVertexAttribOffset","getVideoPlaybackQuality","getVideoTracks","getWakeLockState","getYear","givenName","global","globalAlpha","globalCompositeOperation","glyphOrientationHorizontal","glyphOrientationVertical","glyphRef","go","gradientTransform","gradientUnits","grammars","green","group","groupCollapsed","groupEnd","hardwareConcurrency","has","hasAttribute","hasAttributeNS","hasAttributes","hasChildNodes","hasComposition","hasExtension","hasFeature","hasFocus","hasLayout","hasOwnProperty","hash","head","headers","heading","height","hidden","hide","hideFocus","high","hint","history","honorificPrefix","honorificSuffix","horizontalOverflow","host","hostname","href","hreflang","hspace","html5TagCheckInerface","htmlFor","htmlText","httpEquiv","hwTimestamp","hypot","iccId","iceConnectionState","iceGatheringState","icon","id","identifier","identity","ignoreBOM","ignoreCase","image-orientation","image-rendering","imageOrientation","imageRendering","images","ime-mode","imeMode","implementation","importKey","importNode","importStylesheet","imports","impp","imul","in1","in2","inBandMetadataTrackDispatchType","inRange","includes","incremental","indeterminate","index","indexNames","indexOf","indexedDB","inertiaDestinationX","inertiaDestinationY","info","init","initAnimationEvent","initBeforeLoadEvent","initClipboardEvent","initCloseEvent","initCommandEvent","initCompositionEvent","initCustomEvent","initData","initDeviceMotionEvent","initDeviceOrientationEvent","initDragEvent","initErrorEvent","initEvent","initFocusEvent","initGestureEvent","initHashChangeEvent","initKeyEvent","initKeyboardEvent","initMSManipulationEvent","initMessageEvent","initMouseEvent","initMouseScrollEvent","initMouseWheelEvent","initMutationEvent","initNSMouseEvent","initOverflowEvent","initPageEvent","initPageTransitionEvent","initPointerEvent","initPopStateEvent","initProgressEvent","initScrollAreaEvent","initSimpleGestureEvent","initStorageEvent","initTextEvent","initTimeEvent","initTouchEvent","initTransitionEvent","initUIEvent","initWebKitAnimationEvent","initWebKitTransitionEvent","initWebKitWheelEvent","initWheelEvent","initialTime","initialize","initiatorType","inner","innerHTML","innerHeight","innerText","innerWidth","input","inputBuffer","inputEncoding","inputMethod","insertAdjacentElement","insertAdjacentHTML","insertAdjacentText","insertBefore","insertCell","insertData","insertItemBefore","insertNode","insertRow","insertRule","instanceRoot","intercept","interimResults","internalSubset","intersectsNode","interval","invalidIteratorState","inverse","invertSelf","is","is2D","isAlternate","isArray","isBingCurrentSearchDefault","isBuffer","isCandidateWindowVisible","isChar","isCollapsed","isComposing","isContentEditable","isContentHandlerRegistered","isContextLost","isDefaultNamespace","isDisabled","isEnabled","isEqual","isEqualNode","isExtensible","isFinite","isFramebuffer","isFrozen","isGenerator","isId","isInjected","isInteger","isMap","isMultiLine","isNaN","isOpen","isPointInFill","isPointInPath","isPointInRange","isPointInStroke","isPrefAlternate","isPrimary","isProgram","isPropertyImplicit","isProtocolHandlerRegistered","isPrototypeOf","isRenderbuffer","isSafeInteger","isSameNode","isSealed","isShader","isSupported","isTextEdit","isTexture","isTrusted","isTypeSupported","isView","isolation","italics","item","itemId","itemProp","itemRef","itemScope","itemType","itemValue","iterateNext","iterator","javaEnabled","jobTitle","join","json","justify-content","justifyContent","k1","k2","k3","k4","kernelMatrix","kernelUnitLengthX","kernelUnitLengthY","kerning","key","keyCode","keyFor","keyIdentifier","keyLightEnabled","keyLocation","keyPath","keySystem","keyText","keyUsage","keys","keytype","kind","knee","label","labels","lang","language","languages","largeArcFlag","lastChild","lastElementChild","lastEventId","lastIndex","lastIndexOf","lastMatch","lastMessageSubject","lastMessageType","lastModified","lastModifiedDate","lastPage","lastParen","lastState","lastStyleSheetSet","latitude","layerX","layerY","layoutFlow","layoutGrid","layoutGridChar","layoutGridLine","layoutGridMode","layoutGridType","lbound","left","leftContext","leftMargin","length","lengthAdjust","lengthComputable","letter-spacing","letterSpacing","level","lighting-color","lightingColor","limitingConeAngle","line","line-height","lineAlign","lineBreak","lineCap","lineDashOffset","lineHeight","lineJoin","lineNumber","lineTo","lineWidth","linearRampToValueAtTime","lineno","link","linkColor","linkProgram","links","list","list-style","list-style-image","list-style-position","list-style-type","listStyle","listStyleImage","listStylePosition","listStyleType","listener","load","loadEventEnd","loadEventStart","loadTimes","loaded","localDescription","localName","localStorage","locale","localeCompare","location","locationbar","lock","lockedFile","log","log10","log1p","log2","logicalXDPI","logicalYDPI","longDesc","longitude","lookupNamespaceURI","lookupPrefix","loop","loopEnd","loopStart","looping","low","lower","lowerBound","lowerOpen","lowsrc","m11","m12","m13","m14","m21","m22","m23","m24","m31","m32","m33","m34","m41","m42","m43","m44","manifest","map","mapping","margin","margin-bottom","margin-left","margin-right","margin-top","marginBottom","marginHeight","marginLeft","marginRight","marginTop","marginWidth","mark","marker","marker-end","marker-mid","marker-offset","marker-start","markerEnd","markerHeight","markerMid","markerOffset","markerStart","markerUnits","markerWidth","marks","mask","mask-type","maskContentUnits","maskType","maskUnits","match","matchMedia","matchMedium","matches","matrix","matrixTransform","max","max-height","max-width","maxAlternatives","maxChannelCount","maxConnectionsPerServer","maxDecibels","maxDistance","maxHeight","maxLength","maxTouchPoints","maxValue","maxWidth","measure","measureText","media","mediaCapabilities","mediaDevices","mediaElement","mediaGroup","mediaKeys","mediaText","meetOrSlice","memory","menubar","mergeAttributes","message","messageClass","messageHandlers","metaKey","method","mimeType","mimeTypes","min","min-height","min-width","minDecibels","minHeight","minValue","minWidth","miterLimit","mix-blend-mode","mixBlendMode","mode","modify","mount","move","moveBy","moveEnd","moveFirst","moveFocusDown","moveFocusLeft","moveFocusRight","moveFocusUp","moveNext","moveRow","moveStart","moveTo","moveToBookmark","moveToElementText","moveToPoint","mozAdd","mozAnimationStartTime","mozAnon","mozApps","mozAudioCaptured","mozAudioChannelType","mozAutoplayEnabled","mozCancelAnimationFrame","mozCancelFullScreen","mozCancelRequestAnimationFrame","mozCaptureStream","mozCaptureStreamUntilEnded","mozClearDataAt","mozContact","mozContacts","mozCreateFileHandle","mozCurrentTransform","mozCurrentTransformInverse","mozCursor","mozDash","mozDashOffset","mozDecodedFrames","mozExitPointerLock","mozFillRule","mozFragmentEnd","mozFrameDelay","mozFullScreen","mozFullScreenElement","mozFullScreenEnabled","mozGetAll","mozGetAllKeys","mozGetAsFile","mozGetDataAt","mozGetMetadata","mozGetUserMedia","mozHasAudio","mozHasItem","mozHidden","mozImageSmoothingEnabled","mozIndexedDB","mozInnerScreenX","mozInnerScreenY","mozInputSource","mozIsTextField","mozItem","mozItemCount","mozItems","mozLength","mozLockOrientation","mozMatchesSelector","mozMovementX","mozMovementY","mozOpaque","mozOrientation","mozPaintCount","mozPaintedFrames","mozParsedFrames","mozPay","mozPointerLockElement","mozPresentedFrames","mozPreservesPitch","mozPressure","mozPrintCallback","mozRTCIceCandidate","mozRTCPeerConnection","mozRTCSessionDescription","mozRemove","mozRequestAnimationFrame","mozRequestFullScreen","mozRequestPointerLock","mozSetDataAt","mozSetImageElement","mozSourceNode","mozSrcObject","mozSystem","mozTCPSocket","mozTextStyle","mozTypesAt","mozUnlockOrientation","mozUserCancelled","mozVisibilityState","msAnimation","msAnimationDelay","msAnimationDirection","msAnimationDuration","msAnimationFillMode","msAnimationIterationCount","msAnimationName","msAnimationPlayState","msAnimationStartTime","msAnimationTimingFunction","msBackfaceVisibility","msBlockProgression","msCSSOMElementFloatMetrics","msCaching","msCachingEnabled","msCancelRequestAnimationFrame","msCapsLockWarningOff","msClearImmediate","msClose","msContentZoomChaining","msContentZoomFactor","msContentZoomLimit","msContentZoomLimitMax","msContentZoomLimitMin","msContentZoomSnap","msContentZoomSnapPoints","msContentZoomSnapType","msContentZooming","msConvertURL","msCrypto","msDoNotTrack","msElementsFromPoint","msElementsFromRect","msExitFullscreen","msExtendedCode","msFillRule","msFirstPaint","msFlex","msFlexAlign","msFlexDirection","msFlexFlow","msFlexItemAlign","msFlexLinePack","msFlexNegative","msFlexOrder","msFlexPack","msFlexPositive","msFlexPreferredSize","msFlexWrap","msFlowFrom","msFlowInto","msFontFeatureSettings","msFullscreenElement","msFullscreenEnabled","msGetInputContext","msGetRegionContent","msGetUntransformedBounds","msGraphicsTrustStatus","msGridColumn","msGridColumnAlign","msGridColumnSpan","msGridColumns","msGridRow","msGridRowAlign","msGridRowSpan","msGridRows","msHidden","msHighContrastAdjust","msHyphenateLimitChars","msHyphenateLimitLines","msHyphenateLimitZone","msHyphens","msImageSmoothingEnabled","msImeAlign","msIndexedDB","msInterpolationMode","msIsStaticHTML","msKeySystem","msKeys","msLaunchUri","msLockOrientation","msManipulationViewsEnabled","msMatchMedia","msMatchesSelector","msMaxTouchPoints","msOrientation","msOverflowStyle","msPerspective","msPerspectiveOrigin","msPlayToDisabled","msPlayToPreferredSourceUri","msPlayToPrimary","msPointerEnabled","msRegionOverflow","msReleasePointerCapture","msRequestAnimationFrame","msRequestFullscreen","msSaveBlob","msSaveOrOpenBlob","msScrollChaining","msScrollLimit","msScrollLimitXMax","msScrollLimitXMin","msScrollLimitYMax","msScrollLimitYMin","msScrollRails","msScrollSnapPointsX","msScrollSnapPointsY","msScrollSnapType","msScrollSnapX","msScrollSnapY","msScrollTranslation","msSetImmediate","msSetMediaKeys","msSetPointerCapture","msTextCombineHorizontal","msTextSizeAdjust","msToBlob","msTouchAction","msTouchSelect","msTraceAsyncCallbackCompleted","msTraceAsyncCallbackStarting","msTraceAsyncOperationCompleted","msTraceAsyncOperationStarting","msTransform","msTransformOrigin","msTransformStyle","msTransition","msTransitionDelay","msTransitionDuration","msTransitionProperty","msTransitionTimingFunction","msUnlockOrientation","msUpdateAsyncCallbackRelation","msUserSelect","msVisibilityState","msWrapFlow","msWrapMargin","msWrapThrough","msWriteProfilerMark","msZoom","msZoomTo","mt","multiEntry","multiSelectionObj","multiline","multiple","multiply","multiplySelf","mutableFile","muted","n","name","nameProp","namedItem","namedRecordset","names","namespaceURI","namespaces","naturalHeight","naturalWidth","navigate","navigation","navigationMode","navigationStart","navigator","near","nearestViewportElement","negative","netscape","networkState","newScale","newTranslate","newURL","newValue","newValueSpecifiedUnits","newVersion","newhome","next","nextElementSibling","nextNode","nextPage","nextSibling","nickname","noHref","noResize","noShade","noValidate","noWrap","nodeName","nodeType","nodeValue","normalize","normalizedPathSegList","notationName","notations","note","noteGrainOn","noteOff","noteOn","now","numOctaves","number","numberOfChannels","numberOfInputs","numberOfItems","numberOfOutputs","numberValue","oMatchesSelector","object","object-fit","object-position","objectFit","objectPosition","objectStore","objectStoreNames","observe","of","offscreenBuffering","offset","offsetHeight","offsetLeft","offsetNode","offsetParent","offsetTop","offsetWidth","offsetX","offsetY","ok","oldURL","oldValue","oldVersion","olderShadowRoot","onLine","onabort","onactivate","onactive","onaddstream","onaddtrack","onafterprint","onafterscriptexecute","onafterupdate","onaudioend","onaudioprocess","onaudiostart","onautocomplete","onautocompleteerror","onbeforeactivate","onbeforecopy","onbeforecut","onbeforedeactivate","onbeforeeditfocus","onbeforepaste","onbeforeprint","onbeforescriptexecute","onbeforeunload","onbeforeupdate","onblocked","onblur","onbounce","onboundary","oncached","oncancel","oncandidatewindowhide","oncandidatewindowshow","oncandidatewindowupdate","oncanplay","oncanplaythrough","once","oncellchange","onchange","onchargingchange","onchargingtimechange","onchecking","onclick","onclose","oncompassneedscalibration","oncomplete","oncontextmenu","oncontrolselect","oncopy","oncuechange","oncut","ondataavailable","ondatachannel","ondatasetchanged","ondatasetcomplete","ondblclick","ondeactivate","ondevicelight","ondevicemotion","ondeviceorientation","ondeviceproximity","ondischargingtimechange","ondisplay","ondownloading","ondrag","ondragend","ondragenter","ondragleave","ondragover","ondragstart","ondrop","ondurationchange","onemptied","onencrypted","onend","onended","onenter","onerror","onerrorupdate","onexit","onfilterchange","onfinish","onfocus","onfocusin","onfocusout","onfullscreenchange","onfullscreenerror","ongesturechange","ongestureend","ongesturestart","ongotpointercapture","onhashchange","onhelp","onicecandidate","oniceconnectionstatechange","oninactive","oninput","oninvalid","onkeydown","onkeypress","onkeyup","onlanguagechange","onlayoutcomplete","onlevelchange","onload","onloadeddata","onloadedmetadata","onloadend","onloadstart","onlosecapture","onlostpointercapture","only","onmark","onmessage","onmousedown","onmouseenter","onmouseleave","onmousemove","onmouseout","onmouseover","onmouseup","onmousewheel","onmove","onmoveend","onmovestart","onmozfullscreenchange","onmozfullscreenerror","onmozorientationchange","onmozpointerlockchange","onmozpointerlockerror","onmscontentzoom","onmsfullscreenchange","onmsfullscreenerror","onmsgesturechange","onmsgesturedoubletap","onmsgestureend","onmsgesturehold","onmsgesturestart","onmsgesturetap","onmsgotpointercapture","onmsinertiastart","onmslostpointercapture","onmsmanipulationstatechanged","onmsneedkey","onmsorientationchange","onmspointercancel","onmspointerdown","onmspointerenter","onmspointerhover","onmspointerleave","onmspointermove","onmspointerout","onmspointerover","onmspointerup","onmssitemodejumplistitemremoved","onmsthumbnailclick","onnegotiationneeded","onnomatch","onnoupdate","onobsolete","onoffline","ononline","onopen","onorientationchange","onpagechange","onpagehide","onpageshow","onpaste","onpause","onplay","onplaying","onpluginstreamstart","onpointercancel","onpointerdown","onpointerenter","onpointerleave","onpointerlockchange","onpointerlockerror","onpointermove","onpointerout","onpointerover","onpointerup","onpopstate","onprogress","onpropertychange","onratechange","onreadystatechange","onremovestream","onremovetrack","onreset","onresize","onresizeend","onresizestart","onresourcetimingbufferfull","onresult","onresume","onrowenter","onrowexit","onrowsdelete","onrowsinserted","onscroll","onsearch","onseeked","onseeking","onselect","onselectionchange","onselectstart","onshow","onsignalingstatechange","onsoundend","onsoundstart","onspeechend","onspeechstart","onstalled","onstart","onstatechange","onstop","onstorage","onstoragecommit","onsubmit","onsuccess","onsuspend","ontextinput","ontimeout","ontimeupdate","ontoggle","ontouchcancel","ontouchend","ontouchmove","ontouchstart","ontransitionend","onunload","onupdateready","onupgradeneeded","onuserproximity","onversionchange","onvoiceschanged","onvolumechange","onwaiting","onwarning","onwebkitanimationend","onwebkitanimationiteration","onwebkitanimationstart","onwebkitcurrentplaybacktargetiswirelesschanged","onwebkitfullscreenchange","onwebkitfullscreenerror","onwebkitkeyadded","onwebkitkeyerror","onwebkitkeymessage","onwebkitneedkey","onwebkitorientationchange","onwebkitplaybacktargetavailabilitychanged","onwebkitpointerlockchange","onwebkitpointerlockerror","onwebkitresourcetimingbufferfull","onwebkittransitionend","onwheel","onzoom","opacity","open","openCursor","openDatabase","openKeyCursor","opener","opera","operationType","operator","opr","optimum","options","order","orderX","orderY","ordered","org","orient","orientAngle","orientType","orientation","origin","originalTarget","orphans","oscpu","outerHTML","outerHeight","outerText","outerWidth","outline","outline-color","outline-offset","outline-style","outline-width","outlineColor","outlineOffset","outlineStyle","outlineWidth","outputBuffer","overflow","overflow-x","overflow-y","overflowX","overflowY","overrideMimeType","oversample","ownerDocument","ownerElement","ownerNode","ownerRule","ownerSVGElement","owningElement","p1","p2","p3","p4","pad","padding","padding-bottom","padding-left","padding-right","padding-top","paddingBottom","paddingLeft","paddingRight","paddingTop","page","page-break-after","page-break-before","page-break-inside","pageBreakAfter","pageBreakBefore","pageBreakInside","pageCount","pageX","pageXOffset","pageY","pageYOffset","pages","paint-order","paintOrder","paintRequests","paintType","palette","panningModel","parent","parentElement","parentNode","parentRule","parentStyleSheet","parentTextEdit","parentWindow","parse","parseFloat","parseFromString","parseInt","participants","passive","password","pasteHTML","path","pathLength","pathSegList","pathSegType","pathSegTypeAsLetter","pathname","pattern","patternContentUnits","patternMismatch","patternTransform","patternUnits","pause","pauseAnimations","pauseOnExit","paused","pending","performance","permission","persisted","personalbar","perspective","perspective-origin","perspectiveOrigin","phoneticFamilyName","phoneticGivenName","photo","ping","pitch","pixelBottom","pixelDepth","pixelHeight","pixelLeft","pixelRight","pixelStorei","pixelTop","pixelUnitToMillimeterX","pixelUnitToMillimeterY","pixelWidth","placeholder","platform","play","playbackRate","playbackState","playbackTime","played","plugins","pluginspage","pname","pointer-events","pointerBeforeReferenceNode","pointerEnabled","pointerEvents","pointerId","pointerLockElement","pointerType","points","pointsAtX","pointsAtY","pointsAtZ","polygonOffset","pop","popupWindowFeatures","popupWindowName","popupWindowURI","port","port1","port2","ports","posBottom","posHeight","posLeft","posRight","posTop","posWidth","position","positionAlign","postError","postMessage","poster","pow","powerOff","preMultiplySelf","precision","preferredStyleSheetSet","preferredStylesheetSet","prefix","preload","prepend","preserveAlpha","preserveAspectRatio","preserveAspectRatioString","pressed","pressure","prevValue","preventDefault","preventExtensions","previousElementSibling","previousNode","previousPage","previousScale","previousSibling","previousTranslate","primaryKey","primitiveType","primitiveUnits","principals","print","privateKey","probablySupportsContext","process","processIceMessage","product","productSub","profile","profileEnd","profiles","prompt","properties","propertyIsEnumerable","propertyName","protocol","protocolLong","prototype","pseudoClass","pseudoElement","publicId","publicKey","published","push","pushNotification","pushState","put","putImageData","quadraticCurveTo","qualifier","queryCommandEnabled","queryCommandIndeterm","queryCommandState","queryCommandSupported","queryCommandText","queryCommandValue","querySelector","querySelectorAll","quote","quotes","r","r1","r2","race","radiogroup","radiusX","radiusY","random","range","rangeCount","rangeMax","rangeMin","rangeOffset","rangeOverflow","rangeParent","rangeUnderflow","rate","ratio","raw","read","readAsArrayBuffer","readAsBinaryString","readAsBlob","readAsDataURL","readAsText","readOnly","readPixels","readReportRequested","readyState","reason","reboot","receiver","receivers","recordNumber","recordset","rect","red","redirectCount","redirectEnd","redirectStart","reduce","reduceRight","reduction","refDistance","refX","refY","referenceNode","referrer","refresh","region","regionAnchorX","regionAnchorY","regionId","regions","register","registerContentHandler","registerElement","registerProtocolHandler","reject","rel","relList","relatedNode","relatedTarget","release","releaseCapture","releaseEvents","releasePointerCapture","releaseShaderCompiler","reliable","reload","remainingSpace","remoteDescription","remove","removeAllRanges","removeAttribute","removeAttributeNS","removeAttributeNode","removeBehavior","removeChild","removeCue","removeEventListener","removeFilter","removeImport","removeItem","removeListener","removeNamedItem","removeNamedItemNS","removeNode","removeParameter","removeProperty","removeRange","removeRegion","removeRule","removeSiteSpecificTrackingException","removeSourceBuffer","removeStream","removeTrack","removeVariable","removeWakeLockListener","removeWebWideTrackingException","removedNodes","renderbufferStorage","renderedBuffer","renderingMode","repeat","replace","replaceAdjacentText","replaceChild","replaceData","replaceId","replaceItem","replaceNode","replaceState","replaceTrack","replaceWholeText","reportValidity","requestAnimationFrame","requestAutocomplete","requestData","requestFullscreen","requestMediaKeySystemAccess","requestPermission","requestPointerLock","requestStart","requestingWindow","required","requiredExtensions","requiredFeatures","reset","resetTransform","resize","resizeBy","resizeTo","resolve","response","responseBody","responseEnd","responseStart","responseText","responseType","responseURL","responseXML","restore","result","resultType","resume","returnValue","rev","reverse","reversed","revocable","revokeObjectURL","rgbColor","right","rightContext","rightMargin","rolloffFactor","root","rootElement","rotate","rotateAxisAngle","rotateAxisAngleSelf","rotateFromVector","rotateFromVectorSelf","rotateSelf","rotation","rotationRate","round","rowIndex","rowSpan","rows","rubyAlign","rubyOverhang","rubyPosition","rules","runtime","runtimeStyle","rx","ry","safari","sampleCoverage","sampleRate","sandbox","save","scale","scale3d","scale3dSelf","scaleNonUniform","scaleNonUniformSelf","scaleSelf","scheme","scissor","scope","scopeName","scoped","screen","screenBrightness","screenEnabled","screenLeft","screenPixelToMillimeterX","screenPixelToMillimeterY","screenTop","screenX","screenY","scripts","scroll","scroll-behavior","scrollAmount","scrollBehavior","scrollBy","scrollByLines","scrollByPages","scrollDelay","scrollHeight","scrollIntoView","scrollIntoViewIfNeeded","scrollLeft","scrollLeftMax","scrollMaxX","scrollMaxY","scrollTo","scrollTop","scrollTopMax","scrollWidth","scrollX","scrollY","scrollbar3dLightColor","scrollbarArrowColor","scrollbarBaseColor","scrollbarDarkShadowColor","scrollbarFaceColor","scrollbarHighlightColor","scrollbarShadowColor","scrollbarTrackColor","scrollbars","scrolling","sdp","sdpMLineIndex","sdpMid","seal","search","searchBox","searchBoxJavaBridge_","searchParams","sectionRowIndex","secureConnectionStart","security","seed","seekable","seeking","select","selectAllChildren","selectNode","selectNodeContents","selectNodes","selectSingleNode","selectSubString","selected","selectedIndex","selectedOptions","selectedStyleSheetSet","selectedStylesheetSet","selection","selectionDirection","selectionEnd","selectionStart","selector","selectorText","self","send","sendAsBinary","sendBeacon","sender","sentTimestamp","separator","serializeToString","serviceWorker","sessionId","sessionStorage","set","setActive","setAlpha","setAttribute","setAttributeNS","setAttributeNode","setAttributeNodeNS","setBaseAndExtent","setBingCurrentSearchDefault","setCapture","setColor","setCompositeOperation","setCurrentTime","setCustomValidity","setData","setDate","setDragImage","setEnd","setEndAfter","setEndBefore","setEndPoint","setFillColor","setFilterRes","setFloat32","setFloat64","setFloatValue","setFullYear","setHours","setImmediate","setInt16","setInt32","setInt8","setInterval","setItem","setLineCap","setLineDash","setLineJoin","setLineWidth","setLocalDescription","setMatrix","setMatrixValue","setMediaKeys","setMilliseconds","setMinutes","setMiterLimit","setMonth","setNamedItem","setNamedItemNS","setNonUserCodeExceptions","setOrientToAngle","setOrientToAuto","setOrientation","setOverrideHistoryNavigationMode","setPaint","setParameter","setPeriodicWave","setPointerCapture","setPosition","setPreference","setProperty","setPrototypeOf","setRGBColor","setRGBColorICCColor","setRadius","setRangeText","setRemoteDescription","setRequestHeader","setResizable","setResourceTimingBufferSize","setRotate","setScale","setSeconds","setSelectionRange","setServerCertificate","setShadow","setSkewX","setSkewY","setStart","setStartAfter","setStartBefore","setStdDeviation","setStringValue","setStrokeColor","setSuggestResult","setTargetAtTime","setTargetValueAtTime","setTime","setTimeout","setTransform","setTranslate","setUTCDate","setUTCFullYear","setUTCHours","setUTCMilliseconds","setUTCMinutes","setUTCMonth","setUTCSeconds","setUint16","setUint32","setUint8","setUri","setValueAtTime","setValueCurveAtTime","setVariable","setVelocity","setVersion","setYear","settingName","settingValue","sex","shaderSource","shadowBlur","shadowColor","shadowOffsetX","shadowOffsetY","shadowRoot","shape","shape-rendering","shapeRendering","sheet","shift","shiftKey","shiftLeft","show","showHelp","showModal","showModalDialog","showModelessDialog","showNotification","sidebar","sign","signalingState","sin","singleNodeValue","sinh","size","sizeToContent","sizes","skewX","skewXSelf","skewY","skewYSelf","slice","slope","small","smooth","smil","smoothingTimeConstant","snapToLines","snapshotItem","snapshotLength","some","sort","source","sourceBuffer","sourceBuffers","sourceIndex","spacing","span","speakAs","speaking","specified","specularConstant","specularExponent","speechSynthesis","speed","speedOfSound","spellcheck","splice","split","splitText","spreadMethod","sqrt","src","srcElement","srcFilter","srcUrn","srcdoc","srclang","srcset","stack","stackTraceLimit","stacktrace","standalone","standby","start","startContainer","startIce","startOffset","startRendering","startTime","startsWith","state","status","statusMessage","statusText","statusbar","stdDeviationX","stdDeviationY","stencilFunc","stencilFuncSeparate","stencilMask","stencilMaskSeparate","stencilOp","stencilOpSeparate","step","stepDown","stepMismatch","stepUp","sticky","stitchTiles","stop","stop-color","stop-opacity","stopColor","stopImmediatePropagation","stopOpacity","stopPropagation","storageArea","storageName","storageStatus","storeSiteSpecificTrackingException","storeWebWideTrackingException","stpVersion","stream","strike","stringValue","stringify","stroke","stroke-dasharray","stroke-dashoffset","stroke-linecap","stroke-linejoin","stroke-miterlimit","stroke-opacity","stroke-width","strokeDasharray","strokeDashoffset","strokeLinecap","strokeLinejoin","strokeMiterlimit","strokeOpacity","strokeRect","strokeStyle","strokeText","strokeWidth","style","styleFloat","styleMedia","styleSheet","styleSheetSets","styleSheets","sub","subarray","subject","submit","subscribe","substr","substring","substringData","subtle","subtree","suffix","suffixes","summary","sup","supports","surfaceScale","surroundContents","suspend","suspendRedraw","swapCache","swapNode","sweepFlag","symbols","system","systemCode","systemId","systemLanguage","systemXDPI","systemYDPI","tBodies","tFoot","tHead","tabIndex","table","table-layout","tableLayout","tableValues","tag","tagName","tagUrn","tags","taintEnabled","takeRecords","tan","tanh","target","targetElement","targetTouches","targetX","targetY","tel","terminate","test","texImage2D","texParameterf","texParameteri","texSubImage2D","text","text-align","text-anchor","text-decoration","text-decoration-color","text-decoration-line","text-decoration-style","text-indent","text-overflow","text-rendering","text-shadow","text-transform","textAlign","textAlignLast","textAnchor","textAutospace","textBaseline","textContent","textDecoration","textDecorationBlink","textDecorationColor","textDecorationLine","textDecorationLineThrough","textDecorationNone","textDecorationOverline","textDecorationStyle","textDecorationUnderline","textIndent","textJustify","textJustifyTrim","textKashida","textKashidaSpace","textLength","textOverflow","textRendering","textShadow","textTracks","textTransform","textUnderlinePosition","then","threadId","threshold","tiltX","tiltY","time","timeEnd","timeStamp","timeout","timestamp","timestampOffset","timing","title","toArray","toBlob","toDataURL","toDateString","toElement","toExponential","toFixed","toFloat32Array","toFloat64Array","toGMTString","toISOString","toJSON","toLocaleDateString","toLocaleFormat","toLocaleLowerCase","toLocaleString","toLocaleTimeString","toLocaleUpperCase","toLowerCase","toMethod","toPrecision","toSdp","toSource","toStaticHTML","toString","toStringTag","toTimeString","toUTCString","toUpperCase","toggle","toggleLongPressEnabled","tooLong","toolbar","top","topMargin","total","totalFrameDelay","totalVideoFrames","touchAction","touches","trace","track","transaction","transactions","transform","transform-origin","transform-style","transformOrigin","transformPoint","transformString","transformStyle","transformToDocument","transformToFragment","transition","transition-delay","transition-duration","transition-property","transition-timing-function","transitionDelay","transitionDuration","transitionProperty","transitionTimingFunction","translate","translateSelf","translationX","translationY","trim","trimLeft","trimRight","trueSpeed","trunc","truncate","type","typeDetail","typeMismatch","typeMustMatch","types","ubound","undefined","unescape","uneval","unicode-bidi","unicodeBidi","uniform1f","uniform1fv","uniform1i","uniform1iv","uniform2f","uniform2fv","uniform2i","uniform2iv","uniform3f","uniform3fv","uniform3i","uniform3iv","uniform4f","uniform4fv","uniform4i","uniform4iv","uniformMatrix2fv","uniformMatrix3fv","uniformMatrix4fv","unique","uniqueID","uniqueNumber","unitType","units","unloadEventEnd","unloadEventStart","unlock","unmount","unobserve","unpause","unpauseAnimations","unreadCount","unregister","unregisterContentHandler","unregisterProtocolHandler","unscopables","unselectable","unshift","unsubscribe","unsuspendRedraw","unsuspendRedrawAll","unwatch","unwrapKey","update","updateCommands","updateIce","updateInterval","updateSettings","updated","updating","upload","upper","upperBound","upperOpen","uri","url","urn","urns","usages","useCurrentView","useMap","useProgram","usedSpace","userAgent","userLanguage","username","v8BreakIterator","vAlign","vLink","valid","validateProgram","validationMessage","validity","value","valueAsDate","valueAsNumber","valueAsString","valueInSpecifiedUnits","valueMissing","valueOf","valueText","valueType","values","vector-effect","vectorEffect","velocityAngular","velocityExpansion","velocityX","velocityY","vendor","vendorSub","verify","version","vertexAttrib1f","vertexAttrib1fv","vertexAttrib2f","vertexAttrib2fv","vertexAttrib3f","vertexAttrib3fv","vertexAttrib4f","vertexAttrib4fv","vertexAttribDivisorANGLE","vertexAttribPointer","vertical","vertical-align","verticalAlign","verticalOverflow","vibrate","videoHeight","videoTracks","videoWidth","view","viewBox","viewBoxString","viewTarget","viewTargetString","viewport","viewportAnchorX","viewportAnchorY","viewportElement","visibility","visibilityState","visible","vlinkColor","voice","volume","vrml","vspace","w","wand","warn","wasClean","watch","watchPosition","webdriver","webkitAddKey","webkitAnimation","webkitAnimationDelay","webkitAnimationDirection","webkitAnimationDuration","webkitAnimationFillMode","webkitAnimationIterationCount","webkitAnimationName","webkitAnimationPlayState","webkitAnimationTimingFunction","webkitAppearance","webkitAudioContext","webkitAudioDecodedByteCount","webkitAudioPannerNode","webkitBackfaceVisibility","webkitBackground","webkitBackgroundAttachment","webkitBackgroundClip","webkitBackgroundColor","webkitBackgroundImage","webkitBackgroundOrigin","webkitBackgroundPosition","webkitBackgroundPositionX","webkitBackgroundPositionY","webkitBackgroundRepeat","webkitBackgroundSize","webkitBackingStorePixelRatio","webkitBorderImage","webkitBorderImageOutset","webkitBorderImageRepeat","webkitBorderImageSlice","webkitBorderImageSource","webkitBorderImageWidth","webkitBoxAlign","webkitBoxDirection","webkitBoxFlex","webkitBoxOrdinalGroup","webkitBoxOrient","webkitBoxPack","webkitBoxSizing","webkitCancelAnimationFrame","webkitCancelFullScreen","webkitCancelKeyRequest","webkitCancelRequestAnimationFrame","webkitClearResourceTimings","webkitClosedCaptionsVisible","webkitConvertPointFromNodeToPage","webkitConvertPointFromPageToNode","webkitCreateShadowRoot","webkitCurrentFullScreenElement","webkitCurrentPlaybackTargetIsWireless","webkitDirectionInvertedFromDevice","webkitDisplayingFullscreen","webkitEnterFullScreen","webkitEnterFullscreen","webkitExitFullScreen","webkitExitFullscreen","webkitExitPointerLock","webkitFullScreenKeyboardInputAllowed","webkitFullscreenElement","webkitFullscreenEnabled","webkitGenerateKeyRequest","webkitGetAsEntry","webkitGetDatabaseNames","webkitGetEntries","webkitGetEntriesByName","webkitGetEntriesByType","webkitGetFlowByName","webkitGetGamepads","webkitGetImageDataHD","webkitGetNamedFlows","webkitGetRegionFlowRanges","webkitGetUserMedia","webkitHasClosedCaptions","webkitHidden","webkitIDBCursor","webkitIDBDatabase","webkitIDBDatabaseError","webkitIDBDatabaseException","webkitIDBFactory","webkitIDBIndex","webkitIDBKeyRange","webkitIDBObjectStore","webkitIDBRequest","webkitIDBTransaction","webkitImageSmoothingEnabled","webkitIndexedDB","webkitInitMessageEvent","webkitIsFullScreen","webkitKeys","webkitLineDashOffset","webkitLockOrientation","webkitMatchesSelector","webkitMediaStream","webkitNotifications","webkitOfflineAudioContext","webkitOrientation","webkitPeerConnection00","webkitPersistentStorage","webkitPointerLockElement","webkitPostMessage","webkitPreservesPitch","webkitPutImageDataHD","webkitRTCPeerConnection","webkitRegionOverset","webkitRequestAnimationFrame","webkitRequestFileSystem","webkitRequestFullScreen","webkitRequestFullscreen","webkitRequestPointerLock","webkitResolveLocalFileSystemURL","webkitSetMediaKeys","webkitSetResourceTimingBufferSize","webkitShadowRoot","webkitShowPlaybackTargetPicker","webkitSlice","webkitSpeechGrammar","webkitSpeechGrammarList","webkitSpeechRecognition","webkitSpeechRecognitionError","webkitSpeechRecognitionEvent","webkitStorageInfo","webkitSupportsFullscreen","webkitTemporaryStorage","webkitTextSizeAdjust","webkitTransform","webkitTransformOrigin","webkitTransition","webkitTransitionDelay","webkitTransitionDuration","webkitTransitionProperty","webkitTransitionTimingFunction","webkitURL","webkitUnlockOrientation","webkitUserSelect","webkitVideoDecodedByteCount","webkitVisibilityState","webkitWirelessVideoPlaybackDisabled","webkitdropzone","webstore","weight","whatToShow","wheelDelta","wheelDeltaX","wheelDeltaY","which","white-space","whiteSpace","wholeText","widows","width","will-change","willChange","willValidate","window","withCredentials","word-break","word-spacing","word-wrap","wordBreak","wordSpacing","wordWrap","wrap","wrapKey","write","writeln","writingMode","x","x1","x2","xChannelSelector","xmlEncoding","xmlStandalone","xmlVersion","xmlbase","xmllang","xmlspace","y","y1","y2","yChannelSelector","yandex","z","z-index","zIndex","zoom","zoomAndPan","zoomRectScreen"];function qi(e,t){function n(e){p(t,e)}e.walk(new Dn((function(e){e instanceof yt&&e.quote?n(e.key):e instanceof bt&&e.quote?n(e.key.name):e instanceof dt&&$i(e.property,n)})))}function $i(e,t){e.walk(new Dn((function(e){return e instanceof ft?$i(e.tail_node(),t):e instanceof nn?t(e.value):e instanceof gt&&($i(e.consequent,t),$i(e.alternative,t)),!0})))}function ji(e,t){var n=(t=o(t,{builtins:!1,cache:null,debug:!1,keep_quoted:!1,only_cache:!1,regex:null,reserved:null,undeclared:!1},!0)).reserved;Array.isArray(n)||(n=[n]);var i=new Set(n);t.builtins||function(e){Yi.forEach(i);var t={},n="object"==typeof global?global:self;function i(t){e.add(t)}["Symbol","Map","Promise","Proxy","Reflect","Set","WeakMap","WeakSet"].forEach((function(e){t[e]=n[e]||new Function})),["null","true","false","Infinity","-Infinity","undefined"].forEach(i),[Object,Array,Function,Number,String,Boolean,Error,Math,Date,RegExp,t.Symbol,ArrayBuffer,DataView,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,eval,EvalError,Float32Array,Float64Array,Int8Array,Int16Array,Int32Array,isFinite,isNaN,JSON,t.Map,parseFloat,parseInt,t.Promise,t.Proxy,RangeError,ReferenceError,t.Reflect,t.Set,SyntaxError,TypeError,Uint8Array,Uint8ClampedArray,Uint16Array,Uint32Array,URIError,t.WeakMap,t.WeakSet].forEach((function(e){Object.getOwnPropertyNames(e).map(i),e.prototype&&Object.getOwnPropertyNames(e.prototype).map(i)}))}(i);var r,a=-1;t.cache?(r=t.cache.props).forEach((function(e){i.add(e)})):r=new Map;var s,u=t.regex&&new RegExp(t.regex),c=!1!==t.debug;c&&(s=!0===t.debug?"":t.debug);var l=new Set,f=new Set,p="strict"===t.keep_quoted;return e.walk(new Dn((function(e){if(e instanceof yt)"string"!=typeof e.key||p&&e.quote||m(e.key);else if(e instanceof bt)p&&e.key.end.quote||m(e.key.name);else if(e instanceof _t){var n=!!t.undeclared;if(!n){for(var i=e;i.expression;)i=i.expression;n=!(i.thedef&&i.thedef.undeclared)}!n||p&&e.quote||m(e.property)}else e instanceof dt?p||$i(e.property,m):e instanceof ct&&"Object.defineProperty"==e.expression.print_to_string()&&$i(e.args[1],m)}))),e.transform(new gn((function(e){e instanceof yt?"string"!=typeof e.key||p&&e.quote||(e.key=E(e.key)):e instanceof bt?p&&e.key.end.quote||(e.key.name=E(e.key.name)):e instanceof _t?p&&e.quote||(e.property=E(e.property)):!t.keep_quoted&&e instanceof dt?e.property=h(e.property):e instanceof ct&&"Object.defineProperty"==e.expression.print_to_string()&&(e.args[1]=h(e.args[1]))})));function _(e){return!f.has(e)&&(!i.has(e)&&(t.only_cache?r.has(e):!/^-?[0-9]+(\.[0-9]+)?(e[+-][0-9]+)?$/.test(e)))}function d(e){return!(u&&!u.test(e))&&(!i.has(e)&&(r.has(e)||l.has(e)))}function m(e){_(e)&&l.add(e),d(e)||f.add(e)}function E(e){if(!d(e))return e;var t=r.get(e);if(!t){if(c){var n="_$"+e+"$"+s+"_";_(n)&&(t=n)}if(!t)do{t=In(++a)}while(!_(t));r.set(e,t)}return t}function h(e){return e.transform(new gn((function(e){if(e instanceof ft){var t=e.expressions.length-1;e.expressions[t]=h(e.expressions[t])}else e instanceof nn?e.value=E(e.value):e instanceof gt&&(e.consequent=h(e.consequent),e.alternative=h(e.alternative));return e})))}}var Zi="undefined"==typeof atob?function(e){return Buffer.from(e,"base64").toString()}:atob,Ji="undefined"==typeof btoa?function(e){return Buffer.from(e).toString("base64")}:btoa;function Qi(e,t,n){t[e]&&n.forEach((function(n){t[n]&&("object"!=typeof t[n]&&(t[n]={}),e in t[n]||(t[n][e]=t[e]))}))}function er(e){e&&("props"in e?e.props instanceof Map||(e.props=function(e){var t=new Map;for(var n in e)D(e,n)&&"$"===n.charAt(0)&&t.set(n.substr(1),e[n]);return t}(e.props)):e.props=new Map)}function tr(e){return{props:(t=e.props,n=Object.create(null),t.forEach((function(e,t){n["$"+t]=e})),n)};var t,n}function nr(e,n){var i,r,a=ue.warn_function;try{var s,u=(n=o(n,{compress:{},ecma:void 0,enclose:!1,ie8:!1,keep_classnames:void 0,keep_fnames:!1,mangle:{},module:!1,nameCache:null,output:{},parse:{},rename:void 0,safari10:!1,sourceMap:!1,timings:!1,toplevel:!1,warnings:!1,wrap:!1},!0)).timings&&{start:Date.now()};void 0===n.keep_classnames&&(n.keep_classnames=n.keep_fnames),void 0===n.rename&&(n.rename=n.compress&&n.mangle),Qi("ecma",n,["parse","compress","output"]),Qi("ie8",n,["compress","mangle","output"]),Qi("keep_classnames",n,["compress","mangle"]),Qi("keep_fnames",n,["compress","mangle"]),Qi("module",n,["parse","compress","mangle"]),Qi("safari10",n,["mangle","output"]),Qi("toplevel",n,["compress","mangle"]),Qi("warnings",n,["compress"]),n.mangle&&(n.mangle=o(n.mangle,{cache:n.nameCache&&(n.nameCache.vars||{}),eval:!1,ie8:!1,keep_classnames:!1,keep_fnames:!1,module:!1,properties:!1,reserved:[],safari10:!1,toplevel:!1},!0),n.mangle.properties&&("object"!=typeof n.mangle.properties&&(n.mangle.properties={}),n.mangle.properties.keep_quoted&&(s=n.mangle.properties.reserved,Array.isArray(s)||(s=[]),n.mangle.properties.reserved=s),!n.nameCache||"cache"in n.mangle.properties||(n.mangle.properties.cache=n.nameCache.props||{})),er(n.mangle.cache),er(n.mangle.properties.cache)),n.sourceMap&&(n.sourceMap=o(n.sourceMap,{asObject:!1,content:null,filename:null,includeSources:!1,root:null,url:null},!0));var c,l=[];if(n.warnings&&!ue.warn_function&&(ue.warn_function=function(e){l.push(e)}),u&&(u.parse=Date.now()),e instanceof Me)c=e;else{for(var f in"string"==typeof e&&(e=[e]),n.parse=n.parse||{},n.parse.toplevel=null,e)if(D(e,f)&&(n.parse.filename=f,n.parse.toplevel=oe(e[f],n.parse),n.sourceMap&&"inline"==n.sourceMap.content)){if(Object.keys(e).length>1)throw new Error("inline source map only works with singular input");n.sourceMap.content=(i=e[f],r=void 0,(r=/(?:^|[^.])\/\/# sourceMappingURL=data:application\/json(;[\w=-]*)?;base64,([+/0-9A-Za-z]*=*)\s*$/.exec(i))?Zi(r[2]):(ue.warn("inline source map not found"),null))}c=n.parse.toplevel}s&&"strict"!==n.mangle.properties.keep_quoted&&qi(c,s),n.wrap&&(c=c.wrap_commonjs(n.wrap)),n.enclose&&(c=c.wrap_enclose(n.enclose)),u&&(u.rename=Date.now()),u&&(u.compress=Date.now()),n.compress&&(c=new Wn(n.compress).compress(c)),u&&(u.scope=Date.now()),n.mangle&&c.figure_out_scope(n.mangle),u&&(u.mangle=Date.now()),n.mangle&&(In.reset(),c.compute_char_frequency(n.mangle),c.mangle_names(n.mangle)),u&&(u.properties=Date.now()),n.mangle&&n.mangle.properties&&(c=ji(c,n.mangle.properties)),u&&(u.output=Date.now());var p={};if(n.output.ast&&(p.ast=c),!D(n.output,"code")||n.output.code){if(n.sourceMap&&("string"==typeof n.sourceMap.content&&(n.sourceMap.content=JSON.parse(n.sourceMap.content)),n.output.source_map=function(e){e=o(e,{file:null,root:null,orig:null,orig_line_diff:0,dest_line_diff:0});var n=new t.SourceMapGenerator({file:e.file,sourceRoot:e.root}),i=e.orig&&new t.SourceMapConsumer(e.orig);return i&&i.sources.forEach((function(e){var t=i.sourceContentFor(e,!0);t&&n.setSourceContent(e,t)})),{add:function(t,r,o,a,s,u){if(i){var c=i.originalPositionFor({line:a,column:s});if(null===c.source)return;t=c.source,a=c.line,s=c.column,u=c.name||u}n.addMapping({generated:{line:r+e.dest_line_diff,column:o},original:{line:a+e.orig_line_diff,column:s},source:t,name:u})},get:function(){return n},toString:function(){return JSON.stringify(n.toJSON())}}}({file:n.sourceMap.filename,orig:n.sourceMap.content,root:n.sourceMap.root}),n.sourceMap.includeSources)){if(e instanceof Me)throw new Error("original source content unavailable");for(var f in e)D(e,f)&&n.output.source_map.get().setSourceContent(f,e[f])}delete n.output.ast,delete n.output.code;var _=Fn(n.output);if(c.print(_),p.code=_.get(),n.sourceMap)if(n.sourceMap.asObject?p.map=n.output.source_map.get().toJSON():p.map=n.output.source_map.toString(),"inline"==n.sourceMap.url){var d="object"==typeof p.map?JSON.stringify(p.map):p.map;p.code+="\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,"+Ji(d)}else n.sourceMap.url&&(p.code+="\n//# sourceMappingURL="+n.sourceMap.url)}return n.nameCache&&n.mangle&&(n.mangle.cache&&(n.nameCache.vars=tr(n.mangle.cache)),n.mangle.properties&&n.mangle.properties.cache&&(n.nameCache.props=tr(n.mangle.properties.cache))),u&&(u.end=Date.now(),p.timings={parse:.001*(u.rename-u.parse),rename:.001*(u.compress-u.rename),compress:.001*(u.scope-u.compress),scope:.001*(u.mangle-u.scope),mangle:.001*(u.properties-u.mangle),properties:.001*(u.output-u.properties),output:.001*(u.end-u.output),total:.001*(u.end-u.start)}),l.length&&(p.warnings=l),p}catch(e){return{error:e}}finally{ue.warn_function=a}}function ir(e){var t=nr("",e);return t.error&&t.error.defs}!function(){var e=function(e){for(var t=!0,n=0;n<e.length;n++)t&&e[n]instanceof ce&&e[n].body instanceof nn?e[n]=new fe({start:e[n].start,end:e[n].end,value:e[n].body.value}):!t||e[n]instanceof ce&&e[n].body instanceof nn||(t=!1);return e},t={Program:function(t){return new Me({start:i(t),end:r(t),body:e(t.body.map(s))})},ArrayPattern:function(e){return new Le({start:i(e),end:r(e),names:e.elements.map((function(e){return null===e?new fn:s(e)})),is_array:!0})},ObjectPattern:function(e){return new Le({start:i(e),end:r(e),names:e.properties.map(s),is_array:!1})},AssignmentPattern:function(e){var t=Dt;if(a.length>2){var n=a[a.length-2];"FunctionDeclaration"!==n.type&&"FunctionExpression"!==n.type&&"ArrowFunctionExpression"!==n.type||(t=At)}return new t({start:i(e),end:r(e),left:s(e.left),operator:"=",right:s(e.right)})},SpreadElement:function(e){return new Re({start:i(e),end:r(e),expression:s(e.argument)})},RestElement:function(e){return new Re({start:i(e),end:r(e),expression:s(e.argument)})},TemplateElement:function(e){return new Be({start:i(e),end:r(e),value:e.value.cooked,raw:e.value.raw})},TemplateLiteral:function(e){for(var t=[],n=0;n<e.quasis.length;n++)t.push(s(e.quasis[n])),e.expressions[n]&&t.push(s(e.expressions[n]));return new Pe({start:i(e),end:r(e),segments:t})},TaggedTemplateExpression:function(e){return new Ve({start:i(e),end:r(e),template_string:s(e.quasi),prefix:s(e.tag)})},FunctionDeclaration:function(t){return new Ie({start:i(t),end:r(t),name:s(t.id),argnames:t.params.map(s),is_generator:t.generator,async:t.async,body:e(s(t.body).body)})},FunctionExpression:function(t){return new xe({start:i(t),end:r(t),name:s(t.id),argnames:t.params.map(s),is_generator:t.generator,async:t.async,body:e(s(t.body).body)})},ArrowFunctionExpression:function(e){return new ke({start:i(e),end:r(e),argnames:e.params.map(s),body:s(e.body),async:e.async})},ExpressionStatement:function(e){return new pe({start:i(e),end:r(e),body:s(e.expression)})},TryStatement:function(e){var t=e.handlers||[e.handler];if(t.length>1||e.guardedHandlers&&e.guardedHandlers.length)throw new Error("Multiple catch clauses are not supported.");return new Je({start:i(e),end:r(e),body:s(e.block).body,bcatch:s(t[0]),bfinally:e.finalizer?new et(s(e.finalizer)):null})},Property:function(e){var t=e.key,n={start:i(t||e.value),end:r(e.value),key:"Identifier"==t.type?t.name:t.value,value:s(e.value)};return e.computed&&(n.key=s(e.key)),e.method?(n.is_generator=e.value.generator,n.async=e.value.async,e.computed?n.key=s(e.key):n.key=new Ut({name:n.key}),new Ft(n)):"init"==e.kind?("Identifier"!=t.type&&"Literal"!=t.type&&(n.key=s(t)),new yt(n)):("string"!=typeof n.key&&"number"!=typeof n.key||(n.key=new Ut({name:n.key})),n.value=new Ne(n.value),"get"==e.kind?new Ot(n):"set"==e.kind?new Ct(n):"method"==e.kind?(n.async=e.value.async,n.is_generator=e.value.generator,n.quote=e.computed?'"':null,new Ft(n)):void 0)},MethodDefinition:function(e){var t={start:i(e),end:r(e),key:e.computed?s(e.key):new Ut({name:e.key.name||e.key.value}),value:s(e.value),static:e.static};return"get"==e.kind?new Ot(t):"set"==e.kind?new Ct(t):(t.is_generator=e.value.generator,t.async=e.value.async,new Ft(t))},ArrayExpression:function(e){return new vt({start:i(e),end:r(e),elements:e.elements.map((function(e){return null===e?new fn:s(e)}))})},ObjectExpression:function(e){return new Tt({start:i(e),end:r(e),properties:e.properties.map((function(e){return"SpreadElement"===e.type?s(e):(e.type="Property",s(e))}))})},SequenceExpression:function(e){return new ft({start:i(e),end:r(e),expressions:e.expressions.map(s)})},MemberExpression:function(e){return new(e.computed?dt:_t)({start:i(e),end:r(e),property:e.computed?s(e.property):e.property.name,expression:s(e.object)})},SwitchCase:function(e){return new(e.test?Ze:je)({start:i(e),end:r(e),expression:s(e.test),body:e.consequent.map(s)})},VariableDeclaration:function(e){return new("const"===e.kind?rt:"let"===e.kind?it:nt)({start:i(e),end:r(e),definitions:e.declarations.map(s)})},ImportDeclaration:function(e){var t=null,n=null;return e.specifiers.forEach((function(e){"ImportSpecifier"===e.type?(n||(n=[]),n.push(new ot({start:i(e),end:r(e),foreign_name:s(e.imported),name:s(e.local)}))):"ImportDefaultSpecifier"===e.type?t=s(e.local):"ImportNamespaceSpecifier"===e.type&&(n||(n=[]),n.push(new ot({start:i(e),end:r(e),foreign_name:new Yt({name:"*"}),name:s(e.local)})))})),new at({start:i(e),end:r(e),imported_name:t,imported_names:n,module_name:s(e.source)})},ExportAllDeclaration:function(e){return new st({start:i(e),end:r(e),exported_names:[new ot({name:new Zt({name:"*"}),foreign_name:new Zt({name:"*"})})],module_name:s(e.source)})},ExportNamedDeclaration:function(e){return new st({start:i(e),end:r(e),exported_definition:s(e.declaration),exported_names:e.specifiers&&e.specifiers.length?e.specifiers.map((function(e){return new ot({foreign_name:s(e.exported),name:s(e.local)})})):null,module_name:s(e.source)})},ExportDefaultDeclaration:function(e){return new st({start:i(e),end:r(e),exported_value:s(e.declaration),is_default:!0})},Literal:function(e){var t=e.value,n={start:i(e),end:r(e)},o=e.regex;if(o&&o.pattern)return n.value={source:o.pattern,flags:o.flags},new an(n);if(o){const i=e.raw||t,r=i.match(/^\/(.*)\/(\w*)$/);if(!r)throw new Error("Invalid regex source "+i);const[o,a,s]=r;return n.value={source:a,flags:s},new an(n)}if(null===t)return new un(n);switch(typeof t){case"string":return n.value=t,new nn(n);case"number":return n.value=t,new rn(n);case"boolean":return new(t?mn:dn)(n)}},MetaProperty:function(e){if("new"===e.meta.name&&"target"===e.property.name)return new xt({start:i(e),end:r(e)})},Identifier:function(e){var t=a[a.length-2];return new("LabeledStatement"==t.type?qt:"VariableDeclarator"==t.type&&t.id===e?"const"==t.kind?Vt:"let"==t.kind?Pt:It:/Import.*Specifier/.test(t.type)?t.local===e?Wt:Yt:"ExportSpecifier"==t.type?t.local===e?jt:Zt:"FunctionExpression"==t.type?t.id===e?Gt:Bt:"FunctionDeclaration"==t.type?t.id===e?Kt:Bt:"ArrowFunctionExpression"==t.type?t.params.includes(e)?Bt:$t:"ClassExpression"==t.type?t.id===e?Xt:$t:"Property"==t.type?t.key===e&&t.computed||t.value===e?$t:Ut:"ClassDeclaration"==t.type?t.id===e?Ht:$t:"MethodDefinition"==t.type?t.computed?$t:Ut:"CatchClause"==t.type?zt:"BreakStatement"==t.type||"ContinueStatement"==t.type?Jt:$t)({start:i(e),end:r(e),name:e.name})},BigIntLiteral:e=>new on({start:i(e),end:r(e),value:e.value})};function n(e){if("Literal"==e.type)return null!=e.raw?e.raw:e.value+""}function i(e){var t=e.loc,i=t&&t.start,r=e.range;return new se({file:t&&t.source,line:i&&i.line,col:i&&i.column,pos:r?r[0]:e.start,endline:i&&i.line,endcol:i&&i.column,endpos:r?r[0]:e.start,raw:n(e)})}function r(e){var t=e.loc,i=t&&t.end,r=e.range;return new se({file:t&&t.source,line:i&&i.line,col:i&&i.column,pos:r?r[1]:e.end,endline:i&&i.line,endcol:i&&i.column,endpos:r?r[1]:e.end,raw:n(e)})}function o(e,n,o){var a="function From_Moz_"+e+"(M){\n";a+="return new U2."+n.name+"({\nstart: my_start_token(M),\nend: my_end_token(M)";var c="function To_Moz_"+e+"(M){\n";c+="return {\ntype: "+JSON.stringify(e),o&&o.split(/\s*,\s*/).forEach((function(e){var t=/([a-z0-9$_]+)([=@>%])([a-z0-9$_]+)/i.exec(e);if(!t)throw new Error("Can't understand property map: "+e);var n=t[1],i=t[2],r=t[3];switch(a+=",\n"+r+": ",c+=",\n"+n+": ",i){case"@":a+="M."+n+".map(from_moz)",c+="M."+r+".map(to_moz)";break;case">":a+="from_moz(M."+n+")",c+="to_moz(M."+r+")";break;case"=":a+="M."+n,c+="M."+r;break;case"%":a+="from_moz(M."+n+").body",c+="to_moz_block(M)";break;default:throw new Error("Can't understand operator in propmap: "+e)}})),a+="\n})\n}",c+="\n}\n}",a=new Function("U2","my_start_token","my_end_token","from_moz","return("+a+")")(Sn,i,r,s),c=new Function("to_moz","to_moz_block","to_moz_scope","return("+c+")")(l,p,_),t[e]=a,u(n,c)}t.UpdateExpression=t.UnaryExpression=function(e){return new(("prefix"in e?e.prefix:"UnaryExpression"==e.type)?Et:ht)({start:i(e),end:r(e),operator:e.operator,expression:s(e.argument)})},t.ClassDeclaration=t.ClassExpression=function(e){return new("ClassDeclaration"===e.type?Rt:wt)({start:i(e),end:r(e),name:s(e.id),extends:s(e.superClass),properties:e.body.body.map(s)})},o("EmptyStatement",he),o("BlockStatement",Ee,"body@body"),o("IfStatement",Ye,"test>condition, consequent>body, alternate>alternative"),o("LabeledStatement",ge,"label>label, body>body"),o("BreakStatement",ze,"label>label"),o("ContinueStatement",We,"label>label"),o("WithStatement",Oe,"object>expression, body>body"),o("SwitchStatement",qe,"discriminant>expression, cases@body"),o("ReturnStatement",Ge,"argument>value"),o("ThrowStatement",He,"argument>value"),o("WhileStatement",Te,"test>condition, body>body"),o("DoWhileStatement",ve,"test>condition, body>body"),o("ForStatement",be,"init>init, test>condition, update>step, body>body"),o("ForInStatement",ye,"left>init, right>object, body>body"),o("ForOfStatement",Ce,"left>init, right>object, body>body, await=await"),o("AwaitExpression",En,"argument>expression"),o("YieldExpression",hn,"argument>expression, delegate=is_star"),o("DebuggerStatement",le),o("VariableDeclarator",ut,"id>name, init>value"),o("CatchClause",Qe,"param>argname, body%body"),o("ThisExpression",Qt),o("Super",en),o("BinaryExpression",Dt,"operator=operator, left>left, right>right"),o("LogicalExpression",Dt,"operator=operator, left>left, right>right"),o("AssignmentExpression",St,"operator=operator, left>left, right>right"),o("ConditionalExpression",gt,"test>condition, consequent>consequent, alternate>alternative"),o("NewExpression",lt,"callee>expression, arguments@args"),o("CallExpression",ct,"callee>expression, arguments@args"),u(Me,(function(e){return _("Program",e)})),u(Re,(function(e,t){return{type:f()?"RestElement":"SpreadElement",argument:l(e.expression)}})),u(Ve,(function(e){return{type:"TaggedTemplateExpression",tag:l(e.prefix),quasi:l(e.template_string)}})),u(Pe,(function(e){for(var t=[],n=[],i=0;i<e.segments.length;i++)i%2!=0?n.push(l(e.segments[i])):t.push({type:"TemplateElement",value:{raw:e.segments[i].raw,cooked:e.segments[i].value},tail:i===e.segments.length-1});return{type:"TemplateLiteral",quasis:t,expressions:n}})),u(Ie,(function(e){return{type:"FunctionDeclaration",id:l(e.name),params:e.argnames.map(l),generator:e.is_generator,async:e.async,body:_("BlockStatement",e)}})),u(xe,(function(e,t){var n=void 0!==t.is_generator?t.is_generator:e.is_generator;return{type:"FunctionExpression",id:l(e.name),params:e.argnames.map(l),generator:n,async:e.async,body:_("BlockStatement",e)}})),u(ke,(function(e){var t=e.body instanceof Array?{type:"BlockStatement",body:e.body.map(l)}:l(e.body);return{type:"ArrowFunctionExpression",params:e.argnames.map(l),async:e.async,body:t}})),u(Le,(function(e){return e.is_array?{type:"ArrayPattern",elements:e.names.map(l)}:{type:"ObjectPattern",properties:e.names.map(l)}})),u(fe,(function(e){return{type:"ExpressionStatement",expression:{type:"Literal",value:e.value}}})),u(pe,(function(e){return{type:"ExpressionStatement",expression:l(e.body)}})),u($e,(function(e){return{type:"SwitchCase",test:l(e.expression),consequent:e.body.map(l)}})),u(Je,(function(e){return{type:"TryStatement",block:p(e),handler:l(e.bcatch),guardedHandlers:[],finalizer:l(e.bfinally)}})),u(Qe,(function(e){return{type:"CatchClause",param:l(e.argname),guard:null,body:p(e)}})),u(tt,(function(e){return{type:"VariableDeclaration",kind:e instanceof rt?"const":e instanceof it?"let":"var",declarations:e.definitions.map(l)}})),u(st,(function(e){return e.exported_names?"*"===e.exported_names[0].name.name?{type:"ExportAllDeclaration",source:l(e.module_name)}:{type:"ExportNamedDeclaration",specifiers:e.exported_names.map((function(e){return{type:"ExportSpecifier",exported:l(e.foreign_name),local:l(e.name)}})),declaration:l(e.exported_definition),source:l(e.module_name)}:{type:e.is_default?"ExportDefaultDeclaration":"ExportNamedDeclaration",declaration:l(e.exported_value||e.exported_definition)}})),u(at,(function(e){var t=[];return e.imported_name&&t.push({type:"ImportDefaultSpecifier",local:l(e.imported_name)}),e.imported_names&&"*"===e.imported_names[0].foreign_name.name?t.push({type:"ImportNamespaceSpecifier",local:l(e.imported_names[0].name)}):e.imported_names&&e.imported_names.forEach((function(e){t.push({type:"ImportSpecifier",local:l(e.name),imported:l(e.foreign_name)})})),{type:"ImportDeclaration",specifiers:t,source:l(e.module_name)}})),u(ft,(function(e){return{type:"SequenceExpression",expressions:e.expressions.map(l)}})),u(pt,(function(e){var t=e instanceof dt;return{type:"MemberExpression",object:l(e.expression),computed:t,property:t?l(e.property):{type:"Identifier",name:e.property}}})),u(mt,(function(e){return{type:"++"==e.operator||"--"==e.operator?"UpdateExpression":"UnaryExpression",operator:e.operator,prefix:e instanceof Et,argument:l(e.expression)}})),u(Dt,(function(e){return"="==e.operator&&f()?{type:"AssignmentPattern",left:l(e.left),right:l(e.right)}:{type:"&&"==e.operator||"||"==e.operator?"LogicalExpression":"BinaryExpression",left:l(e.left),operator:e.operator,right:l(e.right)}})),u(vt,(function(e){return{type:"ArrayExpression",elements:e.elements.map(l)}})),u(Tt,(function(e){return{type:"ObjectExpression",properties:e.properties.map(l)}})),u(bt,(function(e,t){var n,i=e.key instanceof ue?l(e.key):{type:"Identifier",value:e.key};"number"==typeof e.key&&(i={type:"Literal",value:Number(e.key)}),"string"==typeof e.key&&(i={type:"Identifier",name:e.key});var r="string"==typeof e.key||"number"==typeof e.key,o=!r&&(!(e.key instanceof Nt)||e.key instanceof $t);return e instanceof yt?(n="init",o=!r):e instanceof Ot?n="get":e instanceof Ct&&(n="set"),t instanceof Mt?{type:"MethodDefinition",computed:o,kind:n,static:e.static,key:l(e.key),value:l(e.value)}:{type:"Property",computed:o,kind:n,key:i,value:l(e.value)}})),u(Ft,(function(e,t){return t instanceof Tt?{type:"Property",computed:!(e.key instanceof Nt)||e.key instanceof $t,kind:"init",method:!0,shorthand:!1,key:l(e.key),value:l(e.value)}:{type:"MethodDefinition",computed:!(e.key instanceof Nt)||e.key instanceof $t,kind:"constructor"===e.key?"constructor":"method",static:e.static,key:l(e.key),value:l(e.value)}})),u(Mt,(function(e){return{type:e instanceof wt?"ClassExpression":"ClassDeclaration",superClass:l(e.extends),id:e.name?l(e.name):null,body:{type:"ClassBody",body:e.properties.map(l)}}})),u(xt,(function(e){return{type:"MetaProperty",meta:{type:"Identifier",name:"new"},property:{type:"Identifier",name:"target"}}})),u(Nt,(function(e,t){if(e instanceof Ut&&t.quote)return{type:"Literal",value:e.name};var n=e.definition();return{type:"Identifier",name:n?n.mangled_name||n.name:e.name}})),u(an,(function(e){const t=e.value.source,n=e.value.flags;return{type:"Literal",value:null,raw:e.print_to_string(),regex:{pattern:t,flags:n}}})),u(tn,(function(e){var t=e.value;return"number"==typeof t&&(t<0||0===t&&1/t<0)?{type:"UnaryExpression",operator:"-",prefix:!0,argument:{type:"Literal",value:-t,raw:e.start.raw}}:{type:"Literal",value:t,raw:e.start.raw}})),u(sn,(function(e){return{type:"Identifier",name:String(e.value)}})),u(on,e=>({type:"BigIntLiteral",value:e.value})),_n.DEFMETHOD("to_mozilla_ast",tn.prototype.to_mozilla_ast),un.DEFMETHOD("to_mozilla_ast",tn.prototype.to_mozilla_ast),fn.DEFMETHOD("to_mozilla_ast",(function(){return null})),me.DEFMETHOD("to_mozilla_ast",Ee.prototype.to_mozilla_ast),we.DEFMETHOD("to_mozilla_ast",xe.prototype.to_mozilla_ast);var a=null;function s(e){a.push(e);var n=null!=e?t[e.type](e):null;return a.pop(),n}function u(e,t){e.DEFMETHOD("to_mozilla_ast",(function(e){return n=this,i=t(this,e),r=n.start,o=n.end,r&&o?(null!=r.pos&&null!=o.endpos&&(i.range=[r.pos,o.endpos]),r.line&&(i.loc={start:{line:r.line,column:r.col},end:o.endline?{line:o.endline,column:o.endcol}:null},r.file&&(i.loc.source=r.file)),i):i;var n,i,r,o}))}ue.from_mozilla_ast=function(e){var t=a;a=[];var n=s(e);return a=t,n};var c=null;function l(e){null===c&&(c=[]),c.push(e);var t=null!=e?e.to_mozilla_ast(c[c.length-2]):null;return c.pop(),0===c.length&&(c=null),t}function f(){for(var e=c.length;e--;)if(c[e]instanceof Le)return!0;return!1}function p(e){return{type:"BlockStatement",body:e.body.map(l)}}function _(e,t){var n=t.body.map(l);return t.body[0]instanceof pe&&t.body[0].body instanceof nn&&n.unshift(l(new he(t.body[0]))),{type:e,body:n}}}(),e.AST_Accessor=Ne,e.AST_Array=vt,e.AST_Arrow=ke,e.AST_Assign=St,e.AST_Atom=sn,e.AST_Await=En,e.AST_Binary=Dt,e.AST_Block=me,e.AST_BlockStatement=Ee,e.AST_Boolean=_n,e.AST_Break=ze,e.AST_Call=ct,e.AST_Case=Ze,e.AST_Catch=Qe,e.AST_Class=Mt,e.AST_ClassExpression=wt,e.AST_ConciseMethod=Ft,e.AST_Conditional=gt,e.AST_Const=rt,e.AST_Constant=tn,e.AST_Continue=We,e.AST_DWLoop=Ae,e.AST_Debugger=le,e.AST_DefClass=Rt,e.AST_Default=je,e.AST_DefaultAssign=At,e.AST_Definitions=tt,e.AST_Defun=Ie,e.AST_Destructuring=Le,e.AST_Directive=fe,e.AST_Do=ve,e.AST_Dot=_t,e.AST_EmptyStatement=he,e.AST_Exit=Ue,e.AST_Expansion=Re,e.AST_Export=st,e.AST_False=dn,e.AST_Finally=et,e.AST_For=be,e.AST_ForIn=ye,e.AST_ForOf=Ce,e.AST_Function=xe,e.AST_Hole=fn,e.AST_If=Ye,e.AST_Import=at,e.AST_Infinity=pn,e.AST_IterationStatement=Se,e.AST_Jump=Ke,e.AST_Label=qt,e.AST_LabelRef=Jt,e.AST_LabeledStatement=ge,e.AST_Lambda=we,e.AST_Let=it,e.AST_LoopControl=Xe,e.AST_NaN=cn,e.AST_NameMapping=ot,e.AST_New=lt,e.AST_NewTarget=xt,e.AST_Node=ue,e.AST_Null=un,e.AST_Number=rn,e.AST_Object=Tt,e.AST_ObjectGetter=Ot,e.AST_ObjectKeyVal=yt,e.AST_ObjectProperty=bt,e.AST_ObjectSetter=Ct,e.AST_PrefixedTemplateString=Ve,e.AST_PropAccess=pt,e.AST_RegExp=an,e.AST_Return=Ge,e.AST_Scope=Fe,e.AST_Sequence=ft,e.AST_SimpleStatement=pe,e.AST_Statement=ce,e.AST_StatementWithBody=De,e.AST_String=nn,e.AST_Sub=dt,e.AST_Super=en,e.AST_Switch=qe,e.AST_SwitchBranch=$e,e.AST_Symbol=Nt,e.AST_SymbolBlockDeclaration=Lt,e.AST_SymbolCatch=zt,e.AST_SymbolClass=Xt,e.AST_SymbolConst=Vt,e.AST_SymbolDeclaration=kt,e.AST_SymbolDefClass=Ht,e.AST_SymbolDefun=Kt,e.AST_SymbolExport=jt,e.AST_SymbolExportForeign=Zt,e.AST_SymbolFunarg=Bt,e.AST_SymbolImport=Wt,e.AST_SymbolImportForeign=Yt,e.AST_SymbolLambda=Gt,e.AST_SymbolLet=Pt,e.AST_SymbolMethod=Ut,e.AST_SymbolRef=$t,e.AST_SymbolVar=It,e.AST_TemplateSegment=Be,e.AST_TemplateString=Pe,e.AST_This=Qt,e.AST_Throw=He,e.AST_Token=se,e.AST_Toplevel=Me,e.AST_True=mn,e.AST_Try=Je,e.AST_Unary=mt,e.AST_UnaryPostfix=ht,e.AST_UnaryPrefix=Et,e.AST_Undefined=ln,e.AST_Var=nt,e.AST_VarDef=ut,e.AST_While=Te,e.AST_With=Oe,e.AST_Yield=hn,e.Compressor=Wn,e.OutputStream=Fn,e.TreeTransformer=gn,e.TreeWalker=Dn,e._JS_Parse_Error=$,e._tokenizer=Q,e.base54=In,e.default_options=function(){const e={};return Object.keys(ir({0:0})).forEach(t=>{const n=ir({[t]:{0:0}});n&&(e[t]=n)}),e},e.defaults=o,e.mangle_properties=ji,e.minify=nr,e.parse=oe,e.push_uniq=p,e.reserve_quoted_keys=qi,e.string_template=_,e.to_ascii=Zi}));
+
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
+},{"buffer":4,"source-map":142}]},{},["html-minifier"]);

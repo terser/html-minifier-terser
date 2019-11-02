@@ -3,11 +3,10 @@
 const path = require('path');
 const { runQunitPuppeteer, printOutput, printFailedTests } = require('./node_modules/node-qunit-puppeteer/index.js');
 
-const Console = console;
 const args = process.argv.slice(2);
 
 if (args.length < 1 || args.length > 3) {
-  Console.log('Usage: node-qunit-puppeteer <URL> [<timeout>] [<puppeteerArgs>]');
+  console.log('Usage: node-qunit-puppeteer <URL> [<timeout>] [<puppeteerArgs>]');
   process.exit(1);
 }
 
@@ -26,7 +25,7 @@ if (targetUrl.indexOf('http://') === 0 || targetUrl.indexOf('https://') === 0) {
 const qunitArgs = {
   targetUrl,
   timeout: parseInt(args[1] || 30000, 10),
-  redirectConsole: false,
+  redirectconsole: false,
 };
 
 const puppeteerArgsStr = args[2];
@@ -34,7 +33,7 @@ if (typeof puppeteerArgsStr === 'string') {
   const puppeteerArgs = puppeteerArgsStr.split(/(\s+)/).filter(s => s.trim().length > 0);
   if (args.length > 0) {
     qunitArgs.puppeteerArgs = puppeteerArgs;
-    Console.log(`Puppeteer args are: ${puppeteerArgs.join(' ')}`);
+    console.log(`Puppeteer args are: ${puppeteerArgs.join(' ')}`);
   }
 }
 
@@ -42,15 +41,15 @@ runQunitPuppeteer(qunitArgs)
   .then((result) => {
     var output = {passed:result.stats.passed,failed:result.stats.failed,total:result.stats.total,runtime:result.stats.runtime,failures:[]};
     
-    Console.log(JSON.stringify(output));
+    console.log(JSON.stringify(output));
     if (result.stats.failed > 0) {
       // Handle the failed test run
-      printFailedTests(result, Console);
+      printFailedTests(result, console);
     } else {
       process.exit(0);
     }
   })
   .catch((ex) => {
-    Console.error(ex);
+    console.error(ex);
     process.exit(1);
   });

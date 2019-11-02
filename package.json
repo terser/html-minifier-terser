@@ -1,5 +1,5 @@
 {
-  "name": "html-minifier",
+  "name": "html-minifier-terser",
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "version": "4.0.0",
   "keywords": [
@@ -24,9 +24,10 @@
     "uglifier",
     "uglify"
   ],
-  "homepage": "https://kangax.github.io/html-minifier/",
-  "author": "Juriy \"kangax\" Zaytsev",
+  "homepage": "https://danielruf.github.io/html-minifier-terser/",
+  "author": "Daniel Ruf",
   "maintainers": [
+    "Daniel Ruf <daniel@daniel-ruf.de",
     "Alex Lam <alexlamsl@gmail.com>",
     "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)"
   ],
@@ -42,10 +43,10 @@
   "main": "src/htmlminifier.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kangax/html-minifier.git"
+    "url": "git+https://github.com/DanielRuf/html-minifier-terser.git"
   },
   "bugs": {
-    "url": "https://github.com/kangax/html-minifier/issues"
+    "url": "https://github.com/DanielRuf/html-minifier-terser/issues"
   },
   "engines": {
     "node": ">=6"

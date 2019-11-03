@@ -1,6 +1,6 @@
 /*!
- * HTMLMinifier v4.0.0 (https://kangax.github.io/html-minifier/)
- * Copyright 2010-2019 Juriy "kangax" Zaytsev
+ * HTMLMinifier v5.0.0 (https://danielruf.github.io/html-minifier-terser/)
+ * Copyright 2010-2019 Daniel Ruf
  * Licensed under the MIT license
  */
 
@@ -25334,7 +25334,7 @@ exports.createMapFromString = function(values, ignoreCase) {
   return createMap(values.split(/,/), ignoreCase);
 };
 
-},{}],"html-minifier":[function(require,module,exports){
+},{}],"html-minifier-terser":[function(require,module,exports){
 'use strict';
 
 var CleanCSS = require('clean-css');
@@ -26686,4 +26686,4 @@ exports.minify = function(value, options) {
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":4,"source-map":142}]},{},["html-minifier"]);
+},{"buffer":4,"source-map":142}]},{},["html-minifier-terser"]);

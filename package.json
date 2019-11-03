@@ -38,7 +38,7 @@
   ],
   "license": "MIT",
   "bin": {
-    "html-minifier": "./cli.js"
+    "html-minifier-terser": "./cli.js"
   },
   "main": "src/htmlminifier.js",
   "repository": {

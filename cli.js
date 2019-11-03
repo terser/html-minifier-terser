@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * html-minifier CLI tool
+ * html-minifier-terser CLI tool
  *
  * The MIT License (MIT)
  *

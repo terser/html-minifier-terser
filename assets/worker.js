@@ -2,7 +2,7 @@
   'use strict';
 
   importScripts('../dist/htmlminifier.min.js');
-  var minify = require('html-minifier').minify;
+  var minify = require('html-minifier-terser').minify;
   addEventListener('message', function(event) {
     try {
       var options = event.data.options;

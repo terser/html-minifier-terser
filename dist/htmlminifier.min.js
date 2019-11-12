@@ -1,5 +1,5 @@
 /*!
- * HTMLMinifier v5.0.1 (https://danielruf.github.io/html-minifier-terser/)
+ * HTMLMinifier v5.0.2 (https://danielruf.github.io/html-minifier-terser/)
  * Copyright 2010-2019 Daniel Ruf
  * Licensed under the MIT license
  */

@@ -49,7 +49,7 @@
     "url": "https://github.com/DanielRuf/html-minifier-terser/issues"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=6"
   },
   "scripts": {
     "dist": "grunt dist",

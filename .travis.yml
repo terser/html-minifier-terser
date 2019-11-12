@@ -4,6 +4,8 @@ matrix:
   fast_finish: true
 
 node_js:
+  - "6"
+  - "8"
   - "10"
   - "12"
   - "node"

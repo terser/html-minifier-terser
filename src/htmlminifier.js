@@ -160,7 +160,8 @@ var executableScriptsMimetypes = utils.createMap([
   'text/jscript',
   'application/javascript',
   'application/x-javascript',
-  'application/ecmascript'
+  'application/ecmascript',
+  'module'
 ]);
 
 function isScriptTypeAttribute(attrValue) {

@@ -1,6 +1,6 @@
 /*!
- * HTMLMinifier v5.0.2 (https://danielruf.github.io/html-minifier-terser/)
- * Copyright 2010-2019 Daniel Ruf
+ * HTMLMinifier v5.0.3 (https://danielruf.github.io/html-minifier-terser/)
+ * Copyright 2010-2020 Daniel Ruf
  * Licensed under the MIT license
  */
 
@@ -25497,7 +25497,8 @@ var executableScriptsMimetypes = utils.createMap([
   'text/jscript',
   'application/javascript',
   'application/x-javascript',
-  'application/ecmascript'
+  'application/ecmascript',
+  'module'
 ]);
 
 function isScriptTypeAttribute(attrValue) {

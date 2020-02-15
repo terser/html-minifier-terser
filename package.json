@@ -58,7 +58,7 @@
   "dependencies": {
     "camel-case": "^4.1.1",
     "clean-css": "^4.2.1",
-    "commander": "^4.0.0",
+    "commander": "^4.1.1",
     "he": "^1.2.0",
     "param-case": "^3.0.3",
     "relateurl": "^0.2.7",

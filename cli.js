@@ -27,11 +27,11 @@
 
 'use strict';
 
-var camelCase = require('camel-case');
+var camelCase = require('camel-case').camelCase;
 var fs = require('fs');
 var info = require('./package.json');
 var minify = require('./' + info.main).minify;
-var paramCase = require('param-case');
+var paramCase = require('param-case').paramCase;
 var path = require('path');
 var program = require('commander');
 

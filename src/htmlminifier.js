@@ -645,7 +645,10 @@ function processOptions(values) {
     canCollapseWhitespace: canCollapseWhitespace,
     canTrimWhitespace: canTrimWhitespace,
     html5: true,
-    ignoreCustomComments: [/^!/],
+    ignoreCustomComments: [
+      /^!/,
+      /^\s*#/
+    ],
     ignoreCustomFragments: [
       /<%[\s\S]*?%>/,
       /<\?[\s\S]*?\?>/

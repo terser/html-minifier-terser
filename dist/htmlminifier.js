@@ -1,5 +1,5 @@
 /*!
- * HTMLMinifier v5.0.5 (https://danielruf.github.io/html-minifier-terser/)
+ * HTMLMinifier v5.1.0 (https://danielruf.github.io/html-minifier-terser/)
  * Copyright 2010-2020 Daniel Ruf
  * Licensed under the MIT license
  */
@@ -26083,7 +26083,10 @@ function processOptions(values) {
     canCollapseWhitespace: canCollapseWhitespace,
     canTrimWhitespace: canTrimWhitespace,
     html5: true,
-    ignoreCustomComments: [/^!/],
+    ignoreCustomComments: [
+      /^!/,
+      /^\s*#/
+    ],
     ignoreCustomFragments: [
       /<%[\s\S]*?%>/,
       /<\?[\s\S]*?\?>/

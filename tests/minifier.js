@@ -2802,13 +2802,10 @@ QUnit.test('ignore custom comments', function(assert) {
   }), input);
 
   input = '<!--#include virtual="/cgi-bin/counter.pl" -->';
-  assert.equal(minify(input, {
-    removeComments: true,
-    // ignore Apache SSI includes
-    ignoreCustomComments: [
-      /^\s*#/
-    ]
-  }), input);
+  assert.equal(minify(input), input);
+  assert.equal(minify(input, { removeComments: true }), input);
+  assert.equal(minify(input, { removeComments: true, ignoreCustomComments: false }), '');
+  assert.equal(minify(input, { removeComments: true, ignoreCustomComments: [] }), '');
 });
 
 QUnit.test('processScripts', function(assert) {

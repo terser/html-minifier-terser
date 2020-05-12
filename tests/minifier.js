@@ -1108,6 +1108,11 @@ QUnit.test('removing javascript type attributes', function(assert) {
   output = '<script>alert(1)</script>';
   assert.equal(minify(input, { removeScriptTypeAttributes: true }), output);
 
+  input = '<script type="modules">alert(1)</script>';
+  assert.equal(minify(input, { removeScriptTypeAttributes: false }), input);
+  output = '<script type="modules">alert(1)</script>';
+  assert.equal(minify(input, { removeScriptTypeAttributes: true }), output);
+
   input = '<script type="text/javascript">alert(1)</script>';
   assert.equal(minify(input, { removeScriptTypeAttributes: false }), input);
   output = '<script>alert(1)</script>';
@@ -1162,6 +1167,9 @@ QUnit.test('removing attribute quotes', function(assert) {
 
   input = '<input value="hello world">';
   assert.equal(minify(input, { removeAttributeQuotes: true }), '<input value="hello world">');
+
+  input = '<script type="module">alert(1);</script>';
+  assert.equal(minify(input, { removeAttributeQuotes: true }), '<script type=module>alert(1);</script>');
 
   input = '<a href="#" title="foo#bar">x</a>';
   assert.equal(minify(input, { removeAttributeQuotes: true }), '<a href=# title=foo#bar>x</a>');

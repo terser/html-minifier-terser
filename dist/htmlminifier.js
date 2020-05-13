@@ -1,5 +1,5 @@
 /*!
- * HTMLMinifier v5.1.0 (https://danielruf.github.io/html-minifier-terser/)
+ * HTMLMinifier v5.1.1 (https://danielruf.github.io/html-minifier-terser/)
  * Copyright 2010-2020 Daniel Ruf
  * Licensed under the MIT license
  */
@@ -25602,9 +25602,18 @@ var executableScriptsMimetypes = utils.createMap([
   'module'
 ]);
 
+var keepScriptsMimetypes = utils.createMap([
+  'module'
+]);
+
 function isScriptTypeAttribute(attrValue) {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
   return attrValue === '' || executableScriptsMimetypes(attrValue);
+}
+
+function keepScriptTypeAttribute(attrValue) {
+  attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
+  return keepScriptsMimetypes(attrValue);
 }
 
 function isExecutableScript(tag, attrs) {
@@ -25992,7 +26001,7 @@ function normalizeAttr(attr, attrs, tag, options) {
   if (options.removeRedundantAttributes &&
     isAttributeRedundant(tag, attrName, attrValue, attrs) ||
     options.removeScriptTypeAttributes && tag === 'script' &&
-    attrName === 'type' && isScriptTypeAttribute(attrValue) ||
+    attrName === 'type' && isScriptTypeAttribute(attrValue) && !keepScriptTypeAttribute(attrValue) ||
     options.removeStyleLinkTypeAttributes && (tag === 'style' || tag === 'link') &&
     attrName === 'type' && isStyleLinkTypeAttribute(attrValue)) {
     return;

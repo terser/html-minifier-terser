@@ -2,7 +2,6 @@
 
 [![NPM version](https://img.shields.io/npm/v/html-minifier-terser.svg)](https://www.npmjs.com/package/html-minifier-terser)
 [![Build Status](https://img.shields.io/travis/terser/html-minifier-terser.svg)](https://travis-ci.org/terser/html-minifier-terser)
-[![Dependency Status](https://img.shields.io/david/terser/html-minifier-terser.svg)](https://david-dm.org/terser/html-minifier-terser)
 
 [HTMLMinifier](https://terser.org/html-minifier-terser/) is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
 

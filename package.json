@@ -24,7 +24,7 @@
     "uglifier",
     "uglify"
   ],
-  "homepage": "https://danielruf.github.io/html-minifier-terser/",
+  "homepage": "https://terser.github.io/html-minifier-terser/",
   "author": "Daniel Ruf",
   "maintainers": [
     "Daniel Ruf <daniel@daniel-ruf.de",
@@ -43,10 +43,10 @@
   "main": "src/htmlminifier.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DanielRuf/html-minifier-terser.git"
+    "url": "git+https://github.com/terser/html-minifier-terser.git"
   },
   "bugs": {
-    "url": "https://github.com/DanielRuf/html-minifier-terser/issues"
+    "url": "https://github.com/terser/html-minifier-terser/issues"
   },
   "engines": {
     "node": ">=6"

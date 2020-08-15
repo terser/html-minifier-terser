@@ -24,7 +24,7 @@
     "uglifier",
     "uglify"
   ],
-  "homepage": "https://terser.github.io/html-minifier-terser/",
+  "homepage": "https://terser.org/html-minifier-terser/",
   "author": "Daniel Ruf",
   "maintainers": [
     "Daniel Ruf <daniel@daniel-ruf.de",

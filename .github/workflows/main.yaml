@@ -1,0 +1,37 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  ci-latest:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+        node: [ '*' ]
+    name: CI - Node latest (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm install --no-optional --no-save --no-update-notifier
+      - name: Run tests
+        run: npm test --no-update-notifier
+  ci:
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+        node: [ '12', '10', '8', '6' ]
+    name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm install --no-optional --no-save --no-update-notifier
+      - name: Run tests
+        run: npm test --no-update-notifier

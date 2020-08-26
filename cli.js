@@ -129,7 +129,7 @@ var mainOptions = {
   removeEmptyElements: 'Remove all elements with empty contents',
   removeOptionalTags: 'Remove unrequired tags',
   removeRedundantAttributes: 'Remove attributes when value matches default.',
-  removeScriptTypeAttributes: 'Remove type="text/javascript" from script tags. Other type attribute values are left intact.',
+  removeScriptTypeAttributes: 'Removes the following attributes from script tags: text/javascript, text/ecmascript, text/jscript, application/javascript, application/x-javascript, application/ecmascript. Other type attribute values are left intact',
   removeStyleLinkTypeAttributes: 'Remove type="text/css" from style and link tags. Other type attribute values are left intact.',
   removeTagWhitespace: 'Remove space between attributes whenever possible',
   sortAttributes: 'Sort attributes by frequency',

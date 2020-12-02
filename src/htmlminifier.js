@@ -325,7 +325,7 @@ function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
     return collapseWhitespaceAll(attrValue);
   }
   else if (options.customAttrCollapse && options.customAttrCollapse.test(attrName)) {
-    attrValue = attrValue.replace(/\n+|\r+|\s{2,}/g, '');
+    attrValue = trimWhitespace(attrValue.replace(/ ?[\n\r]+ ?/g, '').replace(/\s{2,}/g, options.conservativeCollapse ? ' ' : ''));
   }
   else if (tag === 'script' && attrName === 'type') {
     attrValue = trimWhitespace(attrValue.replace(/\s*;\s*/g, ';'));

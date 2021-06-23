@@ -33,9 +33,10 @@ var info = require('./package.json');
 var minify = require('./' + info.main).minify;
 var paramCase = require('param-case').paramCase;
 var path = require('path');
-var program = require('commander');
+var { Command } = require('commander');
 
-program._name = info.name;
+const program = new Command();
+program.name(info.name);
 program.version(info.version);
 
 function fatal(message) {
@@ -195,10 +196,12 @@ program.arguments('[files...]').action(function(files) {
   content = files.map(readFile).join('');
 }).parse(process.argv);
 
+const programOptions = program.opts()
+
 function createOptions() {
   var options = {};
   mainOptionKeys.forEach(function(key) {
-    var param = program[key === 'minifyURLs' ? 'minifyUrls' : camelCase(key)];
+    var param = programOptions[key === 'minifyURLs' ? 'minifyUrls' : camelCase(key)];
     if (typeof param !== 'undefined') {
       options[key] = param;
     }
@@ -280,14 +283,14 @@ function writeMinify() {
   catch (e) {
     fatal('Minification error:\n' + e.message);
   }
-  (program.output ? fs.createWriteStream(program.output).on('error', function(e) {
-    fatal('Cannot write ' + program.output + '\n' + e.message);
+  (programOptions.output ? fs.createWriteStream(programOptions.output).on('error', function(e) {
+    fatal('Cannot write ' + programOptions.output + '\n' + e.message);
   }) : process.stdout).write(minified);
 }
 
-var inputDir = program.inputDir;
-var outputDir = program.outputDir;
-var fileExt = program.fileExt;
+var inputDir = programOptions.inputDir;
+var outputDir = programOptions.outputDir;
+var fileExt = programOptions.fileExt;
 if (inputDir || outputDir) {
   if (!inputDir) {
     fatal('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o.');

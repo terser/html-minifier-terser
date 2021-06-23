@@ -56,7 +56,7 @@
     "test": "grunt test"
   },
   "dependencies": {
-    "camel-case": "^4.1.1",
+    "camel-case": "^4.1.2",
     "clean-css": "^4.2.3",
     "commander": "^4.1.1",
     "he": "^1.2.0",

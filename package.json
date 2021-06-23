@@ -70,7 +70,7 @@
     "grunt-eslint": "^23.0.0",
     "grunt-terser": "^1.0.0",
     "node-qunit-puppeteer": "1.0.13",
-    "qunit": "^2.9.2"
+    "qunit": "^2.16.0"
   },
   "benchmarkDependencies": {
     "chalk": "^2.4.2",

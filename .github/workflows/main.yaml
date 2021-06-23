@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: ["*"]
+        node: ['*']
     name: CI - Node latest (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     steps:

@@ -62,7 +62,7 @@
     "he": "^1.2.0",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
-    "terser": "^4.6.3"
+    "terser": "^4.8.0"
   },
   "devDependencies": {
     "grunt": "^1.4.1",

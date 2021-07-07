@@ -13,14 +13,6 @@ function qunitVersion() {
   }
 }
 
-function isNodejsVersionSupported() {
-  return (
-    process.versions &&
-    process.versions.node &&
-    process.versions.node.split('.')[0] >= 8
-  );
-}
-
 module.exports = function(grunt) {
   // Force use of Unix newlines
   grunt.util.linefeed = '\n';
@@ -108,12 +100,7 @@ module.exports = function(grunt) {
 
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-terser');
-
-  // dependencies of grunt-eslint use the spread operator
-  // which is not supported by NodeJS 6 and older
-  if (isNodejsVersionSupported()) {
-    grunt.loadNpmTasks('grunt-eslint');
-  }
+  grunt.loadNpmTasks('grunt-eslint');
 
   function report(type, details) {
     grunt.log.writeln(type + ' completed in ' + details.runtime + 'ms');
@@ -187,20 +174,11 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('test', function() {
-    if (isNodejsVersionSupported()) {
-      grunt.task.run([
-        'eslint',
-        'dist',
-        'qunit'
-      ]);
-    }
-    else {
-      // the puppeteer runner uses async / await
-      // which is not supported by NodeJS 6 and older
-      grunt.task.run([
-        'dist'
-      ]);
-    }
+    grunt.task.run([
+      'eslint',
+      'dist',
+      'qunit'
+    ]);
   });
 
   grunt.registerTask('default', 'test');

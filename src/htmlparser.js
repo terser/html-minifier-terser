@@ -31,6 +31,7 @@
 'use strict';
 
 var createMapFromString = require('./utils').createMapFromString;
+var replaceAsync = require('./utils').replaceAsync;
 
 function makeMap(values) {
   return createMapFromString(values, true);
@@ -40,7 +41,7 @@ function makeMap(values) {
 var singleAttrIdentifier = /([^\s"'<>/=]+)/,
     singleAttrAssigns = [/=/],
     singleAttrValues = [
-      // attr value double quotes
+    // attr value double quotes
       /"([^"]*)"+/.source,
       // attr value, single quotes
       /'([^']*)'+/.source,
@@ -49,7 +50,7 @@ var singleAttrIdentifier = /([^\s"'<>/=]+)/,
     ],
     // https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName
     qnameCapture = (function() {
-      // based on https://www.npmjs.com/package/ncname
+    // based on https://www.npmjs.com/package/ncname
       var combiningChar = '\\u0300-\\u0345\\u0360\\u0361\\u0483-\\u0486\\u0591-\\u05A1\\u05A3-\\u05B9\\u05BB-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u064B-\\u0652\\u0670\\u06D6-\\u06E4\\u06E7\\u06E8\\u06EA-\\u06ED\\u0901-\\u0903\\u093C\\u093E-\\u094D\\u0951-\\u0954\\u0962\\u0963\\u0981-\\u0983\\u09BC\\u09BE-\\u09C4\\u09C7\\u09C8\\u09CB-\\u09CD\\u09D7\\u09E2\\u09E3\\u0A02\\u0A3C\\u0A3E-\\u0A42\\u0A47\\u0A48\\u0A4B-\\u0A4D\\u0A70\\u0A71\\u0A81-\\u0A83\\u0ABC\\u0ABE-\\u0AC5\\u0AC7-\\u0AC9\\u0ACB-\\u0ACD\\u0B01-\\u0B03\\u0B3C\\u0B3E-\\u0B43\\u0B47\\u0B48\\u0B4B-\\u0B4D\\u0B56\\u0B57\\u0B82\\u0B83\\u0BBE-\\u0BC2\\u0BC6-\\u0BC8\\u0BCA-\\u0BCD\\u0BD7\\u0C01-\\u0C03\\u0C3E-\\u0C44\\u0C46-\\u0C48\\u0C4A-\\u0C4D\\u0C55\\u0C56\\u0C82\\u0C83\\u0CBE-\\u0CC4\\u0CC6-\\u0CC8\\u0CCA-\\u0CCD\\u0CD5\\u0CD6\\u0D02\\u0D03\\u0D3E-\\u0D43\\u0D46-\\u0D48\\u0D4A-\\u0D4D\\u0D57\\u0E31\\u0E34-\\u0E3A\\u0E47-\\u0E4E\\u0EB1\\u0EB4-\\u0EB9\\u0EBB\\u0EBC\\u0EC8-\\u0ECD\\u0F18\\u0F19\\u0F35\\u0F37\\u0F39\\u0F3E\\u0F3F\\u0F71-\\u0F84\\u0F86-\\u0F8B\\u0F90-\\u0F95\\u0F97\\u0F99-\\u0FAD\\u0FB1-\\u0FB7\\u0FB9\\u20D0-\\u20DC\\u20E1\\u302A-\\u302F\\u3099\\u309A';
       var digit = '0-9\\u0660-\\u0669\\u06F0-\\u06F9\\u0966-\\u096F\\u09E6-\\u09EF\\u0A66-\\u0A6F\\u0AE6-\\u0AEF\\u0B66-\\u0B6F\\u0BE7-\\u0BEF\\u0C66-\\u0C6F\\u0CE6-\\u0CEF\\u0D66-\\u0D6F\\u0E50-\\u0E59\\u0ED0-\\u0ED9\\u0F20-\\u0F29';
       var extender = '\\xB7\\u02D0\\u02D1\\u0387\\u0640\\u0E46\\u0EC6\\u3005\\u3031-\\u3035\\u309D\\u309E\\u30FC-\\u30FE';
@@ -91,16 +92,16 @@ var reCache = {};
 
 function attrForHandler(handler) {
   var pattern = singleAttrIdentifier.source +
-                '(?:\\s*(' + joinSingleAttrAssigns(handler) + ')' +
-                '[ \\t\\n\\f\\r]*(?:' + singleAttrValues.join('|') + '))?';
+    '(?:\\s*(' + joinSingleAttrAssigns(handler) + ')' +
+    '[ \\t\\n\\f\\r]*(?:' + singleAttrValues.join('|') + '))?';
   if (handler.customAttrSurround) {
     var attrClauses = [];
     for (var i = handler.customAttrSurround.length - 1; i >= 0; i--) {
       attrClauses[i] = '(?:' +
-                       '(' + handler.customAttrSurround[i][0].source + ')\\s*' +
-                       pattern +
-                       '\\s*(' + handler.customAttrSurround[i][1].source + ')' +
-                       ')';
+        '(' + handler.customAttrSurround[i][0].source + ')\\s*' +
+        pattern +
+        '\\s*(' + handler.customAttrSurround[i][1].source + ')' +
+        ')';
     }
     attrClauses.push('(?:' + pattern + ')');
     pattern = '(?:' + attrClauses.join('|') + ')';
@@ -116,317 +117,328 @@ function joinSingleAttrAssigns(handler) {
   }).join('|');
 }
 
-function HTMLParser(html, handler) {
-  var stack = [], lastTag;
-  var attribute = attrForHandler(handler);
-  var last, prevTag, nextTag;
-  while (html) {
-    last = html;
-    // Make sure we're not in a script or style element
-    if (!lastTag || !special(lastTag)) {
-      var textEnd = html.indexOf('<');
-      if (textEnd === 0) {
-        // Comment:
-        if (/^<!--/.test(html)) {
-          var commentEnd = html.indexOf('-->');
+class HTMLParser {
+  constructor(html, handler) {
+    this.html = html;
+    this.handler = handler;
+  }
 
-          if (commentEnd >= 0) {
-            if (handler.comment) {
-              handler.comment(html.substring(4, commentEnd));
+  async parse() {
+    let html = this.html;
+    const handler = this.handler;
+
+    var stack = [], lastTag;
+    var attribute = attrForHandler(handler);
+    var last, prevTag, nextTag;
+    while (html) {
+      last = html;
+      // Make sure we're not in a script or style element
+      if (!lastTag || !special(lastTag)) {
+        var textEnd = html.indexOf('<');
+        if (textEnd === 0) {
+          // Comment:
+          if (/^<!--/.test(html)) {
+            var commentEnd = html.indexOf('-->');
+
+            if (commentEnd >= 0) {
+              if (handler.comment) {
+                await handler.comment(html.substring(4, commentEnd));
+              }
+              html = html.substring(commentEnd + 3);
+              prevTag = '';
+              continue;
             }
-            html = html.substring(commentEnd + 3);
+          }
+
+          // https://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+          if (/^<!\[/.test(html)) {
+            var conditionalEnd = html.indexOf(']>');
+
+            if (conditionalEnd >= 0) {
+              if (handler.comment) {
+                await handler.comment(html.substring(2, conditionalEnd + 1), true /* non-standard */);
+              }
+              html = html.substring(conditionalEnd + 2);
+              prevTag = '';
+              continue;
+            }
+          }
+
+          // Doctype:
+          var doctypeMatch = html.match(doctype);
+          if (doctypeMatch) {
+            if (handler.doctype) {
+              handler.doctype(doctypeMatch[0]);
+            }
+            html = html.substring(doctypeMatch[0].length);
             prevTag = '';
             continue;
           }
-        }
 
-        // https://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
-        if (/^<!\[/.test(html)) {
-          var conditionalEnd = html.indexOf(']>');
-
-          if (conditionalEnd >= 0) {
-            if (handler.comment) {
-              handler.comment(html.substring(2, conditionalEnd + 1), true /* non-standard */);
-            }
-            html = html.substring(conditionalEnd + 2);
-            prevTag = '';
+          // End tag:
+          var endTagMatch = html.match(endTag);
+          if (endTagMatch) {
+            html = html.substring(endTagMatch[0].length);
+            await replaceAsync(endTagMatch[0], endTag, parseEndTag);
+            prevTag = '/' + endTagMatch[1].toLowerCase();
             continue;
           }
-        }
 
-        // Doctype:
-        var doctypeMatch = html.match(doctype);
-        if (doctypeMatch) {
-          if (handler.doctype) {
-            handler.doctype(doctypeMatch[0]);
+          // Start tag:
+          var startTagMatch = parseStartTag(html);
+          if (startTagMatch) {
+            html = startTagMatch.rest;
+            await handleStartTag(startTagMatch);
+            prevTag = startTagMatch.tagName.toLowerCase();
+            continue;
           }
-          html = html.substring(doctypeMatch[0].length);
-          prevTag = '';
-          continue;
+
+          // Treat `<` as text
+          if (handler.continueOnParseError) {
+            textEnd = html.indexOf('<', 1);
+          }
         }
 
-        // End tag:
-        var endTagMatch = html.match(endTag);
-        if (endTagMatch) {
-          html = html.substring(endTagMatch[0].length);
-          endTagMatch[0].replace(endTag, parseEndTag);
-          prevTag = '/' + endTagMatch[1].toLowerCase();
-          continue;
-        }
-
-        // Start tag:
-        var startTagMatch = parseStartTag(html);
-        if (startTagMatch) {
-          html = startTagMatch.rest;
-          handleStartTag(startTagMatch);
-          prevTag = startTagMatch.tagName.toLowerCase();
-          continue;
-        }
-
-        // Treat `<` as text
-        if (handler.continueOnParseError) {
-          textEnd = html.indexOf('<', 1);
-        }
-      }
-
-      var text;
-      if (textEnd >= 0) {
-        text = html.substring(0, textEnd);
-        html = html.substring(textEnd);
-      }
-      else {
-        text = html;
-        html = '';
-      }
-
-      // next tag
-      var nextTagMatch = parseStartTag(html);
-      if (nextTagMatch) {
-        nextTag = nextTagMatch.tagName;
-      }
-      else {
-        nextTagMatch = html.match(endTag);
-        if (nextTagMatch) {
-          nextTag = '/' + nextTagMatch[1];
+        var text;
+        if (textEnd >= 0) {
+          text = html.substring(0, textEnd);
+          html = html.substring(textEnd);
         }
         else {
-          nextTag = '';
+          text = html;
+          html = '';
         }
-      }
 
-      if (handler.chars) {
-        handler.chars(text, prevTag, nextTag);
-      }
-      prevTag = '';
-    }
-    else {
-      var stackedTag = lastTag.toLowerCase();
-      var reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)</' + stackedTag + '[^>]*>', 'i'));
-
-      html = html.replace(reStackedTag, function(all, text) {
-        if (stackedTag !== 'script' && stackedTag !== 'style' && stackedTag !== 'noscript') {
-          text = text
-            .replace(/<!--([\s\S]*?)-->/g, '$1')
-            .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1');
+        // next tag
+        var nextTagMatch = parseStartTag(html);
+        if (nextTagMatch) {
+          nextTag = nextTagMatch.tagName;
+        }
+        else {
+          nextTagMatch = html.match(endTag);
+          if (nextTagMatch) {
+            nextTag = '/' + nextTagMatch[1];
+          }
+          else {
+            nextTag = '';
+          }
         }
 
         if (handler.chars) {
-          handler.chars(text);
+          await handler.chars(text, prevTag, nextTag);
         }
-
-        return '';
-      });
-
-      parseEndTag('</' + stackedTag + '>', stackedTag);
-    }
-
-    if (html === last) {
-      throw new Error('Parse Error: ' + html);
-    }
-  }
-
-  if (!handler.partialMarkup) {
-    // Clean up any remaining tags
-    parseEndTag();
-  }
-
-  function parseStartTag(input) {
-    var start = input.match(startTagOpen);
-    if (start) {
-      var match = {
-        tagName: start[1],
-        attrs: []
-      };
-      input = input.slice(start[0].length);
-      var end, attr;
-      while (!(end = input.match(startTagClose)) && (attr = input.match(attribute))) {
-        input = input.slice(attr[0].length);
-        match.attrs.push(attr);
+        prevTag = '';
       }
-      if (end) {
-        match.unarySlash = end[1];
-        match.rest = input.slice(end[0].length);
-        return match;
+      else {
+        var stackedTag = lastTag.toLowerCase();
+        var reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)</' + stackedTag + '[^>]*>', 'i'));
+
+        html = await replaceAsync(html, reStackedTag, async(_, text) => {
+          if (stackedTag !== 'script' && stackedTag !== 'style' && stackedTag !== 'noscript') {
+            text = text
+              .replace(/<!--([\s\S]*?)-->/g, '$1')
+              .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1');
+          }
+
+
+          if (handler.chars) {
+            await handler.chars(text);
+          }
+
+          return '';
+        });
+
+        await parseEndTag('</' + stackedTag + '>', stackedTag);
+      }
+
+      if (html === last) {
+        throw new Error('Parse Error: ' + html);
       }
     }
-  }
 
-  function closeIfFound(tagName) {
-    if (findTag(tagName) >= 0) {
-      parseEndTag('', tagName);
-      return true;
+    if (!handler.partialMarkup) {
+      // Clean up any remaining tags
+      await parseEndTag();
     }
-  }
 
-  function handleStartTag(match) {
-    var tagName = match.tagName;
-    var unarySlash = match.unarySlash;
-
-    if (handler.html5) {
-      if (lastTag === 'p' && nonPhrasing(tagName)) {
-        parseEndTag('', lastTag);
-      }
-      else if (tagName === 'tbody') {
-        closeIfFound('thead');
-      }
-      else if (tagName === 'tfoot') {
-        if (!closeIfFound('tbody')) {
-          closeIfFound('thead');
+    function parseStartTag(input) {
+      var start = input.match(startTagOpen);
+      if (start) {
+        var match = {
+          tagName: start[1],
+          attrs: []
+        };
+        input = input.slice(start[0].length);
+        var end, attr;
+        while (!(end = input.match(startTagClose)) && (attr = input.match(attribute))) {
+          input = input.slice(attr[0].length);
+          match.attrs.push(attr);
         }
-      }
-      if (tagName === 'col' && findTag('colgroup') < 0) {
-        lastTag = 'colgroup';
-        stack.push({ tag: lastTag, attrs: [] });
-        if (handler.start) {
-          handler.start(lastTag, [], false, '');
+        if (end) {
+          match.unarySlash = end[1];
+          match.rest = input.slice(end[0].length);
+          return match;
         }
       }
     }
 
-    if (!handler.html5 && !inline(tagName)) {
-      while (lastTag && inline(lastTag)) {
-        parseEndTag('', lastTag);
+    async function closeIfFound(tagName) {
+      if (findTag(tagName) >= 0) {
+        await parseEndTag('', tagName);
+        return true;
       }
     }
 
-    if (closeSelf(tagName) && lastTag === tagName) {
-      parseEndTag('', tagName);
-    }
+    async function handleStartTag(match) {
+      var tagName = match.tagName;
+      var unarySlash = match.unarySlash;
 
-    var unary = empty(tagName) || tagName === 'html' && lastTag === 'head' || !!unarySlash;
-
-    var attrs = match.attrs.map(function(args) {
-      var name, value, customOpen, customClose, customAssign, quote;
-      var ncp = 7; // number of captured parts, scalar
-
-      // hackish work around FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
-      if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
-        if (args[3] === '') { delete args[3]; }
-        if (args[4] === '') { delete args[4]; }
-        if (args[5] === '') { delete args[5]; }
-      }
-
-      function populate(index) {
-        customAssign = args[index];
-        value = args[index + 1];
-        if (typeof value !== 'undefined') {
-          return '"';
+      if (handler.html5) {
+        if (lastTag === 'p' && nonPhrasing(tagName)) {
+          await parseEndTag('', lastTag);
         }
-        value = args[index + 2];
-        if (typeof value !== 'undefined') {
-          return '\'';
+        else if (tagName === 'tbody') {
+          await closeIfFound('thead');
         }
-        value = args[index + 3];
-        if (typeof value === 'undefined' && fillAttrs(name)) {
-          value = name;
+        else if (tagName === 'tfoot') {
+          if (!await closeIfFound('tbody')) {
+            await closeIfFound('thead');
+          }
         }
-        return '';
-      }
-
-      var j = 1;
-      if (handler.customAttrSurround) {
-        for (var i = 0, l = handler.customAttrSurround.length; i < l; i++, j += ncp) {
-          name = args[j + 1];
-          if (name) {
-            quote = populate(j + 2);
-            customOpen = args[j];
-            customClose = args[j + 6];
-            break;
+        if (tagName === 'col' && findTag('colgroup') < 0) {
+          lastTag = 'colgroup';
+          stack.push({ tag: lastTag, attrs: [] });
+          if (handler.start) {
+            await handler.start(lastTag, [], false, '');
           }
         }
       }
 
-      if (!name && (name = args[j])) {
-        quote = populate(j + 1);
-      }
-
-      return {
-        name: name,
-        value: value,
-        customAssign: customAssign || '=',
-        customOpen: customOpen || '',
-        customClose: customClose || '',
-        quote: quote || ''
-      };
-    });
-
-    if (!unary) {
-      stack.push({ tag: tagName, attrs: attrs });
-      lastTag = tagName;
-      unarySlash = '';
-    }
-
-    if (handler.start) {
-      handler.start(tagName, attrs, unary, unarySlash);
-    }
-  }
-
-  function findTag(tagName) {
-    var pos;
-    var needle = tagName.toLowerCase();
-    for (pos = stack.length - 1; pos >= 0; pos--) {
-      if (stack[pos].tag.toLowerCase() === needle) {
-        break;
-      }
-    }
-    return pos;
-  }
-
-  function parseEndTag(tag, tagName) {
-    var pos;
-
-    // Find the closest opened tag of the same type
-    if (tagName) {
-      pos = findTag(tagName);
-    }
-    // If no tag name is provided, clean shop
-    else {
-      pos = 0;
-    }
-
-    if (pos >= 0) {
-      // Close all the open elements, up the stack
-      for (var i = stack.length - 1; i >= pos; i--) {
-        if (handler.end) {
-          handler.end(stack[i].tag, stack[i].attrs, i > pos || !tag);
+      if (!handler.html5 && !inline(tagName)) {
+        while (lastTag && inline(lastTag)) {
+          await parseEndTag('', lastTag);
         }
       }
 
-      // Remove the open elements from the stack
-      stack.length = pos;
-      lastTag = pos && stack[pos - 1].tag;
-    }
-    else if (tagName.toLowerCase() === 'br') {
+      if (closeSelf(tagName) && lastTag === tagName) {
+        await parseEndTag('', tagName);
+      }
+
+      var unary = empty(tagName) || tagName === 'html' && lastTag === 'head' || !!unarySlash;
+
+      var attrs = match.attrs.map(function(args) {
+        var name, value, customOpen, customClose, customAssign, quote;
+        var ncp = 7; // number of captured parts, scalar
+
+        // hackish work around FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
+        if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
+          if (args[3] === '') { delete args[3]; }
+          if (args[4] === '') { delete args[4]; }
+          if (args[5] === '') { delete args[5]; }
+        }
+
+        function populate(index) {
+          customAssign = args[index];
+          value = args[index + 1];
+          if (typeof value !== 'undefined') {
+            return '"';
+          }
+          value = args[index + 2];
+          if (typeof value !== 'undefined') {
+            return '\'';
+          }
+          value = args[index + 3];
+          if (typeof value === 'undefined' && fillAttrs(name)) {
+            value = name;
+          }
+          return '';
+        }
+
+        var j = 1;
+        if (handler.customAttrSurround) {
+          for (var i = 0, l = handler.customAttrSurround.length; i < l; i++, j += ncp) {
+            name = args[j + 1];
+            if (name) {
+              quote = populate(j + 2);
+              customOpen = args[j];
+              customClose = args[j + 6];
+              break;
+            }
+          }
+        }
+
+        if (!name && (name = args[j])) {
+          quote = populate(j + 1);
+        }
+
+        return {
+          name: name,
+          value: value,
+          customAssign: customAssign || '=',
+          customOpen: customOpen || '',
+          customClose: customClose || '',
+          quote: quote || ''
+        };
+      });
+
+      if (!unary) {
+        stack.push({ tag: tagName, attrs: attrs });
+        lastTag = tagName;
+        unarySlash = '';
+      }
+
       if (handler.start) {
-        handler.start(tagName, [], true, '');
+        await handler.start(tagName, attrs, unary, unarySlash);
       }
     }
-    else if (tagName.toLowerCase() === 'p') {
-      if (handler.start) {
-        handler.start(tagName, [], false, '', true);
+
+    function findTag(tagName) {
+      var pos;
+      var needle = tagName.toLowerCase();
+      for (pos = stack.length - 1; pos >= 0; pos--) {
+        if (stack[pos].tag.toLowerCase() === needle) {
+          break;
+        }
       }
-      if (handler.end) {
-        handler.end(tagName, []);
+      return pos;
+    }
+
+    async function parseEndTag(tag, tagName) {
+      var pos;
+
+      // Find the closest opened tag of the same type
+      if (tagName) {
+        pos = findTag(tagName);
+      }
+      // If no tag name is provided, clean shop
+      else {
+        pos = 0;
+      }
+
+      if (pos >= 0) {
+        // Close all the open elements, up the stack
+        for (var i = stack.length - 1; i >= pos; i--) {
+          if (handler.end) {
+            handler.end(stack[i].tag, stack[i].attrs, i > pos || !tag);
+          }
+        }
+
+        // Remove the open elements from the stack
+        stack.length = pos;
+        lastTag = pos && stack[pos - 1].tag;
+      }
+      else if (tagName.toLowerCase() === 'br') {
+        if (handler.start) {
+          await handler.start(tagName, [], true, '');
+        }
+      }
+      else if (tagName.toLowerCase() === 'p') {
+        if (handler.start) {
+          await handler.start(tagName, [], false, '', true);
+        }
+        if (handler.end) {
+          handler.end(tagName, []);
+        }
       }
     }
   }
@@ -493,7 +505,7 @@ exports.HTMLtoDOM = function(html, doc) {
 
   var elems = [],
       documentElement = doc.documentElement ||
-        doc.getDocumentElement && doc.getDocumentElement();
+      doc.getDocumentElement && doc.getDocumentElement();
 
   // If we're dealing with an empty document then we
   // need to pre-populate it with the HTML document structure

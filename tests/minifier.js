@@ -60,9 +60,13 @@ QUnit.test('parsing non-trivial markup', async function(assert) {
   assert.equal(await minify(input), input);
 
   input = '<$unicorn>';
-  // assert.throws(async function() {
-  //   await minify(input);
-  // }, 'Invalid tag name');
+  try {
+    await minify(input);
+  }
+  catch (err) {
+    assert.throws(err, 'Invalid tag name');
+  }
+
   assert.equal(await minify(input, {
     continueOnParseError: true,
   }), input);
@@ -95,10 +99,15 @@ QUnit.test('parsing non-trivial markup', async function(assert) {
   // https://github.com/kangax/html-minifier/issues/507
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ "></tag>';
   assert.equal(await minify(input), input);
+
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ " ss"123>';
-  // assert.throws(function() {
-  //   minify(input);
-  // }, 'invalid attribute name');
+  try {
+    await minify(input);
+  }
+  catch (err) {
+    assert.throws(err, 'invalid attribute name');
+  }
+
   assert.equal(await minify(input, {
     continueOnParseError: true,
   }), input);
@@ -112,6 +121,7 @@ QUnit.test('parsing non-trivial markup', async function(assert) {
           ' data-ng-pattern="vm.options.format"' +
           ' data-options="vm.datepickerOptions">';
   assert.equal(await minify(input), input);
+
   input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
           ' <!--FIXME hardcoded placeholder - dates may not be used for service required fields yet. -->' +
           ' placeholder="YYYY-MM-DD"' +
@@ -120,18 +130,26 @@ QUnit.test('parsing non-trivial markup', async function(assert) {
           ' data-ng-model-options="{ debounce: 1000 }"' +
           ' data-ng-pattern="vm.options.format"' +
           ' data-options="vm.datepickerOptions">';
-  // assert.throws(function() {
-  //   minify(input);
-  // }, 'HTML comment inside tag');
+  try {
+    await minify(input);
+  }
+  catch (err) {
+    assert.throws(err, 'HTML comment inside tag');
+  }
+
   assert.equal(await minify(input, {
     continueOnParseError: true,
   }), input);
 
   // https://github.com/kangax/html-minifier/issues/974
   input = '<!–– Failing New York Times Comment -->';
-  // assert.throws(function() {
-  //   minify(input);
-  // }, 'invalid HTML comment');
+  try {
+    await minify(input);
+  }
+  catch (err) {
+    assert.throws(err, 'invalid HTML comment');
+  }
+
   assert.equal(await minify(input, {
     continueOnParseError: true,
   }), input);

@@ -890,7 +890,7 @@ QUnit.test('custom processors', async function(assert) {
   assert.equal(await minify(input, { minifyURLs: null }), input);
   assert.equal(await minify(input, { minifyURLs: false }), input);
   assert.equal(await minify(input, { minifyURLs: url }), input);
-  output = '<style>.foo{background:url(URL)}</style>';
+  output = '<style>.foo{background:url("URL")}</style>';
   assert.equal(await minify(input, { minifyCSS: true, minifyURLs: url }), output);
 });
 
@@ -2345,7 +2345,7 @@ QUnit.test('style minification', async function(assert) {
 
   input = '<div style="background: url(\'images/<% image %>\')"></div>';
   assert.equal(await minify(input), input);
-  output = '<div style="background:url(images/<% image %>)"></div>';
+  output = '<div style="background:url(\'images/<% image %>\')"></div>';
   assert.equal(await minify(input, { minifyCSS: true }), output);
   assert.equal(await minify(input, {
     collapseWhitespace: true,
@@ -2363,7 +2363,7 @@ QUnit.test('style minification', async function(assert) {
 
   input = '<style>p { background: url("images/<% image %>") }</style>';
   assert.equal(await minify(input), input);
-  output = '<style>p{background:url(images/<% image %>)}</style>';
+  output = '<style>p{background:url("images/<% image %>")}</style>';
   assert.equal(await minify(input, { minifyCSS: true }), output);
   assert.equal(await minify(input, {
     collapseWhitespace: true,
@@ -2480,9 +2480,9 @@ QUnit.test('url attribute minification', async function(assert) {
   input = '<style>body { background: url(\'http://website.com/bg.png\') }</style>';
   assert.equal(await minify(input, { minifyURLs: 'http://website.com/' }), input);
   assert.equal(await minify(input, { minifyURLs: { site: 'http://website.com/' } }), input);
-  output = '<style>body{background:url(http://website.com/bg.png)}</style>';
+  output = '<style>body{background:url(\'http://website.com/bg.png\')}</style>';
   assert.equal(await minify(input, { minifyCSS: true }), output);
-  output = '<style>body{background:url(bg.png)}</style>';
+  output = '<style>body{background:url(\'bg.png\')}</style>';
   assert.equal(await minify(input, {
     minifyCSS: true,
     minifyURLs: 'http://website.com/'
@@ -2496,7 +2496,7 @@ QUnit.test('url attribute minification', async function(assert) {
   assert.equal(await minify(input, { minifyURLs: { site: 'http://website.com/foo bar/' } }), input);
   output = '<style>body{background:url("http://website.com/foo bar/bg.png")}</style>';
   assert.equal(await minify(input, { minifyCSS: true }), output);
-  output = '<style>body{background:url(bg.png)}</style>';
+  output = '<style>body{background:url("bg.png")}</style>';
   assert.equal(await minify(input, {
     minifyCSS: true,
     minifyURLs: { site: 'http://website.com/foo bar/' }
@@ -2516,7 +2516,7 @@ QUnit.test('url attribute minification', async function(assert) {
     minifyCSS: true,
     minifyURLs: { site: 'http://website.com/foo%20bar/' }
   }), output);
-  output = '<style>body{background:url(bg.png)}</style>';
+  output = '<style>body{background:url("bg.png")}</style>';
   assert.equal(await minify(input, {
     minifyCSS: true,
     minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' }

@@ -143,7 +143,7 @@ Note that almost all options are disabled by default. For command line usage ple
 
 ```js
 var minify = require('html-minifier-terser').minify;
-var result = minify('<p title="blah" id="moo">foo</p>', {
+var result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true
 });
 result; // '<p title=blah id=moo>foo</p>'

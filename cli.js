@@ -275,10 +275,10 @@ function processDirectory(inputDir, outputDir, fileExt) {
   });
 }
 
-function writeMinify() {
+async function writeMinify() {
   var minified;
   try {
-    minified = minify(content, createOptions());
+    minified = await minify(content, createOptions());
   }
   catch (e) {
     fatal('Minification error:\n' + e.message);

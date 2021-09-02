@@ -7,14 +7,10 @@
       options.log = function(message) {
         console.log(message);
       };
-      var minified;
-      try {
-        minified = minify(value, options);
-      }
-      catch (err) {
-        return errorback(err);
-      }
-      callback(minified);
+
+      minify(value, options)
+        .then(callback)
+        .catch(errorback);
     };
   })();
   if (typeof Worker === 'function') {

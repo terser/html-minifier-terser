@@ -9,7 +9,7 @@
       options.log = function(message) {
         console.log(message);
       };
-      minify(event.data.value, options).then(this.postMessage)
+      minify(event.data.value, options).then(this.postMessage);
     }
     catch (err) {
       postMessage({

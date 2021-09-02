@@ -1,5 +1,5 @@
 /*!
- * HTMLMinifier v6.0.1 (https://terser.org/html-minifier-terser/)
+ * HTMLMinifier v6.0.2 (https://terser.org/html-minifier-terser/)
  * Copyright 2010-2021 Juriy "kangax" Zaytsev, Daniel Ruf
  * Licensed under the MIT license
  */

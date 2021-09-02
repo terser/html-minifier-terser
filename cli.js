@@ -231,13 +231,13 @@ function mkdir(outputDir, callback) {
 }
 
 function processFile(inputFile, outputFile) {
-  fs.readFile(inputFile, { encoding: 'utf8' }, function(err, data) {
+  fs.readFile(inputFile, { encoding: 'utf8' }, async function(err, data) {
     if (err) {
       fatal('Cannot read ' + inputFile + '\n' + err.message);
     }
     var minified;
     try {
-      minified = minify(data, createOptions());
+      minified = await minify(data, createOptions());
     }
     catch (e) {
       fatal('Minification error on ' + inputFile + '\n' + e.message);

@@ -34729,7 +34729,7 @@ function parse($TEXT, options) {
     // Example: /* I count */ ( /* I don't */ foo() )
     // Useful because comments_before property of call with parens outside
     // contains both comments inside and outside these parens. Used to find the
-    // right #__PURE__ comments for an expression
+    
     const outer_comments_before_counts = new WeakMap();
 
     options = defaults(options, {
@@ -38334,7 +38334,7 @@ var AST_ClassProperty = DEFNODE("ClassProperty", "static quote", {
     }
 }, AST_ObjectProperty);
 
-var AST_ClassPrivateProperty = DEFNODE("ClassProperty", "", {
+var AST_ClassPrivateProperty = DEFNODE("ClassPrivateProperty", "", {
     $documentation: "A class property for a private property",
 }, AST_ClassProperty);
 
@@ -39036,7 +39036,7 @@ def_transform(AST_Sequence, function(self, tw) {
         : [new AST_Number({ value: 0 })];
 });
 
-def_transform(AST_Dot, function(self, tw) {
+def_transform(AST_PropAccess, function(self, tw) {
     self.expression = self.expression.transform(tw);
 });
 
@@ -40608,9 +40608,11 @@ function OutputStream(options) {
     var do_add_mapping = mappings ? function() {
         mappings.forEach(function(mapping) {
             try {
-                let name = !mapping.name && mapping.token.type == "name" ? mapping.token.value : mapping.name;
-                if (name instanceof AST_Symbol) {
-                    name = name.name;
+                let { name, token } = mapping;
+                if (token.type == "name" || token.type === "privatename") {
+                    name = token.value;
+                } else if (name instanceof AST_Symbol) {
+                    name = token.type === "string" ? token.value : name.name;
                 }
                 options.source_map.add(
                     mapping.token.file,
@@ -42083,6 +42085,7 @@ function OutputStream(options) {
 
         if (self.optional) output.print("?");
         output.print(".#");
+        output.add_mapping(self.end);
         output.print_name(prop);
     });
     DEFPRINT(AST_Sub, function(self, output) {
@@ -42536,8 +42539,10 @@ function OutputStream(options) {
     DEFMAP([
         AST_ObjectGetter,
         AST_ObjectSetter,
+        AST_PrivateGetter,
+        AST_PrivateSetter,
     ], function(output) {
-        output.add_mapping(this.start, this.key.name);
+        output.add_mapping(this.key.end, this.key.name);
     });
 
     DEFMAP([ AST_ObjectProperty ], function(output) {
@@ -43392,8 +43397,9 @@ AST_Scope.DEFMETHOD("def_variable", function(symbol, init) {
 
 function next_mangled(scope, options) {
     var ext = scope.enclosed;
+    var nth_identifier = options.nth_identifier;
     out: while (true) {
-        var m = base54(++scope.cname);
+        var m = nth_identifier.get(++scope.cname);
         if (ALL_RESERVED_WORDS.has(m)) continue; // skip over "do"
 
         // https://github.com/mishoo/UglifyJS2/issues/242 -- do not
@@ -43469,6 +43475,7 @@ AST_Symbol.DEFMETHOD("global", function() {
 AST_Toplevel.DEFMETHOD("_default_mangler_options", function(options) {
     options = defaults(options, {
         eval        : false,
+        nth_identifier : base54,
         ie8         : false,
         keep_classnames: false,
         keep_fnames : false,
@@ -43490,6 +43497,7 @@ AST_Toplevel.DEFMETHOD("_default_mangler_options", function(options) {
 
 AST_Toplevel.DEFMETHOD("mangle_names", function(options) {
     options = this._default_mangler_options(options);
+    var nth_identifier = options.nth_identifier;
 
     // We only need to mangle declaration nodes.  Special logic wired
     // into the code generator will display the mangled name if it's
@@ -43541,7 +43549,7 @@ AST_Toplevel.DEFMETHOD("mangle_names", function(options) {
         if (node instanceof AST_Label) {
             let name;
             do {
-                name = base54(++lname);
+                name = nth_identifier.get(++lname);
             } while (ALL_RESERVED_WORDS.has(name));
             node.mangled_name = name;
             return true;
@@ -43603,9 +43611,12 @@ AST_Toplevel.DEFMETHOD("find_colliding_names", function(options) {
 });
 
 AST_Toplevel.DEFMETHOD("expand_names", function(options) {
-    base54.reset();
-    base54.sort();
     options = this._default_mangler_options(options);
+    var nth_identifier = options.nth_identifier;
+    if (nth_identifier.reset && nth_identifier.sort) {
+        nth_identifier.reset();
+        nth_identifier.sort();
+    }
     var avoid = this.find_colliding_names(options);
     var cname = 0;
     this.globals.forEach(rename);
@@ -43617,7 +43628,7 @@ AST_Toplevel.DEFMETHOD("expand_names", function(options) {
     function next_name() {
         var name;
         do {
-            name = base54(cname++);
+            name = nth_identifier.get(cname++);
         } while (avoid.has(name) || ALL_RESERVED_WORDS.has(name));
         return name;
     }
@@ -43644,30 +43655,37 @@ AST_Sequence.DEFMETHOD("tail_node", function() {
 
 AST_Toplevel.DEFMETHOD("compute_char_frequency", function(options) {
     options = this._default_mangler_options(options);
+    var nth_identifier = options.nth_identifier;
+    if (!nth_identifier.reset || !nth_identifier.consider || !nth_identifier.sort) {
+        // If the identifier mangler is invariant, skip computing character frequency.
+        return;
+    }
+    nth_identifier.reset();
+
     try {
         AST_Node.prototype.print = function(stream, force_parens) {
             this._print(stream, force_parens);
             if (this instanceof AST_Symbol && !this.unmangleable(options)) {
-                base54.consider(this.name, -1);
+                nth_identifier.consider(this.name, -1);
             } else if (options.properties) {
                 if (this instanceof AST_DotHash) {
-                    base54.consider("#" + this.property, -1);
+                    nth_identifier.consider("#" + this.property, -1);
                 } else if (this instanceof AST_Dot) {
-                    base54.consider(this.property, -1);
+                    nth_identifier.consider(this.property, -1);
                 } else if (this instanceof AST_Sub) {
                     skip_string(this.property);
                 }
             }
         };
-        base54.consider(this.print_to_string(), 1);
+        nth_identifier.consider(this.print_to_string(), 1);
     } finally {
         AST_Node.prototype.print = AST_Node.prototype._print;
     }
-    base54.sort();
+    nth_identifier.sort();
 
     function skip_string(node) {
         if (node instanceof AST_String) {
-            base54.consider(node.value, -1);
+            nth_identifier.consider(node.value, -1);
         } else if (node instanceof AST_Conditional) {
             skip_string(node.consequent);
             skip_string(node.alternative);
@@ -43691,19 +43709,20 @@ const base54 = (() => {
             frequency.set(ch, 0);
         });
     }
-    base54.consider = function(str, delta) {
+    function consider(str, delta) {
         for (var i = str.length; --i >= 0;) {
             frequency.set(str[i], frequency.get(str[i]) + delta);
         }
-    };
+    }
     function compare(a, b) {
         return frequency.get(b) - frequency.get(a);
     }
-    base54.sort = function() {
+    function sort() {
         chars = mergeSort(leading, compare).concat(mergeSort(digits, compare));
-    };
-    base54.reset = reset;
+    }
+    // Ensure this is in a usable initial state.
     reset();
+    sort();
     function base54(num) {
         var ret = "", base = 54;
         num++;
@@ -43715,7 +43734,13 @@ const base54 = (() => {
         } while (num > 0);
         return ret;
     }
-    return base54;
+
+    return {
+        get: base54,
+        consider,
+        reset,
+        sort
+    };
 })();
 
 let mangle_options = undefined;
@@ -47042,7 +47067,9 @@ function tighten_body(statements, compressor) {
             // Replace variable with assignment when found
             if (can_replace
                 && !(node instanceof AST_SymbolDeclaration)
-                && lhs.equivalent_to(node)) {
+                && lhs.equivalent_to(node)
+                && !shadows(node.scope, lvalues)
+            ) {
                 if (stop_if_hit) {
                     abort = true;
                     return node;
@@ -47090,7 +47117,7 @@ function tighten_body(statements, compressor) {
                 || node instanceof AST_PropAccess
                 && (side_effects || node.expression.may_throw_on_access(compressor))
                 || node instanceof AST_SymbolRef
-                && (lvalues.get(node.name) || side_effects && may_modify(node))
+                && ((lvalues.has(node.name) && lvalues.get(node.name).modified) || side_effects && may_modify(node))
                 || node instanceof AST_VarDef && node.value
                 && (lvalues.has(node.name.name) || side_effects && may_modify(node.name))
                 || (sym = is_lhs(node.left, node))
@@ -47163,8 +47190,9 @@ function tighten_body(statements, compressor) {
                 // Locate symbols which may execute code outside of scanning range
                 var lvalues = get_lvalues(candidate);
                 var lhs_local = is_lhs_local(lhs);
-                if (lhs instanceof AST_SymbolRef)
-                    lvalues.set(lhs.name, false);
+                if (lhs instanceof AST_SymbolRef) {
+                    lvalues.set(lhs.name, { def: lhs.definition(), modified: false });
+                }
                 var side_effects = value_has_side_effects(candidate);
                 var replace_all = replace_all_symbols();
                 var may_throw = candidate.may_throw(compressor);
@@ -47230,8 +47258,9 @@ function tighten_body(statements, compressor) {
                 return false;
             let cur_scope = def.scope;
             while (cur_scope && cur_scope !== scope) {
-                if (cur_scope.variables.has(def.name))
+                if (cur_scope.variables.has(def.name)) {
                     return true;
+                }
                 cur_scope = cur_scope.parent_scope;
             }
             return false;
@@ -47512,8 +47541,14 @@ function tighten_body(statements, compressor) {
                 var sym = node;
                 while (sym instanceof AST_PropAccess)
                     sym = sym.expression;
-                if (sym instanceof AST_SymbolRef || sym instanceof AST_This) {
-                    lvalues.set(sym.name, lvalues.get(sym.name) || is_modified(compressor, tw, node, node, 0));
+                if (sym instanceof AST_SymbolRef) {
+                    const prev = lvalues.get(sym.name);
+                    if (!prev || !prev.modified) {
+                        lvalues.set(sym.name, {
+                            def: sym.definition(),
+                            modified: is_modified(compressor, tw, node, node, 0)
+                        });
+                    }
                 }
             });
             get_rvalue(expr).walk(tw);
@@ -47622,6 +47657,18 @@ function tighten_body(statements, compressor) {
                     return side_effects_external(node.expression, true);
                 if (node instanceof AST_SymbolRef)
                     return node.definition().scope !== scope;
+            }
+            return false;
+        }
+
+        function shadows(newScope, lvalues) {
+            for (const {def} of lvalues.values()) {
+                let current = newScope;
+                while (current && current !== def.scope) {
+                    let nested_def = current.variables.get(def.name);
+                    if (nested_def && nested_def !== def) return true;
+                    current = current.parent_scope;
+                }
             }
             return false;
         }
@@ -48368,7 +48415,8 @@ class Compressor extends TreeWalker {
         var passes = +this.options.passes || 1;
         var min_count = 1 / 0;
         var stopping = false;
-        var mangle = { ie8: this.option("ie8") };
+        var nth_identifier = this.mangle_options && this.mangle_options.nth_identifier || base54;
+        var mangle = { ie8: this.option("ie8"), nth_identifier: nth_identifier };
         for (var pass = 0; pass < passes; pass++) {
             this._toplevel.figure_out_scope(mangle);
             if (pass === 0 && this.option("drop_console")) {
@@ -49570,58 +49618,251 @@ def_optimize(AST_Switch, function(self, compressor) {
                 }
             }
         }
-        if (aborts(branch)) {
-            var prev = body[body.length - 1];
-            if (aborts(prev) && prev.body.length == branch.body.length
-                && make_node(AST_BlockStatement, prev, prev).equivalent_to(make_node(AST_BlockStatement, branch, branch))) {
-                prev.body = [];
-            }
-        }
         body.push(branch);
     }
     while (i < len) eliminate_branch(self.body[i++], body[body.length - 1]);
+    self.body = body;
+
+    for (let i = 0; i < body.length; i++) {
+        let branch = body[i];
+        if (branch.body.length === 0) continue;
+        if (!aborts(branch)) continue;
+
+        for (let j = i + 1; j < body.length; i++, j++) {
+            let next = body[j];
+            if (next.body.length === 0) continue;
+            if (
+                branches_equivalent(next, branch, false)
+                || (j === body.length - 1 && branches_equivalent(next, branch, true))
+            ) {
+                branch.body = [];
+                branch = next;
+                continue;
+            }
+            break;
+        }
+    }
+
+    let default_or_exact = default_branch || exact_match;
+    default_branch = null;
+    exact_match = null;
+
+    // Prune any empty branches at the end of the switch statement.
+    {
+        let i = body.length - 1;
+        for (; i >= 0; i--) {
+            let bbody = body[i].body;
+            if (is_break(bbody[bbody.length - 1], compressor)) bbody.pop();
+            if (!is_inert_body(body[i])) break;
+        }
+        // i now points to the index of a branch that contains a body. By incrementing, it's
+        // pointing to the first branch that's empty.
+        i++;
+        if (!default_or_exact || body.indexOf(default_or_exact) >= i) {
+            // The default behavior is to do nothing. We can take advantage of that to
+            // remove all case expressions that are side-effect free that also do
+            // nothing, since they'll default to doing nothing. But we can't remove any
+            // case expressions before one that would side-effect, since they may cause
+            // the side-effect to be skipped.
+            for (let j = body.length - 1; j >= i; j--) {
+                let branch = body[j];
+                if (branch === default_or_exact) {
+                    default_or_exact = null;
+                    body.pop();
+                } else if (!branch.expression.has_side_effects(compressor)) {
+                    body.pop();
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+
+    // Prune side-effect free branches that fall into default.
+    if (default_or_exact) {
+        let default_index = body.indexOf(default_or_exact);
+        let default_body_index = default_index;
+        for (; default_body_index < body.length - 1; default_body_index++) {
+            if (!is_inert_body(body[default_body_index])) break;
+        }
+        let side_effect_index = body.length - 1;
+        for (; side_effect_index >= 0; side_effect_index--) {
+            let branch = body[side_effect_index];
+            if (branch === default_or_exact) continue;
+            if (branch.expression.has_side_effects(compressor)) break;
+        }
+        // If the default behavior comes after any side-effect case expressions,
+        // then we can fold all side-effect free cases into the default branch.
+        // If the side-effect case is after the default, then any side-effect
+        // free cases could prevent the side-effect from occurring.
+        if (default_body_index > side_effect_index) {
+            let prev_body_index = default_index - 1;
+            for (; prev_body_index >= 0; prev_body_index--) {
+                if (!is_inert_body(body[prev_body_index])) break;
+            }
+            let before = Math.max(side_effect_index, prev_body_index) + 1;
+            let after = default_index;
+            if (side_effect_index > default_index) {
+                // If the default falls into the same body as a side-effect
+                // case, then we need preserve that case and only prune the
+                // cases after it.
+                after = side_effect_index;
+                body[side_effect_index].body = body[default_body_index].body;
+            } else {
+                // The default will be the last branch.
+                default_or_exact.body = body[default_body_index].body;
+            }
+
+            // Prune everything after the default (or last side-effect case)
+            // until the next case with a body.
+            body.splice(after + 1, default_body_index - after);
+            // Prune everything before the default that falls into it.
+            body.splice(before, default_index - before);
+        }
+    }
+
+    // See if we can remove the switch entirely if all cases (the default) fall into the same case body.
+    DEFAULT: if (default_or_exact) {
+        let i = body.findIndex(branch => !is_inert_body(branch));
+        let caseBody;
+        // `i` is equal to one of the following:
+        // - `-1`, there is no body in the switch statement.
+        // - `body.length - 1`, all cases fall into the same body.
+        // - anything else, there are multiple bodies in the switch.
+        if (i === body.length - 1) {
+            // All cases fall into the case body.
+            let branch = body[i];
+            if (has_nested_break(self)) break DEFAULT;
+
+            // This is the last case body, and we've already pruned any breaks, so it's
+            // safe to hoist.
+            caseBody = make_node(AST_BlockStatement, branch, {
+                body: branch.body
+            });
+            branch.body = [];
+        } else if (i !== -1) {
+            // If there are multiple bodies, then we cannot optimize anything.
+            break DEFAULT;
+        }
+
+        let sideEffect = body.find(branch => {
+            return (
+                branch !== default_or_exact
+                && branch.expression.has_side_effects(compressor)
+            );
+        });
+        // If no cases cause a side-effect, we can eliminate the switch entirely.
+        if (!sideEffect) {
+            return make_node(AST_BlockStatement, self, {
+                body: decl.concat(
+                    statement(self.expression),
+                    default_or_exact.expression ? statement(default_or_exact.expression) : [],
+                    caseBody || []
+                )
+            }).optimize(compressor);
+        }
+
+        // If we're this far, either there was no body or all cases fell into the same body.
+        // If there was no body, then we don't need a default branch (because the default is
+        // do nothing). If there was a body, we'll extract it to after the switch, so the
+        // switch's new default is to do nothing and we can still prune it.
+        const default_index = body.indexOf(default_or_exact);
+        body.splice(default_index, 1);
+        default_or_exact = null;
+
+        if (caseBody) {
+            // Recurse into switch statement one more time so that we can append the case body
+            // outside of the switch. This recursion will only happen once since we've pruned
+            // the default case.
+            return make_node(AST_BlockStatement, self, {
+                body: decl.concat(self, caseBody)
+            }).optimize(compressor);
+        }
+        // If we fall here, there is a default branch somewhere, there are no case bodies,
+        // and there's a side-effect somewhere. Just let the below paths take care of it.
+    }
+
     if (body.length > 0) {
         body[0].body = decl.concat(body[0].body);
     }
-    self.body = body;
-    while (branch = body[body.length - 1]) {
-        var stat = branch.body[branch.body.length - 1];
-        if (stat instanceof AST_Break && compressor.loopcontrol_target(stat) === self)
-            branch.body.pop();
-        if (branch.body.length || branch instanceof AST_Case
-            && (default_branch || branch.expression.has_side_effects(compressor))) break;
-        if (body.pop() === default_branch) default_branch = null;
-    }
+
     if (body.length == 0) {
         return make_node(AST_BlockStatement, self, {
-            body: decl.concat(make_node(AST_SimpleStatement, self.expression, {
-                body: self.expression
-            }))
+            body: decl.concat(statement(self.expression))
         }).optimize(compressor);
     }
-    if (body.length == 1 && (body[0] === exact_match || body[0] === default_branch)) {
-        var has_break = false;
-        var tw = new TreeWalker(function(node) {
-            if (has_break
-                || node instanceof AST_Lambda
-                || node instanceof AST_SimpleStatement) return true;
-            if (node instanceof AST_Break && tw.loopcontrol_target(node) === self)
-                has_break = true;
-        });
-        self.walk(tw);
-        if (!has_break) {
-            var statements = body[0].body.slice();
-            var exp = body[0].expression;
-            if (exp) statements.unshift(make_node(AST_SimpleStatement, exp, {
-                body: exp
-            }));
-            statements.unshift(make_node(AST_SimpleStatement, self.expression, {
-                body:self.expression
-            }));
-            return make_node(AST_BlockStatement, self, {
-                body: statements
+    if (body.length == 1 && !has_nested_break(self)) {
+        // This is the last case body, and we've already pruned any breaks, so it's
+        // safe to hoist.
+        let branch = body[0];
+        return make_node(AST_If, self, {
+            condition: make_node(AST_Binary, self, {
+                operator: "===",
+                left: self.expression,
+                right: branch.expression,
+            }),
+            body: make_node(AST_BlockStatement, branch, {
+                body: branch.body
+            }),
+            alternative: null
+        }).optimize(compressor);
+    }
+    if (body.length === 2 && default_or_exact && !has_nested_break(self)) {
+        let branch = body[0] === default_or_exact ? body[1] : body[0];
+        let exact_exp = default_or_exact.expression && statement(default_or_exact.expression);
+        if (aborts(body[0])) {
+            // Only the first branch body could have a break (at the last statement)
+            let first = body[0];
+            if (is_break(first.body[first.body.length - 1], compressor)) {
+                first.body.pop();
+            }
+            return make_node(AST_If, self, {
+                condition: make_node(AST_Binary, self, {
+                    operator: "===",
+                    left: self.expression,
+                    right: branch.expression,
+                }),
+                body: make_node(AST_BlockStatement, branch, {
+                    body: branch.body
+                }),
+                alternative: make_node(AST_BlockStatement, default_or_exact, {
+                    body: [].concat(
+                        exact_exp || [],
+                        default_or_exact.body
+                    )
+                })
             }).optimize(compressor);
         }
+        let operator = "===";
+        let consequent = make_node(AST_BlockStatement, branch, {
+            body: branch.body,
+        });
+        let always = make_node(AST_BlockStatement, default_or_exact, {
+            body: [].concat(
+                exact_exp || [],
+                default_or_exact.body
+            )
+        });
+        if (body[0] === default_or_exact) {
+            operator = "!==";
+            let tmp = always;
+            always = consequent;
+            consequent = tmp;
+        }
+        return make_node(AST_BlockStatement, self, {
+            body: [
+                make_node(AST_If, self, {
+                    condition: make_node(AST_Binary, self, {
+                        operator: operator,
+                        left: self.expression,
+                        right: branch.expression,
+                    }),
+                    body: consequent,
+                    alternative: null
+                })
+            ].concat(always)
+        }).optimize(compressor);
     }
     return self;
 
@@ -49631,6 +49872,50 @@ def_optimize(AST_Switch, function(self, compressor) {
         } else {
             trim_unreachable_code(compressor, branch, decl);
         }
+    }
+    function branches_equivalent(branch, prev, insertBreak) {
+        let bbody = branch.body;
+        let pbody = prev.body;
+        if (insertBreak) {
+            bbody = bbody.concat(make_node(AST_Break));
+        }
+        if (bbody.length !== pbody.length) return false;
+        let bblock = make_node(AST_BlockStatement, branch, { body: bbody });
+        let pblock = make_node(AST_BlockStatement, prev, { body: pbody });
+        return bblock.equivalent_to(pblock);
+    }
+    function statement(expression) {
+        return make_node(AST_SimpleStatement, expression, {
+            body: expression
+        });
+    }
+    function has_nested_break(root) {
+        let has_break = false;
+        let tw = new TreeWalker(node => {
+            if (has_break) return true;
+            if (node instanceof AST_Lambda) return true;
+            if (node instanceof AST_SimpleStatement) return true;
+            if (!is_break(node, tw)) return;
+            let parent = tw.parent();
+            if (
+                parent instanceof AST_SwitchBranch
+                && parent.body[parent.body.length - 1] === node
+            ) {
+                return;
+            }
+            has_break = true;
+        });
+        root.walk(tw);
+        return has_break;
+    }
+    function is_break(node, stack) {
+        return node instanceof AST_Break
+            && stack.loopcontrol_target(node) === self;
+    }
+    function is_inert_body(branch) {
+        return !aborts(branch) && !make_node(AST_BlockStatement, branch, {
+            body: branch.body
+        }).has_side_effects(compressor);
     }
 });
 
@@ -49798,6 +50083,14 @@ def_optimize(AST_Call, function(self, compressor) {
     }
 
     if (compressor.option("unsafe")) {
+        if (exp instanceof AST_Dot && exp.start.value === "Array" && exp.property === "from" && self.args.length === 1) {
+            const [argument] = self.args;
+            if (argument instanceof AST_Array) {
+                return make_node(AST_Array, argument, {
+                    elements: argument.elements
+                }).optimize(compressor);
+            }
+        }
         if (is_undeclared_ref(exp)) switch (exp.name) {
           case "Array":
             if (self.args.length != 1) {
@@ -50003,6 +50296,7 @@ def_optimize(AST_Call, function(self, compressor) {
             argnames: [],
             body: []
         }).optimize(compressor);
+        var nth_identifier = compressor.mangle_options && compressor.mangle_options.nth_identifier || base54;
         if (self.args.every((x) => x instanceof AST_String)) {
             // quite a corner-case, but we can handle it:
             //   https://github.com/mishoo/UglifyJS2/issues/203
@@ -50012,14 +50306,13 @@ def_optimize(AST_Call, function(self, compressor) {
                     return arg.value;
                 }).join(",") + "){" + self.args[self.args.length - 1].value + "})";
                 var ast = parse(code);
-                var mangle = { ie8: compressor.option("ie8") };
+                var mangle = { ie8: compressor.option("ie8"), nth_identifier: nth_identifier };
                 ast.figure_out_scope(mangle);
                 var comp = new Compressor(compressor.options, {
                     mangle_options: compressor.mangle_options
                 });
                 ast = ast.transform(comp);
                 ast.figure_out_scope(mangle);
-                base54.reset();
                 ast.compute_char_frequency(mangle);
                 ast.mangle_names(mangle);
                 var fun;
@@ -52217,12 +52510,15 @@ function lift_key(self, compressor) {
         if (self.key.value == "constructor"
             && compressor.parent() instanceof AST_Class) return self;
         if (self instanceof AST_ObjectKeyVal) {
+            self.quote = self.key.quote;
             self.key = self.key.value;
         } else if (self instanceof AST_ClassProperty) {
+            self.quote = self.key.quote;
             self.key = make_node(AST_SymbolClassProperty, self.key, {
                 name: self.key.value
             });
         } else {
+            self.quote = self.key.quote;
             self.key = make_node(AST_SymbolMethod, self.key, {
                 name: self.key.value
             });
@@ -60330,17 +60626,50 @@ function addStrings(node, add) {
     }));
 }
 
+function mangle_private_properties(ast, options) {
+    var cprivate = -1;
+    var private_cache = new Map();
+    var nth_identifier = options.nth_identifier || base54;
+
+    ast =  ast.transform(new TreeTransformer(function(node) {
+        if (
+            node instanceof AST_ClassPrivateProperty
+            || node instanceof AST_PrivateMethod
+            || node instanceof AST_PrivateGetter
+            || node instanceof AST_PrivateSetter
+        ) {
+            node.key.name = mangle_private(node.key.name);
+        } else if (node instanceof AST_DotHash) {
+            node.property = mangle_private(node.property);
+        }
+    }));
+    return ast;
+
+    function mangle_private(name) {
+        let mangled = private_cache.get(name);
+        if (!mangled) {
+            mangled = nth_identifier.get(++cprivate);
+            private_cache.set(name, mangled);
+        }
+
+        return mangled;
+    }
+}
+
 function mangle_properties(ast, options) {
     options = defaults(options, {
         builtins: false,
         cache: null,
         debug: false,
         keep_quoted: false,
+        nth_identifier: base54,
         only_cache: false,
         regex: null,
         reserved: null,
         undeclared: false,
     }, true);
+
+    var nth_identifier = options.nth_identifier;
 
     var reserved_option = options.reserved;
     if (!Array.isArray(reserved_option)) reserved_option = [reserved_option];
@@ -60348,10 +60677,8 @@ function mangle_properties(ast, options) {
     if (!options.builtins) find_builtins(reserved);
 
     var cname = -1;
-    var cprivate = -1;
 
     var cache;
-    var private_cache = new Map();
     if (options.cache) {
         cache = options.cache.props;
         cache.forEach(function(mangled_name) {
@@ -60374,27 +60701,24 @@ function mangle_properties(ast, options) {
 
     var names_to_mangle = new Set();
     var unmangleable = new Set();
-    var private_properties = new Set();
 
-    var keep_quoted_strict = options.keep_quoted === "strict";
+    var keep_quoted = !!options.keep_quoted;
 
     // step 1: find candidates to mangle
     ast.walk(new TreeWalker(function(node) {
         if (
             node instanceof AST_ClassPrivateProperty
             || node instanceof AST_PrivateMethod
-        ) {
-            private_properties.add(node.key.name);
-        } else if (node instanceof AST_DotHash) {
-            private_properties.add(node.property);
-        } else if (node instanceof AST_ObjectKeyVal) {
-            if (typeof node.key == "string" &&
-                (!keep_quoted_strict || !node.quote)) {
+            || node instanceof AST_PrivateGetter
+            || node instanceof AST_PrivateSetter
+            || node instanceof AST_DotHash
+        ) ; else if (node instanceof AST_ObjectKeyVal) {
+            if (typeof node.key == "string" && (!keep_quoted || !node.quote)) {
                 add(node.key);
             }
         } else if (node instanceof AST_ObjectProperty) {
             // setter or getter, since KeyVal is handled above
-            if (!keep_quoted_strict || !node.key.end.quote) {
+            if (!keep_quoted || !node.quote) {
                 add(node.key.name);
             }
         } else if (node instanceof AST_Dot) {
@@ -60407,11 +60731,11 @@ function mangle_properties(ast, options) {
                 declared = !(root.thedef && root.thedef.undeclared);
             }
             if (declared &&
-                (!keep_quoted_strict || !node.quote)) {
+                (!keep_quoted || !node.quote)) {
                 add(node.property);
             }
         } else if (node instanceof AST_Sub) {
-            if (!keep_quoted_strict) {
+            if (!keep_quoted) {
                 addStrings(node.property, add);
             }
         } else if (node instanceof AST_Call
@@ -60427,25 +60751,23 @@ function mangle_properties(ast, options) {
         if (
             node instanceof AST_ClassPrivateProperty
             || node instanceof AST_PrivateMethod
-        ) {
-            node.key.name = mangle_private(node.key.name);
-        } else if (node instanceof AST_DotHash) {
-            node.property = mangle_private(node.property);
-        } else if (node instanceof AST_ObjectKeyVal) {
-            if (typeof node.key == "string" &&
-                (!keep_quoted_strict || !node.quote)) {
+            || node instanceof AST_PrivateGetter
+            || node instanceof AST_PrivateSetter
+            || node instanceof AST_DotHash
+        ) ; else if (node instanceof AST_ObjectKeyVal) {
+            if (typeof node.key == "string" && (!keep_quoted || !node.quote)) {
                 node.key = mangle(node.key);
             }
         } else if (node instanceof AST_ObjectProperty) {
             // setter, getter, method or class field
-            if (!keep_quoted_strict || !node.key.end.quote) {
+            if (!keep_quoted || !node.quote) {
                 node.key.name = mangle(node.key.name);
             }
         } else if (node instanceof AST_Dot) {
-            if (!keep_quoted_strict || !node.quote) {
+            if (!keep_quoted || !node.quote) {
                 node.property = mangle(node.property);
             }
-        } else if (!options.keep_quoted && node instanceof AST_Sub) {
+        } else if (!keep_quoted && node instanceof AST_Sub) {
             node.property = mangleStrings(node.property);
         } else if (node instanceof AST_Call
             && node.expression.print_to_string() == "Object.defineProperty") {
@@ -60502,22 +60824,12 @@ function mangle_properties(ast, options) {
             // either debug mode is off, or it is on and we could not use the mangled name
             if (!mangled) {
                 do {
-                    mangled = base54(++cname);
+                    mangled = nth_identifier.get(++cname);
                 } while (!can_mangle(mangled));
             }
 
             cache.set(name, mangled);
         }
-        return mangled;
-    }
-
-    function mangle_private(name) {
-        let mangled = private_cache.get(name);
-        if (!mangled) {
-            mangled = base54(++cprivate);
-            private_cache.set(name, mangled);
-        }
-
         return mangled;
     }
 
@@ -60716,9 +61028,9 @@ async function minify(files, options) {
     if (options.mangle) toplevel.figure_out_scope(options.mangle);
     if (timings) timings.mangle = Date.now();
     if (options.mangle) {
-        base54.reset();
         toplevel.compute_char_frequency(options.mangle);
         toplevel.mangle_names(options.mangle);
+        toplevel = mangle_private_properties(toplevel, options.mangle);
     }
     if (timings) timings.properties = Date.now();
     if (options.mangle && options.mangle.properties) {

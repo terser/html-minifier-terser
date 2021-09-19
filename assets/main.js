@@ -1,4 +1,4 @@
-import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3/dist/module.esm.js'
+import Alpine from 'https://cdn.skypack.dev/alpinejs@3';
 
 const worker = new Worker('assets/worker.js');
 

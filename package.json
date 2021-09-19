@@ -15,7 +15,8 @@
   "maintainers": [
     "Daniel Ruf <daniel@daniel-ruf.de",
     "Alex Lam <alexlamsl@gmail.com>",
-    "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)"
+    "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)",
+    "Sibiraj <sibiraj.dev>"
   ],
   "contributors": [
     "Gilmore Davidson (https://github.com/gilmoreorless)",
@@ -59,7 +60,8 @@
   "scripts": {
     "dist": "grunt dist",
     "test": "grunt test",
-    "prepare": "is-ci || husky install"
+    "prepare": "is-ci || husky install",
+    "serve": "npm run dist && serve . -p 6753"
   },
   "dependencies": {
     "camel-case": "^4.1.2",
@@ -79,7 +81,8 @@
     "is-ci": "^3.0.0",
     "lint-staged": "^11.1.2",
     "node-qunit-puppeteer": "^2.1.0",
-    "qunit": "2.16.0"
+    "qunit": "2.16.0",
+    "serve": "^12.0.1"
   },
   "benchmarkDependencies": {
     "chalk": "^2.4.2",

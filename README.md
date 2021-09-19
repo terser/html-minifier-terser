@@ -137,13 +137,14 @@ npm link .
 
 Note that almost all options are disabled by default. For command line usage please see `html-minifier-terser --help` for a list of available options. Experiment and find what works best for you and your project.
 
-* **Sample command line:** ``html-minifier-terser --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true``
+- **Sample command line:** `html-minifier-terser --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true`
 
 ### Node.js
 
 ```js
-var minify = require('html-minifier-terser').minify;
-var result = await minify('<p title="blah" id="moo">foo</p>', {
+const { minify } = require('html-minifier-terser');
+
+const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true
 });
 result; // '<p title=blah id=moo>foo</p>'
@@ -155,4 +156,10 @@ Benchmarks for minified HTML:
 
 ```shell
 node benchmark.js
+```
+
+## Running local server
+
+```shell
+npm run serve
 ```

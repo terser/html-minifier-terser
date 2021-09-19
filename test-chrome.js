@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 const path = require('path');
-const { runQunitPuppeteer, printOutput, printFailedTests } = require('./node_modules/node-qunit-puppeteer/index.js');
+const { runQunitPuppeteer, printFailedTests } = require('./node_modules/node-qunit-puppeteer/index.js');
 
 const args = process.argv.slice(2);
 
@@ -40,7 +40,7 @@ if (typeof puppeteerArgsStr === 'string') {
 runQunitPuppeteer(qunitArgs)
   .then((result) => {
     var output = {passed:result.stats.passed,failed:result.stats.failed,total:result.stats.total,runtime:result.stats.runtime,failures:[]};
-    
+
     console.log(JSON.stringify(output));
     if (result.stats.failed > 0) {
       // Handle the failed test run

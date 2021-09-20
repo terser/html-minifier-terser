@@ -10,8 +10,7 @@ addEventListener('message', (event) => {
     };
 
     minify(event.data.value, options).then(this.postMessage);
-  }
-  catch (err) {
+  } catch (err) {
     postMessage({
       error: err + ''
     });

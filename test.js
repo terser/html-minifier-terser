@@ -2,24 +2,24 @@
 'use strict';
 
 function load(path) {
-  var obj = require(path);
-  for (var key in obj) {
+  const obj = require(path);
+  for (const key in obj) {
     global[key] = obj[key];
   }
   return obj;
 }
 
-var alert = console.log;
-var QUnit = load('qunit');
+const alert = console.log;
+const QUnit = load('qunit');
 
 function hook() {
-  var failures = [];
-  QUnit.log(function(details) {
+  const failures = [];
+  QUnit.log(function (details) {
     if (!details.result) {
       failures.push(details);
     }
   });
-  QUnit.done(function(details) {
+  QUnit.done(function (details) {
     details.failures = failures;
     alert(JSON.stringify(details));
   });

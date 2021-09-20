@@ -1,19 +1,18 @@
 'use strict';
 
 function qunitVersion() {
-  var prepareStackTrace = Error.prepareStackTrace;
-  Error.prepareStackTrace = function() {
+  const prepareStackTrace = Error.prepareStackTrace;
+  Error.prepareStackTrace = function () {
     return '';
   };
   try {
     return require('qunit').version;
-  }
-  finally {
+  } finally {
     Error.prepareStackTrace = prepareStackTrace;
   }
 }
 
-module.exports = function(grunt) {
+module.exports = function (grunt) {
   // Force use of Unix newlines
   grunt.util.linefeed = '\n';
 
@@ -21,21 +20,21 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     qunit_ver: qunitVersion(),
     banner: '/*!\n' +
-            ' * HTMLMinifier v<%= pkg.version %> (<%= pkg.homepage %>)\n' +
-            ' * Copyright 2010-<%= grunt.template.today("yyyy") %> Juriy "kangax" Zaytsev, <%= pkg.author %>\n' +
-            ' * Licensed under the <%= pkg.license %> license\n' +
-            ' */\n',
+      ' * HTMLMinifier v<%= pkg.version %> (<%= pkg.homepage %>)\n' +
+      ' * Copyright 2010-<%= grunt.template.today("yyyy") %> Juriy "kangax" Zaytsev, <%= pkg.author %>\n' +
+      ' * Licensed under the <%= pkg.license %> license\n' +
+      ' */\n',
 
     browserify: {
       src: {
         options: {
           banner: '<%= banner %>',
-          preBundleCB: function() {
-            var fs = require('fs');
-            var file = fs.readFileSync('./node_modules/terser/dist/bundle.min.js');
+          preBundleCB: function () {
+            const fs = require('fs');
+            const file = fs.readFileSync('./node_modules/terser/dist/bundle.min.js');
             fs.writeFileSync('./dist/terser.js', file);
           },
-          postBundleCB: function(err, src, next) {
+          postBundleCB: function (err, src, next) {
             require('fs').unlinkSync('./dist/terser.js');
             next(err, src);
           },
@@ -104,7 +103,7 @@ module.exports = function(grunt) {
 
   function report(type, details) {
     grunt.log.writeln(type + ' completed in ' + details.runtime + 'ms');
-    details.failures.forEach(function(details) {
+    details.failures.forEach(function (details) {
       grunt.log.error();
       grunt.log.error(details.name + (details.message ? ' [' + details.message + ']' : ''));
       grunt.log.error(details.source);
@@ -117,30 +116,28 @@ module.exports = function(grunt) {
     return details.failed;
   }
 
-  grunt.registerMultiTask('qunit', function() {
-    var done = this.async();
-    var errors = [];
+  grunt.registerMultiTask('qunit', function () {
+    const done = this.async();
+    const errors = [];
 
     function run(testType, binPath, testPath) {
-      var testrunner;
+      let testrunner;
       if (testType === 'web') {
         testrunner = 'test-chrome.js';
-      }
-      else {
+      } else {
         testrunner = 'test.js';
       }
       grunt.util.spawn({
         cmd: binPath,
         args: [testrunner, testPath]
-      }, function(error, result) {
+      }, function (error, result) {
         if (error) {
           grunt.log.error(result.stderr);
           grunt.log.error(testType + ' test failed to load');
           errors.push(-1);
-        }
-        else {
-          var output = result.stdout;
-          var index = output.lastIndexOf('\n');
+        } else {
+          let output = result.stdout;
+          const index = output.lastIndexOf('\n');
           if (index !== -1) {
             // There's something before the report JSON
             // Log it to the console -- it's probably some debug output:
@@ -159,10 +156,10 @@ module.exports = function(grunt) {
     run('web', process.argv[0], this.data[1]);
   });
 
-  grunt.registerMultiTask('replace', function() {
-    var pattern = this.data[0];
-    var path = this.target;
-    var html = grunt.file.read(path);
+  grunt.registerMultiTask('replace', function () {
+    const pattern = this.data[0];
+    const path = this.target;
+    let html = grunt.file.read(path);
     html = html.replace(pattern, this.data[1]);
     grunt.file.write(path, html);
   });
@@ -173,9 +170,8 @@ module.exports = function(grunt) {
     'terser'
   ]);
 
-  grunt.registerTask('test', function() {
+  grunt.registerTask('test', function () {
     grunt.task.run([
-      'eslint',
       'dist',
       'qunit'
     ]);

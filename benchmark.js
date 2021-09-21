@@ -2,51 +2,49 @@
 
 'use strict';
 
-var packages = require('./package.json').benchmarkDependencies;
-packages = Object.keys(packages).map(function(name) {
+let packages = require('./package.json').benchmarkDependencies;
+packages = Object.keys(packages).map(function (name) {
   return name + '@' + packages[name];
 });
 packages.unshift('install', '--no-save', '--no-optional');
-var installed = require('child_process').spawnSync('npm', packages, {
+const installed = require('child_process').spawnSync('npm', packages, {
   encoding: 'utf-8',
   shell: true
 });
 if (installed.error) {
   throw installed.error;
-}
-else if (installed.status) {
+} else if (installed.status) {
   console.log(installed.stdout);
   console.error(installed.stderr);
   process.exit(installed.status);
 }
 
-var iltorb = require('iltorb'),
-    chalk = require('chalk'),
-    fork = require('child_process').fork,
-    fs = require('fs'),
-    https = require('https'),
-    lzma = require('lzma'),
-    Minimize = require('minimize'),
-    path = require('path'),
-    Progress = require('progress'),
-    querystring = require('querystring'),
-    Table = require('cli-table3'),
-    url = require('url'),
-    zlib = require('zlib');
+const fs = require('fs');
+const zlib = require('zlib');
+const https = require('https');
+const path = require('path');
 
-var urls = require('./benchmarks');
-var fileNames = Object.keys(urls);
+const iltorb = require('iltorb');
+const chalk = require('chalk');
+const { fork } = require('child_process');
+const lzma = require('lzma');
+const Minimize = require('minimize');
+const Progress = require('progress');
+const Table = require('cli-table3');
 
-var minimize = new Minimize();
+const urls = require('./benchmarks');
+const fileNames = Object.keys(urls);
 
-var progress = new Progress('[:bar] :etas :fileName', {
+const minimize = new Minimize();
+
+const progress = new Progress('[:bar] :etas :fileName', {
   width: 50,
   total: fileNames.length
 });
 
-var table = new Table({
+const table = new Table({
   head: ['File', 'Before', 'After', 'Minimize', 'Will Peavy', 'htmlcompressor.com', 'Savings', 'Time'],
-  colWidths: [fileNames.reduce(function(length, fileName) {
+  colWidths: [fileNames.reduce(function (length, fileName) {
     return Math.max(length, fileName.length);
   }, 0) + 2, 25, 25, 25, 25, 25, 20, 10]
 });
@@ -64,8 +62,8 @@ function greenSize(size) {
 }
 
 function blueSavings(oldSize, newSize) {
-  var savingsPercent = (1 - newSize / oldSize) * 100;
-  var savings = oldSize - newSize;
+  const savingsPercent = (1 - newSize / oldSize) * 100;
+  const savings = oldSize - newSize;
   return chalk.cyan.bold(savingsPercent.toFixed(2)) + chalk.white('% (' + toKb(savings, 2) + ' KB)');
 }
 
@@ -74,7 +72,7 @@ function blueTime(time) {
 }
 
 function readBuffer(filePath, callback) {
-  fs.readFile(filePath, function(err, data) {
+  fs.readFile(filePath, function (err, data) {
     if (err) {
       throw new Error('There was an error reading ' + filePath);
     }
@@ -83,7 +81,7 @@ function readBuffer(filePath, callback) {
 }
 
 function readText(filePath, callback) {
-  fs.readFile(filePath, { encoding: 'utf8' }, function(err, data) {
+  fs.readFile(filePath, { encoding: 'utf8' }, function (err, data) {
     if (err) {
       throw new Error('There was an error reading ' + filePath);
     }
@@ -92,7 +90,7 @@ function readText(filePath, callback) {
 }
 
 function writeBuffer(filePath, data, callback) {
-  fs.writeFile(filePath, data, function(err) {
+  fs.writeFile(filePath, data, function (err) {
     if (err) {
       throw new Error('There was an error writing ' + filePath);
     }
@@ -101,7 +99,7 @@ function writeBuffer(filePath, data, callback) {
 }
 
 function writeText(filePath, data, callback) {
-  fs.writeFile(filePath, data, { encoding: 'utf8' }, function(err) {
+  fs.writeFile(filePath, data, { encoding: 'utf8' }, function (err) {
     if (err) {
       throw new Error('There was an error writing ' + filePath);
     }
@@ -112,7 +110,7 @@ function writeText(filePath, data, callback) {
 }
 
 function readSize(filePath, callback) {
-  fs.stat(filePath, function(err, stats) {
+  fs.stat(filePath, function (err, stats) {
     if (err) {
       throw new Error('There was an error reading ' + filePath);
     }
@@ -127,13 +125,12 @@ function gzip(inPath, outPath, callback) {
 }
 
 function run(tasks, done) {
-  var i = 0;
+  let i = 0;
 
   function callback() {
     if (i < tasks.length) {
       tasks[i++](callback);
-    }
-    else {
+    } else {
       done();
     }
   }
@@ -141,10 +138,10 @@ function run(tasks, done) {
   callback();
 }
 
-var rows = {};
+const rows = {};
 
 function generateMarkdownTable() {
-  var headers = [
+  const headers = [
     'Site',
     'Original size *(KB)*',
     'HTMLMinifier',
@@ -152,65 +149,65 @@ function generateMarkdownTable() {
     'Will Peavy',
     'htmlcompressor.com'
   ];
-  fileNames.forEach(function(fileName) {
-    var row = rows[fileName].report;
+  fileNames.forEach(function (fileName) {
+    const row = rows[fileName].report;
     row[2] = '**' + row[2] + '**';
   });
-  var widths = headers.map(function(header, index) {
-    var width = header.length;
-    fileNames.forEach(function(fileName) {
+  const widths = headers.map(function (header, index) {
+    let width = header.length;
+    fileNames.forEach(function (fileName) {
       width = Math.max(width, rows[fileName].report[index].length);
     });
     return width;
   });
-  var content = '';
+  let content = '';
 
   function output(row) {
-    widths.forEach(function(width, index) {
-      var text = row[index];
+    widths.forEach(function (width, index) {
+      const text = row[index];
       content += '| ' + text + new Array(width - text.length + 2).join(' ');
     });
     content += '|\n';
   }
 
   output(headers);
-  widths.forEach(function(width, index) {
+  widths.forEach(function (width, index) {
     content += '|';
     content += index === 1 ? ':' : ' ';
     content += new Array(width + 1).join('-');
     content += index === 0 ? ' ' : ':';
   });
   content += '|\n';
-  fileNames.sort(function(a, b) {
-    var r = +rows[a].report[1];
-    var s = +rows[b].report[1];
+  fileNames.sort(function (a, b) {
+    const r = +rows[a].report[1];
+    const s = +rows[b].report[1];
     return r < s ? -1 : r > s ? 1 : a < b ? -1 : a > b ? 1 : 0;
-  }).forEach(function(fileName) {
+  }).forEach(function (fileName) {
     output(rows[fileName].report);
   });
   return content;
 }
 
 function displayTable() {
-  fileNames.forEach(function(fileName) {
+  fileNames.forEach(function (fileName) {
     table.push(rows[fileName].display);
   });
   console.log();
   console.log(table.toString());
 }
 
-run(fileNames.map(function(fileName) {
-  var filePath = path.join('benchmarks/', fileName + '.html');
+run(fileNames.map(function (fileName) {
+  const filePath = path.join('benchmarks/', fileName + '.html');
 
   function processFile(site, done) {
-    var original = {
+    const original = {
       filePath: filePath,
       gzFilePath: path.join('benchmarks/generated/', fileName + '.html.gz'),
       lzFilePath: path.join('benchmarks/generated/', fileName + '.html.lz'),
       brFilePath: path.join('benchmarks/generated/', fileName + '.html.br')
     };
-    var infos = {};
-    ['minifier', 'minimize', 'willpeavy', 'compressor'].forEach(function(name) {
+    const infos = {};
+    ['minifier', 'minimize', 'willpeavy', 'compressor'].forEach(function (name) {
       infos[name] = {
         filePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html'),
         gzFilePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html.gz'),
@@ -223,27 +220,27 @@ run(fileNames.map(function(fileName) {
       info.endTime = Date.now();
       run([
         // Apply Gzip on minified output
-        function(done) {
-          gzip(info.filePath, info.gzFilePath, function() {
+        function (done) {
+          gzip(info.filePath, info.gzFilePath, function () {
             info.gzTime = Date.now();
             // Open and read the size of the minified+gzip output
-            readSize(info.gzFilePath, function(size) {
+            readSize(info.gzFilePath, function (size) {
               info.gzSize = size;
               done();
             });
           });
         },
         // Apply LZMA on minified output
-        function(done) {
-          readBuffer(info.filePath, function(data) {
-            lzma.compress(data, 1, function(result, error) {
+        function (done) {
+          readBuffer(info.filePath, function (data) {
+            lzma.compress(data, 1, function (result, error) {
               if (error) {
                 throw error;
               }
-              writeBuffer(info.lzFilePath, new Buffer(result), function() {
+              writeBuffer(info.lzFilePath, Buffer.from(result), function () {
                 info.lzTime = Date.now();
                 // Open and read the size of the minified+lzma output
-                readSize(info.lzFilePath, function(size) {
+                readSize(info.lzFilePath, function (size) {
                   info.lzSize = size;
                   done();
                 });
@@ -252,13 +249,13 @@ run(fileNames.map(function(fileName) {
           });
         },
         // Apply Brotli on minified output
-        function(done) {
-          readBuffer(info.filePath, function(data) {
-            var output = new Buffer(iltorb.compressSync(data));
-            writeBuffer(info.brFilePath, output, function() {
+        function (done) {
+          readBuffer(info.filePath, function (data) {
+            const output = Buffer.from(iltorb.compressSync(data));
+            writeBuffer(info.brFilePath, output, function () {
               info.brTime = Date.now();
               // Open and read the size of the minified+brotli output
-              readSize(info.brFilePath, function(size) {
+              readSize(info.brFilePath, function (size) {
                 info.brSize = size;
                 done();
               });
@@ -266,8 +263,8 @@ run(fileNames.map(function(fileName) {
           });
         },
         // Open and read the size of the minified output
-        function(done) {
-          readSize(info.filePath, function(size) {
+        function (done) {
+          readSize(info.filePath, function (size) {
             info.size = size;
             done();
           });
@@ -276,19 +273,19 @@ run(fileNames.map(function(fileName) {
     }
 
     function testHTMLMinifier(done) {
-      var info = infos.minifier;
+      const info = infos.minifier;
       info.startTime = Date.now();
-      var args = [filePath, '-c', 'sample-cli-config-file.conf', '--minify-urls', site, '-o', info.filePath];
-      fork('./cli', args).on('exit', function() {
+      const args = [filePath, '-c', 'sample-cli-config-file.conf', '--minify-urls', site, '-o', info.filePath];
+      fork('./cli', args).on('exit', function () {
         readSizes(info, done);
       });
     }
 
     function testMinimize(done) {
-      readBuffer(filePath, function(data) {
-        minimize.parse(data, function(error, data) {
-          var info = infos.minimize;
-          writeBuffer(info.filePath, data, function() {
+      readBuffer(filePath, function (data) {
+        minimize.parse(data, function (_, data) {
+          const info = infos.minimize;
+          writeBuffer(info.filePath, data, function () {
             readSizes(info, done);
           });
         });
@@ -296,30 +293,31 @@ run(fileNames.map(function(fileName) {
     }
 
     function testWillPeavy(done) {
-      readText(filePath, function(data) {
-        var options = url.parse('https://www.willpeavy.com/tools/minifier/');
-        options.method = 'POST';
-        options.headers = {
-          'Content-Type': 'application/x-www-form-urlencoded'
+      readText(filePath, function (data) {
+        const url = new URL('https://www.willpeavy.com/tools/minifier/');
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         };
-        https.request(options, function(res) {
+
+        https.request(url, options, function (res) {
           res.setEncoding('utf8');
-          var response = '';
-          res.on('data', function(chunk) {
+          let response = '';
+          res.on('data', function (chunk) {
             response += chunk;
-          }).on('end', function() {
-            var info = infos.willpeavy;
+          }).on('end', function () {
+            const info = infos.willpeavy;
             if (res.statusCode === 200) {
               // Extract result from <textarea/>
-              var start = response.indexOf('>', response.indexOf('<textarea'));
-              var end = response.lastIndexOf('</textarea>');
-              var result = response.slice(start + 1, end).replace(/<\\\//g, '</');
-              writeText(info.filePath, result, function() {
+              const start = response.indexOf('>', response.indexOf('<textarea'));
+              const end = response.lastIndexOf('</textarea>');
+              const result = response.slice(start + 1, end).replace(/<\\\//g, '</');
+              writeText(info.filePath, result, function () {
                 readSizes(info, done);
               });
-            }
-            // Site refused to process content
-            else {
+            } else { // Site refused to process content
               info.size = 0;
               info.gzSize = 0;
               info.lzSize = 0;
@@ -327,21 +325,24 @@ run(fileNames.map(function(fileName) {
               done();
             }
           });
-        }).end(querystring.stringify({
+        }).end(new URLSearchParams({
           html: data
-        }));
+        }).toString());
       });
     }
 
     function testHTMLCompressor(done) {
-      readText(filePath, function(data) {
-        var options = url.parse('https://htmlcompressor.com/compress_ajax_v2.php');
-        options.method = 'POST';
-        options.headers = {
-          'Accept-Encoding': 'gzip',
-          'Content-Type': 'application/x-www-form-urlencoded'
+      readText(filePath, function (data) {
+        const url = new URL('https://htmlcompressor.com/compress_ajax_v2.php');
+        const options = {
+          method: 'POST',
+          headers: {
+            'Accept-Encoding': 'gzip',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         };
-        var info = infos.compressor;
+
+        let info = infos.compressor;
 
         function failed() {
           // Site refused to process content
@@ -355,32 +356,29 @@ run(fileNames.map(function(fileName) {
           }
         }
 
-        https.request(options, function(res) {
+        https.request(url, options, function (res) {
           if (res.headers['content-encoding'] === 'gzip') {
             res = res.pipe(zlib.createGunzip());
           }
           res.setEncoding('utf8');
-          var response = '';
-          res.on('data', function(chunk) {
+          let response = '';
+          res.on('data', function (chunk) {
             response += chunk;
-          }).on('end', function() {
+          }).on('end', function () {
             try {
               response = JSON.parse(response);
-            }
-            catch (e) {
+            } catch (e) {
               response = {};
             }
             if (info && response.success) {
-              writeText(info.filePath, response.result, function() {
+              writeText(info.filePath, response.result, function () {
                 readSizes(info, done);
               });
-            }
-            // Site refused to process content
-            else {
+            } else { // Site refused to process content
               failed();
             }
           });
-        }).on('error', failed).end(querystring.stringify({
+        }).on('error', failed).end(new URLSearchParams({
           code_type: 'html',
           html_level: 3,
           html_strip_quotes: 1,
@@ -393,29 +391,29 @@ run(fileNames.map(function(fileName) {
           js_engine: 'yui',
           js_fallback: 1,
           code: data
-        }));
+        }).toString());
       });
     }
 
     run([
-      function(done) {
+      function (done) {
         readSizes(original, done);
       },
       testHTMLMinifier,
       testMinimize,
       testWillPeavy,
       testHTMLCompressor
-    ], function() {
-      var display = [
+    ], function () {
+      const display = [
         [fileName, '+ gzip', '+ lzma', '+ brotli'].join('\n'),
         [redSize(original.size), redSize(original.gzSize), redSize(original.lzSize), redSize(original.brSize)].join('\n')
       ];
-      var report = [
+      const report = [
         '[' + fileName + '](' + urls[fileName] + ')',
         toKb(original.size)
       ];
-      for (var name in infos) {
-        var info = infos[name];
+      for (const name in infos) {
+        const info = infos[name];
         display.push([greenSize(info.size), greenSize(info.gzSize), greenSize(info.lzSize), greenSize(info.brSize)].join('\n'));
         report.push(info.size ? toKb(info.size) : 'n/a');
       }
@@ -443,40 +441,39 @@ run(fileNames.map(function(fileName) {
   }
 
   function get(site, callback) {
-    var options = url.parse(site);
-    https.get(options, function(res) {
-      var status = res.statusCode;
+    const url = new URL(site);
+
+    https.get(url, function (res) {
+      const status = res.statusCode;
       if (status === 200) {
         if (res.headers['content-encoding'] === 'gzip') {
           res = res.pipe(zlib.createGunzip());
         }
-        res.pipe(fs.createWriteStream(filePath)).on('finish', function() {
+        res.pipe(fs.createWriteStream(filePath)).on('finish', function () {
           callback(site);
         });
-      }
-      else if (status >= 300 && status < 400 && res.headers.location) {
-        get(url.resolve(site, res.headers.location), callback);
-      }
-      else {
+      } else if (status >= 300 && status < 400 && res.headers.location) {
+        get(new URL(res.headers.location, site), callback);
+      } else {
         throw new Error('HTTP error ' + status + '\n' + site);
       }
     });
   }
 
-  return function(done) {
+  return function (done) {
     progress.tick(0, { fileName: fileName });
-    get(urls[fileName], function(site) {
+    get(urls[fileName], function (site) {
       processFile(site, done);
     });
   };
-}), function() {
+}), function () {
   displayTable();
-  var content = generateMarkdownTable();
-  var readme = './README.md';
-  readText(readme, function(data) {
-    var start = data.indexOf('## Minification comparison');
+  const content = generateMarkdownTable();
+  const readme = './README.md';
+  readText(readme, function (data) {
+    let start = data.indexOf('## Minification comparison');
     start = data.indexOf('|', start);
-    var end = data.indexOf('##', start);
+    let end = data.indexOf('##', start);
     end = data.lastIndexOf('|\n', end) + '|\n'.length;
     data = data.slice(0, start) + content + data.slice(end);
     writeText(readme, data);

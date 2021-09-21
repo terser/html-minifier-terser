@@ -25,7 +25,7 @@ if (targetUrl.indexOf('http://') === 0 || targetUrl.indexOf('https://') === 0) {
 const qunitArgs = {
   targetUrl,
   timeout: parseInt(args[1] || 30000, 10),
-  redirectconsole: false,
+  redirectconsole: false
 };
 
 const puppeteerArgsStr = args[2];
@@ -39,7 +39,7 @@ if (typeof puppeteerArgsStr === 'string') {
 
 runQunitPuppeteer(qunitArgs)
   .then((result) => {
-    var output = {passed:result.stats.passed,failed:result.stats.failed,total:result.stats.total,runtime:result.stats.runtime,failures:[]};
+    const output = { passed: result.stats.passed, failed: result.stats.failed, total: result.stats.total, runtime: result.stats.runtime, failures: [] };
 
     console.log(JSON.stringify(output));
     if (result.stats.failed > 0) {

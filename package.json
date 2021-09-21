@@ -61,7 +61,8 @@
     "dist": "grunt dist",
     "test": "grunt test",
     "prepare": "is-ci || husky install",
-    "serve": "npm run dist && serve . -p 6753"
+    "serve": "npm run dist && serve . -p 6753",
+    "lint": "eslint ."
   },
   "dependencies": {
     "camel-case": "^4.1.2",
@@ -73,6 +74,11 @@
     "terser": "^5.8.0"
   },
   "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.24.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.1.0",
     "grunt": "^1.4.1",
     "grunt-browserify": "^6.0.0",
     "grunt-eslint": "^23.0.0",
@@ -85,9 +91,9 @@
     "serve": "^12.0.1"
   },
   "benchmarkDependencies": {
-    "chalk": "^2.4.2",
-    "cli-table3": "^0.5.1",
-    "iltorb": "^2.4.4",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.0",
+    "iltorb": "^2.4.5",
     "lzma": "^2.3.2",
     "minimize": "^2.2.0",
     "progress": "^2.0.3"

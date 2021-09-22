@@ -119,6 +119,7 @@ var mainOptions = {
   minifyCSS: ['Minify CSS in style elements and style attributes (uses clean-css)', parseJSON],
   minifyJS: ['Minify Javascript in script elements and on* attributes (uses terser)', parseJSON],
   minifyURLs: ['Minify URLs in various attributes (uses relateurl)', parseJSON],
+  noNewlinesBeforeTagClose: 'Never add a newline before a tag that closes an element',
   preserveLineBreaks: 'Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break.',
   preventAttributesEscaping: 'Prevents the escaping of the values of attributes.',
   processConditionalComments: 'Process contents of conditional comments through minifier',

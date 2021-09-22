@@ -3,6 +3,7 @@
 var CleanCSS = require('clean-css');
 var decode = require('he').decode;
 var HTMLParser = require('./htmlparser').HTMLParser;
+var endTag = require('./htmlparser').endTag;
 var RelateUrl = require('relateurl');
 var TokenChain = require('./tokenchain');
 var Terser = require('terser');
@@ -1321,12 +1322,15 @@ async function minify(value, options, partialMarkup) {
 
 function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   var str;
-  var maxLineLength = options.maxLineLength;
+  var maxLineLength = options.maxLineLength,
+      noNewlinesBeforeTagClose = options.noNewlinesBeforeTagClose;
   if (maxLineLength) {
     var line = '', lines = [];
     while (results.length) {
       var len = line.length;
       var end = results[0].indexOf('\n');
+      var isClosingTag = Boolean(results[0].match(endTag));
+      var shouldKeepSameLine = noNewlinesBeforeTagClose && isClosingTag;
       if (end < 0) {
         line += restoreIgnore(restoreCustom(results.shift()));
       }
@@ -1334,7 +1338,7 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
         line += restoreIgnore(restoreCustom(results[0].slice(0, end)));
         results[0] = results[0].slice(end + 1);
       }
-      if (len > 0 && line.length > maxLineLength) {
+      if (len > 0 && line.length > maxLineLength && !shouldKeepSameLine) {
         lines.push(line.slice(0, len));
         line = line.slice(len);
       }

@@ -577,3 +577,5 @@ exports.HTMLtoDOM = function(html, doc) {
 
   return doc;
 };
+
+exports.endTag = endTag;

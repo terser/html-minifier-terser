@@ -3016,6 +3016,10 @@ QUnit.test('max line length', async function(assert) {
   assert.equal(await minify(':) <a href="http://example.com">\n\nlink</a>', options), ':) <a \nhref="http://example.com">\n\nlink</a>');
 
   assert.equal(await minify('<a href>ok</a>', options), '<a href>ok</a>');
+
+  options.noNewlinesBeforeTagClose = true;
+
+  assert.equal(await minify('<a title="x"href=" ">foo</a>', options), '<a title="x" href="">foo</a>');
 });
 
 QUnit.test('custom attribute collapse', async function(assert) {

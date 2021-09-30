@@ -64,7 +64,7 @@ Most of the options are disabled by default.
 | `processScripts`               | Array of strings corresponding to types of script elements to process through minifier (e.g. `text/ng-template`, `text/x-handlebars-template`, etc.) | `[ ]` |
 | `quoteCharacter`               | Type of quote to use for attribute values (' or ") | |
 | `removeAttributeQuotes`        | [Remove quotes around attributes when possible](http://perfectionkills.com/experimenting-with-html-minifier/#remove_attribute_quotes) | `false` |
-| `removeComments`               | [Strip HTML comments](http://perfectionkills.com/experimenting-with-html-minifier/#remove_comments). Note: removing comments from some frameworks (React) Server-side-rendering output can lead to hydration problems ([details](https://github.com/terser/html-minifier-terser/pull/85)) | `false` |
+| `removeComments`               | [Strip HTML comments](http://perfectionkills.com/experimenting-with-html-minifier/#remove_comments). Note: removing comments from some frameworks (React) Server-Side-Rendering output can lead to hydration problems ([details](https://github.com/terser/html-minifier-terser/pull/87)). | `false` |
 | `removeEmptyAttributes`        | [Remove all attributes with whitespace-only values](http://perfectionkills.com/experimenting-with-html-minifier/#remove_empty_or_blank_attributes) | `false` (could be `true`, `Function(attrName, tag)`) |
 | `removeEmptyElements`          | [Remove all elements with empty contents](http://perfectionkills.com/experimenting-with-html-minifier/#remove_empty_elements) | `false` |
 | `removeOptionalTags`           | [Remove optional tags](http://perfectionkills.com/experimenting-with-html-minifier/#remove_optional_tags) | `false` |

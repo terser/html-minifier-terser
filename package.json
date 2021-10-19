@@ -53,7 +53,8 @@
       "require": "./src/htmlminifier.js",
       "imports": "./dist/htmlminifier.js"
     },
-    "./dist/*": "./dist/*.js"
+    "./dist/*": "./dist/*.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/",

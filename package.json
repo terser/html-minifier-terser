@@ -3,13 +3,8 @@
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "version": "6.0.2",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/terser/html-minifier-terser.git"
-  },
-  "bugs": {
-    "url": "https://github.com/terser/html-minifier-terser/issues"
-  },
+  "repository": "https://github.com/terser/html-minifier-terser.git",
+  "bugs": "https://github.com/terser/html-minifier-terser/issues",
   "homepage": "https://terser.org/html-minifier-terser/",
   "author": "Daniel Ruf",
   "maintainers": [
@@ -45,49 +40,60 @@
     "uglifier",
     "uglify"
   ],
-  "bin": {
-    "html-minifier-terser": "./cli.js"
-  },
-  "main": "src/htmlminifier.js",
   "engines": {
     "node": ">=12"
   },
+  "bin": {
+    "html-minifier-terser": "./cli.js"
+  },
+  "main": "./src/htmlminifier.js",
+  "module": "./dist/htmlminifier.js",
+  "exports": {
+    ".": {
+      "require": "./src/htmlminifier.js",
+      "imports": "./dist/htmlminifier.js"
+    },
+    "./dist/*": "./dist/*.js"
+  },
   "files": [
-    "src/*.js",
-    "cli.js",
-    "sample-cli-config-file.conf"
+    "dist/",
+    "src/",
+    "cli.js"
   ],
   "scripts": {
-    "dist": "grunt dist",
-    "test": "grunt test",
-    "prepare": "is-ci || husky install",
-    "serve": "npm run dist && serve . -p 6753",
-    "lint": "eslint ."
+    "build": "rollup -c",
+    "test": "npm run build && grunt test",
+    "serve": "npm run build && serve . -p 6753",
+    "lint": "eslint .",
+    "prepare": "is-ci || husky install"
   },
   "dependencies": {
     "camel-case": "^4.1.2",
-    "clean-css": "^5.1.5",
+    "clean-css": "^5.2.1",
     "commander": "^8.2.0",
     "he": "^1.2.0",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
-    "terser": "^5.8.0"
+    "terser": "^5.9.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^21.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.5",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
-    "eslint-plugin-import": "^2.24.2",
+    "eslint-plugin-import": "^2.25.2",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^5.1.0",
     "grunt": "^1.4.1",
     "grunt-browserify": "^6.0.0",
-    "grunt-eslint": "^23.0.0",
     "grunt-terser": "^2.0.0",
     "husky": "^7.0.2",
     "is-ci": "^3.0.0",
-    "lint-staged": "^11.1.2",
+    "lint-staged": "^11.2.3",
     "node-qunit-puppeteer": "^2.1.0",
-    "qunit": "2.16.0",
+    "qunit": "^2.17.2",
+    "rollup": "^2.58.0",
+    "rollup-plugin-polyfill-node": "^0.7.0",
     "serve": "^12.0.1"
   },
   "benchmarkDependencies": {

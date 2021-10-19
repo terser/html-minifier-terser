@@ -19,52 +19,6 @@ module.exports = function (grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     qunit_ver: qunitVersion(),
-    banner: '/*!\n' +
-      ' * HTMLMinifier v<%= pkg.version %> (<%= pkg.homepage %>)\n' +
-      ' * Copyright 2010-<%= grunt.template.today("yyyy") %> Juriy "kangax" Zaytsev, <%= pkg.author %>\n' +
-      ' * Licensed under the <%= pkg.license %> license\n' +
-      ' */\n',
-
-    browserify: {
-      src: {
-        options: {
-          banner: '<%= banner %>',
-          preBundleCB: function () {
-            const fs = require('fs');
-            const file = fs.readFileSync('./node_modules/terser/dist/bundle.min.js');
-            fs.writeFileSync('./dist/terser.js', file);
-          },
-          postBundleCB: function (err, src, next) {
-            require('fs').unlinkSync('./dist/terser.js');
-            next(err, src);
-          },
-          require: [
-            './dist/terser.js:terser',
-            './src/htmlminifier.js:html-minifier-terser'
-          ]
-        },
-        src: 'src/htmlminifier.js',
-        dest: 'dist/htmlminifier.js'
-      }
-    },
-
-    eslint: {
-      grunt: {
-        src: 'Gruntfile.js'
-      },
-      src: {
-        src: ['cli.js', 'src/**/*.js']
-      },
-      tests: {
-        src: ['tests/*.js', 'test.js']
-      },
-      web: {
-        src: ['assets/master.js', 'assets/worker.js']
-      },
-      other: {
-        src: ['backtest.js', 'benchmark.js']
-      }
-    },
 
     qunit: {
       htmlminifier: ['./tests/minifier', 'tests/index.html']
@@ -79,27 +33,8 @@ module.exports = function (grunt) {
         /("[^"]+\/qunit-)[0-9.]+?(\.(?:css|js)")/g,
         '$1<%= qunit_ver %>$2'
       ]
-    },
-
-    terser: {
-      options: {
-        compress: true,
-        mangle: true
-      },
-      beautify: {
-        comments: 'all'
-      },
-      minify: {
-        files: {
-          'dist/htmlminifier.min.js': '<%= browserify.src.dest %>'
-        }
-      }
     }
   });
-
-  grunt.loadNpmTasks('grunt-browserify');
-  grunt.loadNpmTasks('grunt-terser');
-  grunt.loadNpmTasks('grunt-eslint');
 
   function report(type, details) {
     grunt.log.writeln(type + ' completed in ' + details.runtime + 'ms');
@@ -156,23 +91,8 @@ module.exports = function (grunt) {
     run('web', process.argv[0], this.data[1]);
   });
 
-  grunt.registerMultiTask('replace', function () {
-    const pattern = this.data[0];
-    const path = this.target;
-    let html = grunt.file.read(path);
-    html = html.replace(pattern, this.data[1]);
-    grunt.file.write(path, html);
-  });
-
-  grunt.registerTask('dist', [
-    'replace',
-    'browserify',
-    'terser'
-  ]);
-
   grunt.registerTask('test', function () {
     grunt.task.run([
-      'dist',
       'qunit'
     ]);
   });

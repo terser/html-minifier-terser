@@ -85,8 +85,6 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^5.1.0",
     "grunt": "^1.4.1",
-    "grunt-browserify": "^6.0.0",
-    "grunt-terser": "^2.0.0",
     "husky": "^7.0.2",
     "is-ci": "^3.0.0",
     "lint-staged": "^11.2.3",
@@ -94,6 +92,7 @@
     "qunit": "^2.17.2",
     "rollup": "^2.58.0",
     "rollup-plugin-polyfill-node": "^0.7.0",
+    "rollup-plugin-terser": "^7.0.2",
     "serve": "^12.0.1"
   },
   "benchmarkDependencies": {

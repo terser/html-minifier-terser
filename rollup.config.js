@@ -1,12 +1,10 @@
-// @ts-check
-
+import { defineConfig } from 'rollup';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import { terser } from 'rollup-plugin-terser';
 
-/** @type {import("rollup").RollupOptions[] } */
-const config = [
+const config = defineConfig([
   {
     input: 'src/htmlminifier.js',
     output: [{
@@ -65,6 +63,6 @@ const config = [
     ],
     external: ['clean-css', 'terser', 'he', 'relateurl']
   }
-];
+]);
 
 export default config;

@@ -20823,7 +20823,7 @@
 
 	var isAllowedResource_1 = isAllowedResource$3;
 
-	var DATA_URI_PATTERN$1 = /^data:(\S*?)?(;charset=[^;]+)?(;[^,]+?)?,(.+)/;
+	var DATA_URI_PATTERN$1 = /^data:(\S*?)?(;charset=(?:(?!;charset=)[^;])+)?(;[^,]+?)?,(.+)/;
 
 	function matchDataUri$1(uri) {
 	  return DATA_URI_PATTERN$1.exec(uri);
@@ -20862,7 +20862,7 @@
 
 	var rebaseRemoteMap_1 = rebaseRemoteMap$2;
 
-	var DATA_URI_PATTERN = /^data:(\S*?)?(;charset=[^;]+)?(;[^,]+?)?,(.+)/;
+	var DATA_URI_PATTERN = /^data:(\S*?)?(;charset=(?:(?!;charset=)[^;])+)?(;[^,]+?)?,(.+)/;
 
 	function isDataUriResource$2(uri) {
 	  return DATA_URI_PATTERN.test(uri);

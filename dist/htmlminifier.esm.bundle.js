@@ -20817,7 +20817,7 @@ function isRemoteRule(rule) {
 
 var isAllowedResource_1 = isAllowedResource$3;
 
-var DATA_URI_PATTERN$1 = /^data:(\S*?)?(;charset=[^;]+)?(;[^,]+?)?,(.+)/;
+var DATA_URI_PATTERN$1 = /^data:(\S*?)?(;charset=(?:(?!;charset=)[^;])+)?(;[^,]+?)?,(.+)/;
 
 function matchDataUri$1(uri) {
   return DATA_URI_PATTERN$1.exec(uri);
@@ -20856,7 +20856,7 @@ function rebaseRemoteMap$2(sourceMap, sourceUri) {
 
 var rebaseRemoteMap_1 = rebaseRemoteMap$2;
 
-var DATA_URI_PATTERN = /^data:(\S*?)?(;charset=[^;]+)?(;[^,]+?)?,(.+)/;
+var DATA_URI_PATTERN = /^data:(\S*?)?(;charset=(?:(?!;charset=)[^;])+)?(;[^,]+?)?,(.+)/;
 
 function isDataUriResource$2(uri) {
   return DATA_URI_PATTERN.test(uri);

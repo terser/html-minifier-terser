@@ -1,6 +1,6 @@
 import Alpine from 'https://cdn.skypack.dev/alpinejs@3';
 
-const worker = new Worker('assets/worker.js');
+import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
 
 const defaultOptions = [
   {
@@ -265,28 +265,22 @@ Alpine.data('minifier', () => ({
       text: ''
     };
 
-    worker.onmessage = (event) => {
-      const data = event.data;
-
-      if (data.error) {
-        this.stats.result = 'failure';
-        this.stats.text = data.error;
-      } else {
-        const diff = this.input.length - data.length;
-        const savings = this.input.length ? (100 * diff / this.input.length).toFixed(2) : 0;
-
-        this.output = data;
-        this.stats.result = 'success';
-        this.stats.text = `Original Size: ${this.input.length}, Minfied Size: ${data.length}, Savings: ${diff} (${savings}%)`;
-      }
-    };
-
     const options = getOptions(this.options);
 
-    worker.postMessage({
-      value: this.input,
-      options: options
-    });
+    try {
+      const data = await HTMLMinifier.minify(this.input, options); // eslint-disable-line
+
+      const diff = this.input.length - data.length;
+      const savings = this.input.length ? (100 * diff / this.input.length).toFixed(2) : 0;
+
+      this.output = data;
+      this.stats.result = 'success';
+      this.stats.text = `Original Size: ${this.input.length}, Minfied Size: ${data.length}, Savings: ${diff} (${savings}%)`;
+    } catch (err) {
+      this.stats.result = 'failure';
+      this.stats.text = err + '';
+      console.error(err);
+    }
   },
 
   selectAllOptions(yes = true) {

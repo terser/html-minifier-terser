@@ -25,16 +25,12 @@
   },
   "overrides": [
     {
-      "files": "src/*.js",
+      "files": [
+        "src/*.js",
+        "assets/*.js"
+      ],
       "env": {
         "browser": true
-      }
-    },
-    {
-      "files": "assets/*.js",
-      "env": {
-        "browser": true,
-        "worker": true
       }
     }
   ]

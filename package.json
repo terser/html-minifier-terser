@@ -63,9 +63,9 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "test-node": "jest --verbose --environment=node",
-    "test-web": "jest --verbose --environment=jsdom",
-    "test": "npm run test-node",
+    "test:node": "jest --verbose --environment=node",
+    "test:web": "jest --verbose --environment=jsdom",
+    "test": "npm run test:node",
     "serve": "npm run build && serve . -p 6753",
     "lint": "eslint .",
     "prepare": "is-ci || husky install"

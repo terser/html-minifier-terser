@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: npm run test-node
+        run: npm run test:node
 
   test-web:
     strategy:
@@ -41,4 +41,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
-        run: npm run test-node
+        run: npm run test:web

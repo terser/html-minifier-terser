@@ -32,6 +32,13 @@
       "env": {
         "browser": true
       }
+    },
+    {
+      "files": "tests/*.js",
+      "env": {
+        "browser": true,
+        "jest": true
+      }
     }
   ]
 }

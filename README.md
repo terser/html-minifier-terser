@@ -7,8 +7,6 @@
 
 See [corresponding blog post](http://perfectionkills.com/experimenting-with-html-minifier/) for all the gory details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier/#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier/#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier/#field_testing) and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier/#cost_and_benefits).
 
-[Test suite is available online](https://terser.org/html-minifier-terser/tests/).
-
 Also see corresponding [Ruby wrapper](https://github.com/stereobooster/html_minifier), and for Node.js, [Grunt plugin](https://github.com/gruntjs/grunt-contrib-htmlmin), [Gulp module](https://github.com/jonschlinkert/gulp-htmlmin), [Koa middleware wrapper](https://github.com/koajs/html-minifier) and [Express middleware wrapper](https://github.com/melonmanchan/express-minify-html).
 
 For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/html-lint).

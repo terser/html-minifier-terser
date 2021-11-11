@@ -27,17 +27,11 @@
     {
       "files": [
         "src/*.js",
-        "assets/*.js"
+        "assets/*.js",
+        "tests/*.js"
       ],
       "env": {
         "browser": true
-      }
-    },
-    {
-      "files": "tests/*.js",
-      "env": {
-        "browser": true,
-        "jest": true
       }
     }
   ]

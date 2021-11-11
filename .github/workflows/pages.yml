@@ -19,6 +19,12 @@ jobs:
         with:
           node-version: 16
 
+      - name: Rollup
+        run: npm run build
+
+      - name: Build
+        run: npm run build:docs
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:

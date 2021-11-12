@@ -81,9 +81,9 @@
     "terser": "^5.9.0"
   },
   "devDependencies": {
+    "@jest/globals": "^27.3.1",
     "@rollup/plugin-commonjs": "^21.0.1",
     "@rollup/plugin-node-resolve": "^13.0.6",
-    "@types/jest": "^27.0.2",
     "alpinejs": "^3.5.1",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",

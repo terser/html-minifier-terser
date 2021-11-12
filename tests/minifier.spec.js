@@ -1,5 +1,6 @@
 'use strict';
 
+const { test, expect } = require('@jest/globals');
 const { minify } = require('../src/htmlminifier');
 
 test('`minifiy` exists', () => {

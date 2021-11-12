@@ -30,8 +30,7 @@
 
 'use strict';
 
-const createMapFromString = require('./utils').createMapFromString;
-const replaceAsync = require('./utils').replaceAsync;
+const { createMapFromString, replaceAsync } = require('./utils');
 
 function makeMap(values) {
   return createMapFromString(values, true);

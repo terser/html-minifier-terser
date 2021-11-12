@@ -120,7 +120,7 @@ function readSize(filePath, callback) {
 
 function gzip(inPath, outPath, callback) {
   fs.createReadStream(inPath).pipe(zlib.createGzip({
-    level: zlib.Z_BEST_COMPRESSION
+    level: zlib.constants.Z_BEST_COMPRESSION
   })).pipe(fs.createWriteStream(outPath)).on('finish', callback);
 }
 

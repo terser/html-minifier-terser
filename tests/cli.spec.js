@@ -1,7 +1,7 @@
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
 
-const { describe, test, expect } = require('@jest/globals');
+const { describe, test, expect, beforeEach } = require('@jest/globals');
 const { spawnSync } = require('child_process');
 const { minify } = require('../src/htmlminifier');
 
@@ -9,8 +9,16 @@ const fixturesDir = path.resolve(__dirname, 'fixtures');
 const cliPath = path.resolve(process.cwd(), 'cli.js');
 
 const readFixture = async (filePath) => {
-  const data = await fs.readFile(path.resolve(fixturesDir, filePath), 'utf-8');
+  const data = await fs.promises.readFile(path.resolve(fixturesDir, filePath), 'utf-8');
   return data;
+};
+
+const existsFixutre = (filePath) => {
+  return fs.existsSync(path.resolve(fixturesDir, filePath));
+};
+
+const removeFixture = async (p) => {
+  await fs.promises.rm(path.resolve(fixturesDir, p), { recursive: true, force: true });
 };
 
 const execCli = (args = []) => {
@@ -29,8 +37,12 @@ const execCli = (args = []) => {
 };
 
 describe('cli', () => {
+  beforeEach(async () => {
+    await removeFixture('tmp');
+  });
+
   test('minify the html', async () => {
-    const inputHTML = await readFixture('default.html');
+    const input = await readFixture('default.html');
 
     const minfiyOptions = {
       collapseWhitespace: true,
@@ -44,12 +56,12 @@ describe('cli', () => {
     ];
 
     let cliMinifiedHTML = execCli(cliArguments);
-    const minifedHTML = await minify(inputHTML, minfiyOptions);
+    const minifedHTML = await minify(input, minfiyOptions);
 
-    expect(minifedHTML).toBe(cliMinifiedHTML);
+    expect(cliMinifiedHTML).toBe(minifedHTML);
 
     cliMinifiedHTML = execCli(['default.html']);
-    expect(minifedHTML).not.toBe(cliMinifiedHTML);
+    expect(cliMinifiedHTML).not.toBe(minifedHTML);
   });
 
   test('should throw error if input file not found', () => {
@@ -58,5 +70,83 @@ describe('cli', () => {
     ];
 
     expect(() => execCli(cliArguments)).toThrow('no such file');
+  });
+
+  test('should throw if output directory not specified', () => {
+    const cliArguments = [
+      '--input-dir=./'
+    ];
+
+    expect(() => execCli(cliArguments)).toThrow('You need to specify where to write the output files with the option --output-dir');
+  });
+
+  test('should throw if input directory not specified', () => {
+    const cliArguments = [
+      '--output-dir=./'
+    ];
+
+    expect(() => execCli(cliArguments)).toThrow('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o');
+  });
+
+  test('should write files to output directory', () => {
+    const cliArguments = [
+      '--input-dir=./',
+      '--output-dir=./tmp'
+    ];
+
+    execCli(cliArguments);
+    expect(existsFixutre('tmp/default.html')).toBe(true);
+  });
+
+  test('should write files to output nested directory', () => {
+    const cliArguments = [
+      '--input-dir=./',
+      '--output-dir=./tmp/nested'
+    ];
+
+    execCli(cliArguments);
+    expect(existsFixutre('tmp/nested/default.html')).toBe(true);
+  });
+
+  // parsing json
+  test('should minify urls correctly', async () => {
+    const input = await readFixture('url.html');
+
+    const minfiyOptions = {
+      collapseWhitespace: true,
+      minifyURLs: {
+        site: 'http://website.com/folder/'
+      }
+    };
+
+    const cliArguments = [
+      'url.html',
+      '--collapse-whitespace',
+      '--minify-urls={"site":"http://website.com/folder/"}'
+    ];
+
+    const cliMinifiedHTML = execCli(cliArguments);
+    const minifedHTML = await minify(input, minfiyOptions);
+    expect(cliMinifiedHTML).toBe(minifedHTML);
+  });
+
+  // parsing string inputs
+  test('should set quote char correctly', async () => {
+    const input = await readFixture('quote-char.html');
+
+    const minfiyOptions = {
+      collapseWhitespace: true,
+      quoteCharacter: '\''
+    };
+
+    const cliArguments = [
+      'quote-char.html',
+      '--collapse-whitespace',
+      '--quote-character=\''
+    ];
+
+    const cliMinifiedHTML = execCli(cliArguments);
+    const minifedHTML = await minify(input, minfiyOptions);
+    expect(cliMinifiedHTML).toBe(minifedHTML);
   });
 });

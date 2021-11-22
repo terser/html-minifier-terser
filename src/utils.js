@@ -1,15 +1,17 @@
 'use strict';
 
 function createMap(values, ignoreCase) {
-  var map = {};
-  values.forEach(function(value) {
+  const map = {};
+  values.forEach(function (value) {
     map[value] = 1;
   });
-  return ignoreCase ? function(value) {
-    return map[value.toLowerCase()] === 1;
-  } : function(value) {
-    return map[value] === 1;
-  };
+  return ignoreCase
+    ? function (value) {
+      return map[value.toLowerCase()] === 1;
+    }
+    : function (value) {
+      return map[value] === 1;
+    };
 }
 
 async function replaceAsync(str, regex, asyncFn) {
@@ -22,9 +24,8 @@ async function replaceAsync(str, regex, asyncFn) {
   return str.replace(regex, () => data.shift());
 }
 
-
 exports.createMap = createMap;
-exports.createMapFromString = function(values, ignoreCase) {
+exports.createMapFromString = function (values, ignoreCase) {
   return createMap(values.split(/,/), ignoreCase);
 };
 

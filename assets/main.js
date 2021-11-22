@@ -91,6 +91,12 @@ const defaultOptions = [
     helpText: 'Minify URLs in various attributes (uses <code>relateurl</code>)',
   },
   {
+    id: 'noNewlinesBeforeTagClose',
+    type: 'checkbox',
+    label: 'No newline before Tag Close',
+    helpText: 'Never add a newline before a tag that closes an element',
+  },
+  {
     id: 'preserveLineBreaks',
     type: 'checkbox',
     label: 'Preserve line-breaks',

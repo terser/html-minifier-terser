@@ -21,9 +21,9 @@ const preProcessInput = (input = EMPTY, options = defaultOptions, ctx = defaultC
     const reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')+\\s*', 'g');
 
     // temporarily replace custom ignored fragments with unique attributes
-    html = input.replace(reCustomIgnore, (match) => {
+    html = html.replace(reCustomIgnore, (match) => {
       if (!uidAttr) {
-        uidAttr = uniqueId(input);
+        uidAttr = uniqueId(html);
         uidPattern = new RegExp('(\\s*)' + uidAttr + '([0-9]+)' + uidAttr + '(\\s*)', 'g');
       }
 

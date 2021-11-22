@@ -55,7 +55,7 @@ const config = defineConfig([
     plugins: [
       commonjs()
     ],
-    external: ['clean-css', 'terser', 'he', 'relateurl']
+    external: ['clean-css', 'terser', 'entities', 'relateurl']
   }
 ]);
 

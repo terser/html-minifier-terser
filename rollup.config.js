@@ -2,7 +2,17 @@ import { defineConfig } from 'rollup';
 import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
+import json from '@rollup/plugin-json';
 import { terser } from 'rollup-plugin-terser';
+
+const bunldePlugins = [
+  commonjs(),
+  nodePolyfills(),
+  nodeResolve({
+    preferBuiltins: false
+  }),
+  json()
+];
 
 const config = defineConfig([
   {
@@ -13,13 +23,7 @@ const config = defineConfig([
       exports: 'named',
       name: 'HTMLMinifier'
     }],
-    plugins: [
-      commonjs(),
-      nodePolyfills(),
-      nodeResolve({
-        preferBuiltins: false
-      })
-    ]
+    plugins: bunldePlugins
   },
   {
     input: 'src/htmlminifier.js',
@@ -30,11 +34,7 @@ const config = defineConfig([
       name: 'HTMLMinifier'
     }],
     plugins: [
-      commonjs(),
-      nodePolyfills(),
-      nodeResolve({
-        preferBuiltins: false
-      }),
+      ...bunldePlugins,
       terser()
     ]
   },
@@ -44,13 +44,7 @@ const config = defineConfig([
       file: 'dist/htmlminifier.esm.bundle.js',
       format: 'es'
     },
-    plugins: [
-      commonjs(),
-      nodePolyfills(),
-      nodeResolve({
-        preferBuiltins: false
-      })
-    ]
+    plugins: bunldePlugins
   },
   {
     input: 'src/htmlminifier.js',

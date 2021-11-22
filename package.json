@@ -43,18 +43,19 @@
   "engines": {
     "node": ">=12"
   },
-  "bin": {
-    "html-minifier-terser": "./cli.js"
-  },
+  "type": "module",
   "main": "./src/htmlminifier.js",
-  "module": "./dist/htmlminifier.js",
+  "module": "./src/index.js",
   "exports": {
     ".": {
       "require": "./src/htmlminifier.js",
-      "imports": "./dist/htmlminifier.js"
+      "imports": "./src/index.js"
     },
     "./dist/*": "./dist/*.js",
     "./package.json": "./package.json"
+  },
+  "bin": {
+    "html-minifier-terser": "./cli.js"
   },
   "files": [
     "dist/",
@@ -63,8 +64,9 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "test:node": "jest --verbose --environment=node",
+    "test:node": "jest --verbose",
     "test:web": "jest --verbose --environment=jsdom",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --verbose",
     "test": "npm run test:node",
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",
@@ -75,7 +77,7 @@
     "camel-case": "^4.1.2",
     "clean-css": "^5.2.2",
     "commander": "^8.3.0",
-    "he": "^1.2.0",
+    "htmlparser2": "^7.2.0",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
     "terser": "^5.10.0"

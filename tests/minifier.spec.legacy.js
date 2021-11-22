@@ -1,11 +1,11 @@
-import { test, expect, fit } from '@jest/globals';
-import { minify } from '../src/index.js';
+import { test, expect } from '@jest/globals';
+import { minify } from '../legacy/htmlminifier';
 
-fit('`minifiy` exists', () => {
+test('`minifiy` exists', () => {
   expect(minify).toBeDefined();
 });
 
-fit('parsing non-trivial markup', async () => {
+test('parsing non-trivial markup', async () => {
   let input, output;
 
   expect(await minify('</td>')).toBe('');
@@ -31,10 +31,7 @@ fit('parsing non-trivial markup', async () => {
 
   expect(await minify('<a title="x"href=" ">foo</a>')).toBe('<a title="x" href="">foo</a>');
   expect(await minify('<p id=""class=""title="">x')).toBe('<p id="" class="" title="">x</p>');
-
-  // CHANGES
-  // expect(await minify('<p x="x\'"">x</p>')).toBe('<p x="x\'">x</p>', 'trailing quote should be ignored');
-
+  expect(await minify('<p x="x\'"">x</p>')).toBe('<p x="x\'">x</p>', 'trailing quote should be ignored');
   expect(await minify('<a href="#"><p>Click me</p></a>')).toBe('<a href="#"><p>Click me</p></a>');
   expect(await minify('<span><button>Hit me</button></span>')).toBe('<span><button>Hit me</button></span>');
   expect(await minify('<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>')).toBe(
@@ -58,12 +55,12 @@ fit('parsing non-trivial markup', async () => {
   input = '<h:ællæ></h:ællæ>';
   expect(await minify(input)).toBe(input);
 
-  // CHANGES
-  expect(await minify(input)).toBe(input);
-  // expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
-  // expect(await minify(input, {
-  //   continueOnParseError: true
-  // })).toBe(input);
+  input = '<$unicorn>';
+  expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
+
+  expect(await minify(input, {
+    continueOnParseError: true
+  })).toBe(input);
 
   input = '<begriffs.pagination ng-init="perPage=20" collection="logs" url="\'/api/logs?user=-1\'" per-page="perPage" per-page-presets="[10,20,50,100]" template-url="/assets/paginate-anything.html"></begriffs.pagination>';
   expect(await minify(input)).toBe(input);
@@ -94,14 +91,12 @@ fit('parsing non-trivial markup', async () => {
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ "></tag>';
   expect(await minify(input)).toBe(input);
 
-  // CHANGES
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ " ss"123>';
-  // expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
-  // expect(await minify(input)).toBe(input);
+  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
 
-  // expect(await minify(input, {
-  //   continueOnParseError: true
-  // })).toBe(input);
+  expect(await minify(input, {
+    continueOnParseError: true
+  })).toBe(input);
 
   // https://github.com/kangax/html-minifier/issues/512
   input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
@@ -113,7 +108,6 @@ fit('parsing non-trivial markup', async () => {
     ' data-options="vm.datepickerOptions">';
   expect(await minify(input)).toBe(input);
 
-  // CHANGES
   input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
     ' <!--FIXME hardcoded placeholder - dates may not be used for service required fields yet. -->' +
     ' placeholder="YYYY-MM-DD"' +
@@ -122,21 +116,20 @@ fit('parsing non-trivial markup', async () => {
     ' data-ng-model-options="{ debounce: 1000 }"' +
     ' data-ng-pattern="vm.options.format"' +
     ' data-options="vm.datepickerOptions">';
-  // expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
 
-  // expect(await minify(input, {
-  //   continueOnParseError: true
-  // })).toBe(input);
+  expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
 
-  // CHANGES
-  // https://github.com/kangax/html-minifier/issues/974
+  expect(await minify(input, {
+    continueOnParseError: true
+  })).toBe(input);
+
+  // // https://github.com/kangax/html-minifier/issues/974
   input = '<!–– Failing New York Times Comment -->';
-  // expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
-  expect(await minify(input)).toBe(input); // new
+  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
 
-  // expect(await minify(input, {
-  //   continueOnParseError: true
-  // })).toBe(input);
+  expect(await minify(input, {
+    continueOnParseError: true
+  })).toBe(input);
 
   input = '<br a=\u00A0 b="&nbsp;" c="\u00A0">';
   output = '<br a="\u00A0" b="&nbsp;" c="\u00A0">';
@@ -158,13 +151,13 @@ fit('parsing non-trivial markup', async () => {
   })).toBe(output);
 });
 
-fit('options', async () => {
+test('options', async () => {
   const input = '<p>blah<span>blah 2<span>blah 3</span></span></p>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, {})).toBe(input);
 });
 
-fit('case normalization', async () => {
+test('case normalization', async () => {
   expect(await minify('<P>foo</p>')).toBe('<p>foo</p>');
   expect(await minify('<DIV>boo</DIV>')).toBe('<div>boo</div>');
   expect(await minify('<DIV title="moo">boo</DiV>')).toBe('<div title="moo">boo</div>');
@@ -173,7 +166,7 @@ fit('case normalization', async () => {
   expect(await minify('<DiV tItLe="blah">boo</DIV>')).toBe('<div title="blah">boo</div>');
 });
 
-fit('space normalization between attributes', async () => {
+test('space normalization between attributes', async () => {
   expect(await minify('<p title="bar">foo</p>')).toBe('<p title="bar">foo</p>');
   expect(await minify('<img src="test"/>')).toBe('<img src="test">');
   expect(await minify('<p title = "bar">foo</p>')).toBe('<p title="bar">foo</p>');
@@ -383,7 +376,7 @@ test('space normalization around text', async () => {
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-fit('types of whitespace that should always be preserved', async () => {
+test('types of whitespace that should always be preserved', async () => {
   // Hair space:
   let input = '<div>\u200afo\u200ao\u200a</div>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(input);
@@ -420,7 +413,7 @@ fit('types of whitespace that should always be preserved', async () => {
   expect(await minify(input, { sortClassName: true })).toBe(input);
 });
 
-fit('doctype normalization', async () => {
+test('doctype normalization', async () => {
   let input;
   const output = '<!doctype html>';
 
@@ -446,7 +439,7 @@ fit('doctype normalization', async () => {
   expect(await minify(input, { useShortDoctype: true })).toBe(output);
 });
 
-fit('removing comments', async () => {
+test('removing comments', async () => {
   let input;
 
   input = '<!-- test -->';
@@ -623,7 +616,7 @@ test('collapsing space in conditional comments', async () => {
   })).toBe(output);
 });
 
-fit('remove comments from scripts', async () => {
+test('remove comments from scripts', async () => {
   let input, output;
 
   input = '<script><!--\nalert(1);\n--></script>';
@@ -680,6 +673,7 @@ test('remove comments from styles', async () => {
   expect(await minify(input)).toBe(input);
   output = '<style>p.a{background:red}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
+
   input = '<style><!--p.b{background:red}--></style>';
   expect(await minify(input)).toBe(input);
   output = '<style>p.b{background:red}</style>';
@@ -876,7 +870,7 @@ test('custom processors', async () => {
   expect(await minify(input, { minifyCSS: true, minifyURLs: url })).toBe(output);
 });
 
-fit('empty attributes', async () => {
+test('empty attributes', async () => {
   let input;
 
   input = '<p id="" class="" STYLE=" " title="\n" lang="" dir="">x</p>';
@@ -905,7 +899,7 @@ fit('empty attributes', async () => {
   expect(await minify(input, { removeEmptyAttributes: function (attrName, tag) { return tag === 'img' && attrName === 'src'; } })).toBe('<img alt="">');
 });
 
-fit('cleaning class/style attributes', async () => {
+test('cleaning class/style attributes', async () => {
   let input, output;
 
   input = '<p class=" foo bar  ">foo bar baz</p>';
@@ -932,7 +926,7 @@ fit('cleaning class/style attributes', async () => {
   expect(await minify(input)).toBe(output);
 });
 
-fit('cleaning URI-based attributes', async () => {
+test('cleaning URI-based attributes', async () => {
   let input, output;
 
   input = '<a href="   http://example.com  ">x</a>';
@@ -974,7 +968,7 @@ fit('cleaning URI-based attributes', async () => {
   expect(await minify(input)).toBe(input);
 });
 
-fit('cleaning Number-based attributes', async () => {
+test('cleaning Number-based attributes', async () => {
   let input, output;
 
   input = '<a href="#" tabindex="   1  ">x</a><button tabindex="   2  ">y</button>';
@@ -1002,7 +996,7 @@ fit('cleaning Number-based attributes', async () => {
   expect(await minify(input)).toBe(output);
 });
 
-fit('cleaning other attributes', async () => {
+test('cleaning other attributes', async () => {
   let input, output;
 
   input = '<a href="#" onclick="  window.prompt(\'boo\'); " onmouseover=" \n\n alert(123)  \t \n\t  ">blah</a>';
@@ -1014,7 +1008,7 @@ fit('cleaning other attributes', async () => {
   expect(await minify(input)).toBe(output);
 });
 
-fit('removing redundant attributes (&lt;form method="get" ...>)', async () => {
+test('removing redundant attributes (&lt;form method="get" ...>)', async () => {
   let input;
 
   input = '<form method="get">hello world</form>';
@@ -1024,7 +1018,7 @@ fit('removing redundant attributes (&lt;form method="get" ...>)', async () => {
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<form method="post">hello world</form>');
 });
 
-fit('removing redundant attributes (&lt;input type="text" ...>)', async () => {
+test('removing redundant attributes (&lt;input type="text" ...>)', async () => {
   let input;
 
   input = '<input type="text">';
@@ -1037,7 +1031,7 @@ fit('removing redundant attributes (&lt;input type="text" ...>)', async () => {
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<input type="checkbox">');
 });
 
-fit('removing redundant attributes (&lt;a name="..." id="..." ...>)', async () => {
+test('removing redundant attributes (&lt;a name="..." id="..." ...>)', async () => {
   let input;
 
   input = '<a id="foo" name="foo">blah</a>';
@@ -1053,7 +1047,7 @@ fit('removing redundant attributes (&lt;a name="..." id="..." ...>)', async () =
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<a href="..." id="bar">blah</a>');
 });
 
-fit('removing redundant attributes (&lt;script src="..." charset="...">)', async () => {
+test('removing redundant attributes (&lt;script src="..." charset="...">)', async () => {
   let input, output;
 
   input = '<script type="text/javascript" charset="UTF-8">alert(222);</script>';
@@ -1068,7 +1062,7 @@ fit('removing redundant attributes (&lt;script src="..." charset="...">)', async
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(output);
 });
 
-fit('removing redundant attributes (&lt;... language="javascript" ...>)', async () => {
+test('removing redundant attributes (&lt;... language="javascript" ...>)', async () => {
   let input;
 
   input = '<script language="Javascript">x=2,y=4</script>';
@@ -1078,13 +1072,13 @@ fit('removing redundant attributes (&lt;... language="javascript" ...>)', async 
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<script>x=2,y=4</script>');
 });
 
-fit('removing redundant attributes (&lt;area shape="rect" ...>)', async () => {
+test('removing redundant attributes (&lt;area shape="rect" ...>)', async () => {
   const input = '<area shape="rect" coords="696,25,958,47" href="#" title="foo">';
   const output = '<area coords="696,25,958,47" href="#" title="foo">';
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(output);
 });
 
-fit('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async () => {
+test('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async () => {
   let input;
 
   input = '<p onclick="javascript:alert(1)">x</p>';
@@ -1100,7 +1094,7 @@ fit('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async ()
   expect(await minify(input)).toBe(input);
 });
 
-fit('removing javascript type attributes', async () => {
+test('removing javascript type attributes', async () => {
   let input, output;
 
   input = '<script type="">alert(1)</script>';
@@ -1131,7 +1125,7 @@ fit('removing javascript type attributes', async () => {
   expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
 });
 
-fit('removing type="text/css" attributes', async () => {
+test('removing type="text/css" attributes', async () => {
   let input, output;
 
   input = '<style type="">.foo { color: red }</style>';
@@ -1159,7 +1153,7 @@ fit('removing type="text/css" attributes', async () => {
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(input);
 });
 
-fit('removing attribute quotes', async () => {
+test('removing attribute quotes', async () => {
   let input;
 
   input = '<p title="blah" class="a23B-foo.bar_baz:qux" id="moo">foo</p>';
@@ -1433,7 +1427,7 @@ test('removing empty elements', async () => {
   expect(await minify(input, { collapseWhitespace: true, removeEmptyElements: true })).toBe(output);
 });
 
-fit('collapsing boolean attributes', async () => {
+test('collapsing boolean attributes', async () => {
   let input, output;
 
   input = '<input disabled="disabled">';
@@ -1472,7 +1466,7 @@ fit('collapsing boolean attributes', async () => {
   expect(await minify(input, { collapseBooleanAttributes: true, caseSensitive: true })).toBe(output);
 });
 
-fit('collapsing enumerated attributes', async () => {
+test('collapsing enumerated attributes', async () => {
   expect(await minify('<div draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
   expect(await minify('<div draggable="true"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="true"></div>');
   expect(await minify('<div draggable="false"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="false"></div>');
@@ -1486,7 +1480,7 @@ fit('collapsing enumerated attributes', async () => {
   expect(await minify('<div draggable="Auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
 });
 
-fit('keeping trailing slashes in tags', async () => {
+test('keeping trailing slashes in tags', async () => {
   expect(await minify('<img src="test"/>', { keepClosingSlash: true })).toBe('<img src="test"/>');
   // https://github.com/kangax/html-minifier/issues/233
   expect(await minify('<img src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe('<img src=test />');
@@ -1686,7 +1680,7 @@ test('removing optional tags in options', async () => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 });
 
-fit('custom components', async () => {
+test('custom components', async () => {
   const input = '<custom-component>Oh, my.</custom-component>';
   const output = '<custom-component>Oh, my.</custom-component>';
   expect(await minify(input)).toBe(output);
@@ -1697,7 +1691,7 @@ test('HTML4: anchor with inline elements', async () => {
   expect(await minify(input, { html5: false })).toBe(input);
 });
 
-fit('HTML5: anchor with inline elements', async () => {
+test('HTML5: anchor with inline elements', async () => {
   const input = '<a href="#"><span>Well, look at me! I\'m a span!</span></a>';
   expect(await minify(input, { html5: true })).toBe(input);
 });
@@ -1708,13 +1702,13 @@ test('HTML4: anchor with block elements', async () => {
   expect(await minify(input, { html5: false })).toBe(output);
 });
 
-fit('HTML5: anchor with block elements', async () => {
+test('HTML5: anchor with block elements', async () => {
   const input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   const output = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   expect(await minify(input, { html5: true })).toBe(output);
 });
 
-fit('HTML5: enabled by default', async () => {
+test('HTML5: enabled by default', async () => {
   const input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   expect(await minify(input, { html5: true })).toBe(await minify(input));
 });
@@ -1757,7 +1751,7 @@ test('ul/ol should be phrasing content', async () => {
   expect(await minify(input, { html5: true, removeEmptyElements: true })).toBe(output);
 });
 
-fit('phrasing content with Web Components', async () => {
+test('phrasing content with Web Components', async () => {
   const input = '<span><phrasing-element></phrasing-element></span>';
   const output = '<span><phrasing-element></phrasing-element></span>';
   expect(await minify(input, { html5: true })).toBe(output);
@@ -2009,7 +2003,7 @@ test('bootstrap\'s span > button > span', async () => {
   expect(await minify(input, { collapseWhitespace: true, removeAttributeQuotes: true })).toBe(output);
 });
 
-fit('caseSensitive', async () => {
+test('caseSensitive', async () => {
   const input = '<div mixedCaseAttribute="value"></div>';
   const caseSensitiveOutput = '<div mixedCaseAttribute="value"></div>';
   const caseInSensitiveOutput = '<div mixedcaseattribute="value"></div>';
@@ -2017,7 +2011,7 @@ fit('caseSensitive', async () => {
   expect(await minify(input, { caseSensitive: true })).toBe(caseSensitiveOutput);
 });
 
-fit('source & track', async () => {
+test('source & track', async () => {
   const input = '<audio controls="controls">' +
     '<source src="foo.wav">' +
     '<source src="far.wav">' +
@@ -2053,7 +2047,7 @@ test('mixed html and svg', async () => {
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-fit('nested quotes', async () => {
+test('nested quotes', async () => {
   const input = '<div data=\'{"test":"\\"test\\""}\'></div>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { quoteCharacter: '\'' })).toBe(input);
@@ -2062,7 +2056,7 @@ fit('nested quotes', async () => {
   expect(await minify(input, { quoteCharacter: '"' })).toBe(output);
 });
 
-fit('script minification', async () => {
+test('script minification', async () => {
   let input, output;
 
   input = '<script></script>(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()';
@@ -2108,7 +2102,7 @@ fit('script minification', async () => {
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-fit('minification of scripts with different mimetypes', async () => {
+test('minification of scripts with different mimetypes', async () => {
   let input, output;
 
   input = '<script type="">function f(){  return 1  }</script>';
@@ -2236,7 +2230,7 @@ test('minification of scripts with custom fragments', async () => {
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
 });
 
-fit('event minification', async () => {
+test('event minification', async () => {
   let input, output;
 
   input = '<div only="alert(a + b)" one=";return false;"></div>';
@@ -2293,13 +2287,13 @@ fit('event minification', async () => {
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-fit('escaping closing script tag', async () => {
+test('escaping closing script tag', async () => {
   const input = '<script>window.jQuery || document.write(\'<script src="jquery.js"><\\/script>\')</script>';
   const output = '<script>window.jQuery||document.write(\'<script src="jquery.js"><\\/script>\')</script>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-fit('style minification', async () => {
+test('style minification', async () => {
   let input, output;
 
   input = '<style></style>div#foo { background-color: red; color: white }';
@@ -2371,7 +2365,7 @@ fit('style minification', async () => {
   })).toBe(output);
 });
 
-fit('style attribute minification', async () => {
+test('style attribute minification', async () => {
   const input = '<div style="color: red; background-color: yellow; font-family: Verdana, Arial, sans-serif;"></div>';
   const output = '<div style="color:red;background-color:#ff0;font-family:Verdana,Arial,sans-serif"></div>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
@@ -2445,7 +2439,7 @@ test('minification of style with custom fragments', async () => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-fit('url attribute minification', async () => {
+test('url attribute minification', async () => {
   let input, output;
 
   input = '<link rel="stylesheet" href="http://website.com/style.css"><form action="http://website.com/folder/folder2/index.html"><a href="http://website.com/folder/file.html">link</a></form>';
@@ -2507,7 +2501,7 @@ fit('url attribute minification', async () => {
   expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
 });
 
-fit('srcset attribute minification', async () => {
+test('srcset attribute minification', async () => {
   let output;
   const input = '<source srcset="http://site.com/foo.gif ,http://site.com/bar.jpg 1x, baz moo 42w,' +
     '\n\n\n\n\n\t    http://site.com/zo om.png 1.00x">';
@@ -2517,7 +2511,7 @@ fit('srcset attribute minification', async () => {
   expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
 });
 
-fit('valueless attributes', async () => {
+test('valueless attributes', async () => {
   const input = '<br foo>';
   expect(await minify(input)).toBe(input);
 });
@@ -2866,7 +2860,7 @@ test('ignore', async () => {
   expect(await minify(input)).toBe('+0');
 });
 
-fit('meta viewport', async () => {
+test('meta viewport', async () => {
   let input, output;
 
   input = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
@@ -2886,7 +2880,7 @@ fit('meta viewport', async () => {
   expect(await minify(input)).toBe(output);
 });
 
-fit('downlevel-revealed conditional comments', async () => {
+test('downlevel-revealed conditional comments', async () => {
   const input = '<![if !IE]><link href="non-ie.css" rel="stylesheet"><![endif]>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { removeComments: true })).toBe(input);
@@ -2994,12 +2988,9 @@ test('max line length', async () => {
   expect(await minify(':) <a href="http://example.com">\n\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\n\nlink</a>');
 
   expect(await minify('<a href>ok</a>', options)).toBe('<a href>ok</a>');
-
-  options.noNewlinesBeforeTagClose = true;
-  expect(await minify('<a title="x"href=" ">foo</a>', options)).toBe('<a title="x" href="">foo</a>');
 });
 
-fit('custom attribute collapse', async () => {
+test('custom attribute collapse', async () => {
   let input, output;
 
   input = '<div data-bind="\n' +
@@ -3036,13 +3027,13 @@ fit('custom attribute collapse', async () => {
   expect(await minify(input, { customAttrCollapse: /ng-class/ })).toBe(output);
 });
 
-fit('custom attribute collapse with empty attribute value', async () => {
+test('custom attribute collapse with empty attribute value', async () => {
   const input = '<div ng-some\n\n></div>';
   const output = '<div ng-some></div>';
   expect(await minify(input, { customAttrCollapse: /.+/ })).toBe(output);
 });
 
-fit('custom attribute collapse with newlines, whitespace, and carriage returns', async () => {
+test('custom attribute collapse with newlines, whitespace, and carriage returns', async () => {
   const input = '<div ng-class="{ \n\r' +
     '               value:true, \n\r' +
     '               value2:false \n\r' +
@@ -3051,7 +3042,7 @@ fit('custom attribute collapse with newlines, whitespace, and carriage returns',
   expect(await minify(input, { customAttrCollapse: /ng-class/ })).toBe(output);
 });
 
-fit('do not escape attribute value', async () => {
+test('do not escape attribute value', async () => {
   let input;
 
   input = '<div data=\'{\n' +
@@ -3066,12 +3057,12 @@ fit('do not escape attribute value', async () => {
   expect(await minify(input)).toBe(output);
 });
 
-fit('quoteCharacter is single quote', async () => {
+test('quoteCharacter is single quote', async () => {
   expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
 });
 
-fit('quoteCharacter is not single quote or double quote', async () => {
+test('quoteCharacter is not single quote or double quote', async () => {
   expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
 });
@@ -3211,7 +3202,7 @@ test('auto-generated tags', async () => {
   expect(await minify(input, { includeAutoGeneratedTags: true })).toBe(output);
 });
 
-fit('sort attributes', async () => {
+test('sort attributes', async () => {
   let input, output;
 
   input = '<link href="foo">' +
@@ -3382,7 +3373,7 @@ test('sort style classes', async () => {
   expect(await minify(input, { sortClassName: true })).toBe(input);
 });
 
-fit('decode entity characters', async () => {
+test('decode entity characters', async () => {
   let input, output;
 
   input = '<!-- &ne; -->';
@@ -3564,7 +3555,7 @@ test('canCollapseWhitespace and canTrimWhitespace hooks', async () => {
   })).toBe(output);
 });
 
-fit('minify Content-Security-Policy', async () => {
+test('minify Content-Security-Policy', async () => {
   let input, output;
 
   input = '<meta Http-Equiv="Content-Security-Policy"\t\t\t\tContent="default-src \'self\';\n\n\t\timg-src https://*;">';

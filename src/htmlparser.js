@@ -228,7 +228,7 @@ class HTMLParser {
         const stackedTag = lastTag.toLowerCase();
         const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)</' + stackedTag + '[^>]*>', 'i'));
 
-        html = await replaceAsync(html, reStackedTag, async(_, text) => {
+        html = await replaceAsync(html, reStackedTag, async (_, text) => {
           if (stackedTag !== 'script' && stackedTag !== 'style' && stackedTag !== 'noscript') {
             text = text
               .replace(/<!--([\s\S]*?)-->/g, '$1')
@@ -564,3 +564,5 @@ exports.HTMLtoDOM = function (html, doc) {
 
   return doc;
 };
+
+exports.endTag = endTag;

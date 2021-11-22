@@ -5,7 +5,7 @@ const { decode } = require('he');
 const RelateUrl = require('relateurl');
 const Terser = require('terser');
 
-const { HTMLParser } = require('./htmlparser');
+const { HTMLParser, endTag } = require('./htmlparser');
 const TokenChain = require('./tokenchain');
 const utils = require('./utils');
 
@@ -1293,18 +1293,23 @@ async function minify(value, options, partialMarkup) {
 function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   let str;
   const maxLineLength = options.maxLineLength;
+  const noNewlinesBeforeTagClose = options.noNewlinesBeforeTagClose;
+
   if (maxLineLength) {
     let line = ''; const lines = [];
     while (results.length) {
       const len = line.length;
       const end = results[0].indexOf('\n');
+      const isClosingTag = Boolean(results[0].match(endTag));
+      const shouldKeepSameLine = noNewlinesBeforeTagClose && isClosingTag;
+
       if (end < 0) {
         line += restoreIgnore(restoreCustom(results.shift()));
       } else {
         line += restoreIgnore(restoreCustom(results[0].slice(0, end)));
         results[0] = results[0].slice(end + 1);
       }
-      if (len > 0 && line.length > maxLineLength) {
+      if (len > 0 && line.length > maxLineLength && !shouldKeepSameLine) {
         lines.push(line.slice(0, len));
         line = line.slice(len);
       } else if (end >= 0) {

@@ -2990,6 +2990,9 @@ test('max line length', async () => {
   expect(await minify(':) <a href="http://example.com">\n\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\n\nlink</a>');
 
   expect(await minify('<a href>ok</a>', options)).toBe('<a href>ok</a>');
+
+  options.noNewlinesBeforeTagClose = true;
+  expect(await minify('<a title="x"href=" ">foo</a>', options)).toBe('<a title="x" href="">foo</a>');
 });
 
 test('custom attribute collapse', async () => {

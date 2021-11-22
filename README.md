@@ -56,6 +56,7 @@ Most of the options are disabled by default.
 | `minifyCSS`                    | Minify CSS in style elements and style attributes (uses [clean-css](https://github.com/jakubpawlowicz/clean-css)) | `false` (could be `true`, `Object`, `Function(text, type)`) |
 | `minifyJS`                     | Minify JavaScript in script elements and event attributes (uses [Terser](https://github.com/terser/terser)) | `false` (could be `true`, `Object`, `Function(text, inline)`) |
 | `minifyURLs`                   | Minify URLs in various attributes (uses [relateurl](https://github.com/stevenvachon/relateurl)) | `false` (could be `String`, `Object`, `Function(text)`) |
+| `noNewlinesBeforeTagClose`     | Never add a newline before a tag that closes an element | `false` |
 | `preserveLineBreaks`           | Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break. Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `preventAttributesEscaping`    | Prevents the escaping of the values of attributes | `false` |
 | `processConditionalComments`   | Process contents of conditional comments through minifier | `false` |

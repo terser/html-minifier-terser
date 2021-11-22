@@ -3,10 +3,11 @@ import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import { terser } from 'rollup-plugin-terser';
+import json from '@rollup/plugin-json';
 
 const config = defineConfig([
   {
-    input: 'src/htmlminifier.js',
+    input: 'src/index.js',
     output: [{
       file: 'dist/htmlminifier.umd.bundle.js',
       format: 'umd',
@@ -18,11 +19,12 @@ const config = defineConfig([
       nodePolyfills(),
       nodeResolve({
         preferBuiltins: false
-      })
+      }),
+      json()
     ]
   },
   {
-    input: 'src/htmlminifier.js',
+    input: 'src/index.js',
     output: [{
       file: 'dist/htmlminifier.umd.bundle.min.js',
       format: 'umd',
@@ -35,11 +37,12 @@ const config = defineConfig([
       nodeResolve({
         preferBuiltins: false
       }),
+      json(),
       terser()
     ]
   },
   {
-    input: 'src/htmlminifier.js',
+    input: 'src/index.js',
     output: {
       file: 'dist/htmlminifier.esm.bundle.js',
       format: 'es'
@@ -49,19 +52,17 @@ const config = defineConfig([
       nodePolyfills(),
       nodeResolve({
         preferBuiltins: false
-      })
+      }),
+      json()
     ]
   },
   {
-    input: 'src/htmlminifier.js',
+    input: 'src/index.js',
     output: {
-      file: 'dist/htmlminifier.js',
-      format: 'es'
+      file: 'dist/htmlminifier.cjs',
+      format: 'cjs'
     },
-    plugins: [
-      commonjs()
-    ],
-    external: ['clean-css', 'terser', 'he', 'relateurl']
+    external: ['htmlparser2', 'clean-css', 'terser', 'relateurl']
   }
 ]);
 

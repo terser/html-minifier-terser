@@ -3,7 +3,7 @@ const path = require('path');
 
 const { describe, test, expect, beforeEach } = require('@jest/globals');
 const { spawnSync } = require('child_process');
-const { minify } = require('../src/htmlminifier');
+const { minify } = require('../legacy/htmlminifier');
 
 const fixturesDir = path.resolve(__dirname, 'fixtures');
 const cliPath = path.resolve(process.cwd(), 'cli.js');

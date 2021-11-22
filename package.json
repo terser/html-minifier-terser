@@ -43,15 +43,15 @@
   "engines": {
     "node": ">=12"
   },
-  "type": "module",
-  "main": "./src/htmlminifier.js",
+  "main": "./legacy/htmlminifier.js",
   "module": "./src/index.js",
   "exports": {
     ".": {
-      "require": "./src/htmlminifier.js",
+      "require": "./legacy/htmlminifier.js",
       "imports": "./src/index.js"
     },
     "./dist/*": "./dist/*.js",
+    "./legacy/*": "./legacy/*.js",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -64,9 +64,9 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "test:node": "jest --verbose",
-    "test:web": "jest --verbose --environment=jsdom",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --verbose",
+    "test:node": "jest",
+    "test:web": "jest --environment=jsdom",
+    "test:watch": "jest --watch",
     "test": "npm run test:node",
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",
@@ -77,16 +77,21 @@
     "camel-case": "^4.1.2",
     "clean-css": "^5.2.2",
     "commander": "^8.3.0",
+    "he": "^1.2.0",
     "htmlparser2": "^7.2.0",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
     "terser": "^5.10.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.4",
     "@jest/globals": "^27.3.1",
     "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.6",
     "alpinejs": "^3.5.2",
+    "babel-jest": "^27.3.1",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.3",

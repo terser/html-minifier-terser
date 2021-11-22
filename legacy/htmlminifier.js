@@ -6,7 +6,7 @@ const RelateUrl = require('relateurl');
 const Terser = require('terser');
 
 const { HTMLParser, endTag } = require('./htmlparser');
-const TokenChain = require('../src/tokenchain');
+const TokenChain = require('./tokenchain');
 const utils = require('./utils');
 
 function trimWhitespace(str) {

@@ -67,7 +67,7 @@
     "test:web": "jest --verbose --environment=jsdom",
     "test": "npm run test:node",
     "serve": "vite",
-    "build:docs": "vite build",
+    "build:docs": "vite build --base /html-minifier-terser/",
     "lint": "eslint .",
     "prepare": "is-ci || husky install"
   },

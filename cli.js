@@ -139,6 +139,8 @@ const mainOptions = {
   trimCustomFragments: 'Trim white space around ignoreCustomFragments.',
   useShortDoctype: 'Replaces the doctype with the short (HTML5) doctype'
 };
+
+// configure commandline flags
 const mainOptionKeys = Object.keys(mainOptions);
 mainOptionKeys.forEach(function (key) {
   const option = mainOptions[key];
@@ -187,6 +189,7 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
 program.option('--file-ext <text>', 'Specify an extension to be read, ex: html');
+
 let content;
 program.arguments('[files...]').action(function (files) {
   content = files.map(readFile).join('');
@@ -196,8 +199,10 @@ const programOptions = program.opts();
 
 function createOptions() {
   const options = {};
+
   mainOptionKeys.forEach(function (key) {
     const param = programOptions[key === 'minifyURLs' ? 'minifyUrls' : camelCase(key)];
+
     if (typeof param !== 'undefined') {
       options[key] = param;
     } else if (key in config) {
@@ -208,18 +213,9 @@ function createOptions() {
 }
 
 function mkdir(outputDir, callback) {
-  fs.mkdir(outputDir, function (err) {
+  fs.mkdir(outputDir, { recursive: true }, function (err) {
     if (err) {
-      switch (err.code) {
-        case 'ENOENT':
-          return mkdir(path.join(outputDir, '..'), function () {
-            mkdir(outputDir, callback);
-          });
-        case 'EEXIST':
-          break;
-        default:
-          fatal('Cannot create directory ' + outputDir + '\n' + err.message);
-      }
+      fatal('Cannot create directory ' + outputDir + '\n' + err.message);
     }
     callback();
   });
@@ -253,6 +249,7 @@ function processDirectory(inputDir, outputDir, fileExt) {
     files.forEach(function (file) {
       const inputFile = path.join(inputDir, file);
       const outputFile = path.join(outputDir, file);
+
       fs.stat(inputFile, function (err, stat) {
         if (err) {
           fatal('Cannot read ' + inputFile + '\n' + err.message);
@@ -268,23 +265,30 @@ function processDirectory(inputDir, outputDir, fileExt) {
   });
 }
 
-async function writeMinify() {
+const writeMinify = async () => {
+  const minifierOptions = createOptions();
   let minified;
+
   try {
-    minified = await minify(content, createOptions());
+    minified = await minify(content, minifierOptions);
   } catch (e) {
     fatal('Minification error:\n' + e.message);
   }
-  (programOptions.output
-    ? fs.createWriteStream(programOptions.output).on('error', function (e) {
-      fatal('Cannot write ' + programOptions.output + '\n' + e.message);
-    })
-    : process.stdout).write(minified);
-}
 
-const inputDir = programOptions.inputDir;
-const outputDir = programOptions.outputDir;
-const fileExt = programOptions.fileExt;
+  let stream = process.stdout;
+
+  if (programOptions.output) {
+    stream = fs.createWriteStream(programOptions.output)
+      .on('error', (e) => {
+        fatal('Cannot write ' + programOptions.output + '\n' + e.message);
+      });
+  }
+
+  stream.write(minified);
+};
+
+const { inputDir, outputDir, fileExt } = programOptions;
+
 if (inputDir || outputDir) {
   if (!inputDir) {
     fatal('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o.');

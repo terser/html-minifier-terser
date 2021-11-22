@@ -238,3 +238,5 @@ $RECYCLE.BIN/
 
 ### Project
 build/
+temp/
+tmp/

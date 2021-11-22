@@ -7,7 +7,7 @@ test('`minifiy` exists', () => {
   expect(minify).toBeDefined();
 });
 
-test('parsing non-trivial markup', async() => {
+test('parsing non-trivial markup', async () => {
   let input, output;
 
   expect(await minify('</td>')).toBe('');
@@ -18,7 +18,7 @@ test('parsing non-trivial markup', async() => {
   expect(await minify('<p title=" <!-- hello world --> ">x</p>')).toBe('<p title=" <!-- hello world --> ">x</p>');
   expect(await minify('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>')).toBe('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>');
   expect(await minify('<p foo-bar=baz>xxx</p>')).toBe('<p foo-bar="baz">xxx</p>');
-  // expect(await minify('<p foo:bar=baz>xxx</p>')).toBe('<p foo:bar="baz">xxx</p>');
+  expect(await minify('<p foo:bar=baz>xxx</p>')).toBe('<p foo:bar="baz">xxx</p>');
   expect(await minify('<p foo.bar=baz>xxx</p>')).toBe('<p foo.bar="baz">xxx</p>');
 
   input = '<div><div><div><div><div><div><div><div><div><div>' +
@@ -153,13 +153,13 @@ test('parsing non-trivial markup', async() => {
   })).toBe(output);
 });
 
-test('options', async() => {
+test('options', async () => {
   const input = '<p>blah<span>blah 2<span>blah 3</span></span></p>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, {})).toBe(input);
 });
 
-test('case normalization', async() => {
+test('case normalization', async () => {
   expect(await minify('<P>foo</p>')).toBe('<p>foo</p>');
   expect(await minify('<DIV>boo</DIV>')).toBe('<div>boo</div>');
   expect(await minify('<DIV title="moo">boo</DiV>')).toBe('<div title="moo">boo</div>');
@@ -168,7 +168,7 @@ test('case normalization', async() => {
   expect(await minify('<DiV tItLe="blah">boo</DIV>')).toBe('<div title="blah">boo</div>');
 });
 
-test('space normalization between attributes', async() => {
+test('space normalization between attributes', async () => {
   expect(await minify('<p title="bar">foo</p>')).toBe('<p title="bar">foo</p>');
   expect(await minify('<img src="test"/>')).toBe('<img src="test">');
   expect(await minify('<p title = "bar">foo</p>')).toBe('<p title="bar">foo</p>');
@@ -177,7 +177,7 @@ test('space normalization between attributes', async() => {
   expect(await minify('<input title="bar"       id="boo"    value="hello world">')).toBe('<input title="bar" id="boo" value="hello world">');
 });
 
-test('space normalization around text', async() => {
+test('space normalization around text', async () => {
   let input, output;
   input = '   <p>blah</p>\n\n\n   ';
   expect(await minify(input)).toBe(input);
@@ -378,7 +378,7 @@ test('space normalization around text', async() => {
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-test('types of whitespace that should always be preserved', async() => {
+test('types of whitespace that should always be preserved', async () => {
   // Hair space:
   let input = '<div>\u200afo\u200ao\u200a</div>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(input);
@@ -415,7 +415,7 @@ test('types of whitespace that should always be preserved', async() => {
   expect(await minify(input, { sortClassName: true })).toBe(input);
 });
 
-test('doctype normalization', async() => {
+test('doctype normalization', async () => {
   let input;
   const output = '<!doctype html>';
 
@@ -441,7 +441,7 @@ test('doctype normalization', async() => {
   expect(await minify(input, { useShortDoctype: true })).toBe(output);
 });
 
-test('removing comments', async() => {
+test('removing comments', async () => {
   let input;
 
   input = '<!-- test -->';
@@ -461,7 +461,7 @@ test('removing comments', async() => {
   expect(await minify(input, { removeComments: true })).toBe('<style><!-- alert(1) --></style>');
 });
 
-test('ignoring comments', async() => {
+test('ignoring comments', async () => {
   let input;
 
   input = '<!--! test -->';
@@ -491,7 +491,7 @@ test('ignoring comments', async() => {
   expect(await minify(input, { removeComments: true })).toBe(input);
 });
 
-test('conditional comments', async() => {
+test('conditional comments', async () => {
   let input, output;
 
   input = '<![if IE 5]>test<![endif]>';
@@ -582,7 +582,7 @@ test('conditional comments', async() => {
   })).toBe(output);
 });
 
-test('collapsing space in conditional comments', async() => {
+test('collapsing space in conditional comments', async () => {
   let input, output;
 
   input = '<!--[if IE 7]>\n\n   \t\n   \t\t ' +
@@ -618,7 +618,7 @@ test('collapsing space in conditional comments', async() => {
   })).toBe(output);
 });
 
-test('remove comments from scripts', async() => {
+test('remove comments from scripts', async () => {
   let input, output;
 
   input = '<script><!--\nalert(1);\n--></script>';
@@ -668,7 +668,7 @@ test('remove comments from scripts', async() => {
   expect(await minify(input, { minifyJS: true })).toBe(input);
 });
 
-test('remove comments from styles', async() => {
+test('remove comments from styles', async () => {
   let input, output;
 
   input = '<style><!--\np.a{background:red}\n--></style>';
@@ -716,7 +716,7 @@ test('remove comments from styles', async() => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('remove CDATA sections from scripts/styles', async() => {
+test('remove CDATA sections from scripts/styles', async () => {
   let input, output;
 
   input = '<script><![CDATA[\nalert(1)\n]]></script>';
@@ -799,7 +799,7 @@ test('remove CDATA sections from scripts/styles', async() => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('custom processors', async() => {
+test('custom processors', async () => {
   let input, output;
 
   function css(text, type) {
@@ -872,7 +872,7 @@ test('custom processors', async() => {
   expect(await minify(input, { minifyCSS: true, minifyURLs: url })).toBe(output);
 });
 
-test('empty attributes', async() => {
+test('empty attributes', async () => {
   let input;
 
   input = '<p id="" class="" STYLE=" " title="\n" lang="" dir="">x</p>';
@@ -901,7 +901,7 @@ test('empty attributes', async() => {
   expect(await minify(input, { removeEmptyAttributes: function (attrName, tag) { return tag === 'img' && attrName === 'src'; } })).toBe('<img alt="">');
 });
 
-test('cleaning class/style attributes', async() => {
+test('cleaning class/style attributes', async () => {
   let input, output;
 
   input = '<p class=" foo bar  ">foo bar baz</p>';
@@ -928,7 +928,7 @@ test('cleaning class/style attributes', async() => {
   expect(await minify(input)).toBe(output);
 });
 
-test('cleaning URI-based attributes', async() => {
+test('cleaning URI-based attributes', async () => {
   let input, output;
 
   input = '<a href="   http://example.com  ">x</a>';
@@ -970,7 +970,7 @@ test('cleaning URI-based attributes', async() => {
   expect(await minify(input)).toBe(input);
 });
 
-test('cleaning Number-based attributes', async() => {
+test('cleaning Number-based attributes', async () => {
   let input, output;
 
   input = '<a href="#" tabindex="   1  ">x</a><button tabindex="   2  ">y</button>';
@@ -998,7 +998,7 @@ test('cleaning Number-based attributes', async() => {
   expect(await minify(input)).toBe(output);
 });
 
-test('cleaning other attributes', async() => {
+test('cleaning other attributes', async () => {
   let input, output;
 
   input = '<a href="#" onclick="  window.prompt(\'boo\'); " onmouseover=" \n\n alert(123)  \t \n\t  ">blah</a>';
@@ -1010,7 +1010,7 @@ test('cleaning other attributes', async() => {
   expect(await minify(input)).toBe(output);
 });
 
-test('removing redundant attributes (&lt;form method="get" ...>)', async() => {
+test('removing redundant attributes (&lt;form method="get" ...>)', async () => {
   let input;
 
   input = '<form method="get">hello world</form>';
@@ -1020,7 +1020,7 @@ test('removing redundant attributes (&lt;form method="get" ...>)', async() => {
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<form method="post">hello world</form>');
 });
 
-test('removing redundant attributes (&lt;input type="text" ...>)', async() => {
+test('removing redundant attributes (&lt;input type="text" ...>)', async () => {
   let input;
 
   input = '<input type="text">';
@@ -1033,7 +1033,7 @@ test('removing redundant attributes (&lt;input type="text" ...>)', async() => {
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<input type="checkbox">');
 });
 
-test('removing redundant attributes (&lt;a name="..." id="..." ...>)', async() => {
+test('removing redundant attributes (&lt;a name="..." id="..." ...>)', async () => {
   let input;
 
   input = '<a id="foo" name="foo">blah</a>';
@@ -1049,7 +1049,7 @@ test('removing redundant attributes (&lt;a name="..." id="..." ...>)', async() =
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<a href="..." id="bar">blah</a>');
 });
 
-test('removing redundant attributes (&lt;script src="..." charset="...">)', async() => {
+test('removing redundant attributes (&lt;script src="..." charset="...">)', async () => {
   let input, output;
 
   input = '<script type="text/javascript" charset="UTF-8">alert(222);</script>';
@@ -1064,7 +1064,7 @@ test('removing redundant attributes (&lt;script src="..." charset="...">)', asyn
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(output);
 });
 
-test('removing redundant attributes (&lt;... language="javascript" ...>)', async() => {
+test('removing redundant attributes (&lt;... language="javascript" ...>)', async () => {
   let input;
 
   input = '<script language="Javascript">x=2,y=4</script>';
@@ -1074,13 +1074,13 @@ test('removing redundant attributes (&lt;... language="javascript" ...>)', async
   expect(await minify(input, { removeRedundantAttributes: true })).toBe('<script>x=2,y=4</script>');
 });
 
-test('removing redundant attributes (&lt;area shape="rect" ...>)', async() => {
+test('removing redundant attributes (&lt;area shape="rect" ...>)', async () => {
   const input = '<area shape="rect" coords="696,25,958,47" href="#" title="foo">';
   const output = '<area coords="696,25,958,47" href="#" title="foo">';
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(output);
 });
 
-test('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async() => {
+test('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async () => {
   let input;
 
   input = '<p onclick="javascript:alert(1)">x</p>';
@@ -1096,7 +1096,7 @@ test('removing redundant attributes (&lt;... = "javascript: ..." ...>)', async()
   expect(await minify(input)).toBe(input);
 });
 
-test('removing javascript type attributes', async() => {
+test('removing javascript type attributes', async () => {
   let input, output;
 
   input = '<script type="">alert(1)</script>';
@@ -1127,7 +1127,7 @@ test('removing javascript type attributes', async() => {
   expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
 });
 
-test('removing type="text/css" attributes', async() => {
+test('removing type="text/css" attributes', async () => {
   let input, output;
 
   input = '<style type="">.foo { color: red }</style>';
@@ -1155,7 +1155,7 @@ test('removing type="text/css" attributes', async() => {
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(input);
 });
 
-test('removing attribute quotes', async() => {
+test('removing attribute quotes', async () => {
   let input;
 
   input = '<p title="blah" class="a23B-foo.bar_baz:qux" id="moo">foo</p>';
@@ -1183,7 +1183,7 @@ test('removing attribute quotes', async() => {
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<p class=foo|bar:baz></p>');
 });
 
-test('preserving custom attribute-wrapping markup', async() => {
+test('preserving custom attribute-wrapping markup', async () => {
   let input, customAttrOptions;
 
   // With a single rule
@@ -1237,7 +1237,7 @@ test('preserving custom attribute-wrapping markup', async() => {
   expect(await minify(input, customAttrOptions)).toBe('<input {{#if value1}}checked {{/if}}{{#if value2}}data-attr=foo {{/if}}/>');
 });
 
-test('preserving custom attribute-joining markup', async() => {
+test('preserving custom attribute-joining markup', async () => {
   let input;
   const polymerConditionalAttributeJoin = /\?=/;
   const customAttrOptions = {
@@ -1249,7 +1249,7 @@ test('preserving custom attribute-joining markup', async() => {
   expect(await minify(input, customAttrOptions)).toBe(input);
 });
 
-test('collapsing whitespace', async() => {
+test('collapsing whitespace', async () => {
   let input, output;
 
   input = '<script type="text/javascript">  \n\t   alert(1) \n\n\n  \t </script>';
@@ -1321,7 +1321,7 @@ test('collapsing whitespace', async() => {
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-test('removing empty elements', async() => {
+test('removing empty elements', async () => {
   let input, output;
 
   expect(await minify('<p>x</p>', { removeEmptyElements: true })).toBe('<p>x</p>');
@@ -1429,7 +1429,7 @@ test('removing empty elements', async() => {
   expect(await minify(input, { collapseWhitespace: true, removeEmptyElements: true })).toBe(output);
 });
 
-test('collapsing boolean attributes', async() => {
+test('collapsing boolean attributes', async () => {
   let input, output;
 
   input = '<input disabled="disabled">';
@@ -1468,7 +1468,7 @@ test('collapsing boolean attributes', async() => {
   expect(await minify(input, { collapseBooleanAttributes: true, caseSensitive: true })).toBe(output);
 });
 
-test('collapsing enumerated attributes', async() => {
+test('collapsing enumerated attributes', async () => {
   expect(await minify('<div draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
   expect(await minify('<div draggable="true"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="true"></div>');
   expect(await minify('<div draggable="false"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="false"></div>');
@@ -1482,7 +1482,7 @@ test('collapsing enumerated attributes', async() => {
   expect(await minify('<div draggable="Auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
 });
 
-test('keeping trailing slashes in tags', async() => {
+test('keeping trailing slashes in tags', async () => {
   expect(await minify('<img src="test"/>', { keepClosingSlash: true })).toBe('<img src="test"/>');
   // https://github.com/kangax/html-minifier/issues/233
   expect(await minify('<img src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe('<img src=test />');
@@ -1490,7 +1490,7 @@ test('keeping trailing slashes in tags', async() => {
   expect(await minify('<img title="foo" src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe('<img title=foo src=test />');
 });
 
-test('removing optional tags', async() => {
+test('removing optional tags', async () => {
   let input, output;
 
   input = '<p>foo';
@@ -1585,7 +1585,7 @@ test('removing optional tags', async() => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(input);
 });
 
-test('removing optional tags in tables', async() => {
+test('removing optional tags in tables', async () => {
   let input, output;
 
   input = '<table>' +
@@ -1645,7 +1645,7 @@ test('removing optional tags in tables', async() => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 });
 
-test('removing optional tags in options', async() => {
+test('removing optional tags in options', async () => {
   let input, output;
 
   input = '<select><option>foo</option><option>bar</option></select>';
@@ -1682,40 +1682,40 @@ test('removing optional tags in options', async() => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 });
 
-test('custom components', async() => {
+test('custom components', async () => {
   const input = '<custom-component>Oh, my.</custom-component>';
   const output = '<custom-component>Oh, my.</custom-component>';
   expect(await minify(input)).toBe(output);
 });
 
-test('HTML4: anchor with inline elements', async() => {
+test('HTML4: anchor with inline elements', async () => {
   const input = '<a href="#"><span>Well, look at me! I\'m a span!</span></a>';
   expect(await minify(input, { html5: false })).toBe(input);
 });
 
-test('HTML5: anchor with inline elements', async() => {
+test('HTML5: anchor with inline elements', async () => {
   const input = '<a href="#"><span>Well, look at me! I\'m a span!</span></a>';
   expect(await minify(input, { html5: true })).toBe(input);
 });
 
-test('HTML4: anchor with block elements', async() => {
+test('HTML4: anchor with block elements', async () => {
   const input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   const output = '<a href="#"></a><div>Well, look at me! I\'m a div!</div>';
   expect(await minify(input, { html5: false })).toBe(output);
 });
 
-test('HTML5: anchor with block elements', async() => {
+test('HTML5: anchor with block elements', async () => {
   const input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   const output = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   expect(await minify(input, { html5: true })).toBe(output);
 });
 
-test('HTML5: enabled by default', async() => {
+test('HTML5: enabled by default', async () => {
   const input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   expect(await minify(input, { html5: true })).toBe(await minify(input));
 });
 
-test('phrasing content', async() => {
+test('phrasing content', async () => {
   let input, output;
 
   input = '<p>a<div>b</div>';
@@ -1729,7 +1729,7 @@ test('phrasing content', async() => {
 });
 
 // https://github.com/kangax/html-minifier/issues/888
-test('ul/ol should be phrasing content', async() => {
+test('ul/ol should be phrasing content', async () => {
   let input, output;
 
   input = '<p>a<ul><li>item</li></ul>';
@@ -1753,14 +1753,14 @@ test('ul/ol should be phrasing content', async() => {
   expect(await minify(input, { html5: true, removeEmptyElements: true })).toBe(output);
 });
 
-test('phrasing content with Web Components', async() => {
+test('phrasing content with Web Components', async () => {
   const input = '<span><phrasing-element></phrasing-element></span>';
   const output = '<span><phrasing-element></phrasing-element></span>';
   expect(await minify(input, { html5: true })).toBe(output);
 });
 
 // https://github.com/kangax/html-minifier/issues/10
-test('Ignore custom fragments', async() => {
+test('Ignore custom fragments', async () => {
   let input, output;
   const reFragments = [/<\?[^?]+\?>/, /<%[^%]+%>/, /\{\{[^}]*\}\}/];
 
@@ -1995,7 +1995,7 @@ test('Ignore custom fragments', async() => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('bootstrap\'s span > button > span', async() => {
+test('bootstrap\'s span > button > span', async () => {
   const input = '<span class="input-group-btn">' +
     '\n  <button class="btn btn-default" type="button">' +
     '\n    <span class="glyphicon glyphicon-search"></span>' +
@@ -2005,7 +2005,7 @@ test('bootstrap\'s span > button > span', async() => {
   expect(await minify(input, { collapseWhitespace: true, removeAttributeQuotes: true })).toBe(output);
 });
 
-test('caseSensitive', async() => {
+test('caseSensitive', async () => {
   const input = '<div mixedCaseAttribute="value"></div>';
   const caseSensitiveOutput = '<div mixedCaseAttribute="value"></div>';
   const caseInSensitiveOutput = '<div mixedcaseattribute="value"></div>';
@@ -2013,7 +2013,7 @@ test('caseSensitive', async() => {
   expect(await minify(input, { caseSensitive: true })).toBe(caseSensitiveOutput);
 });
 
-test('source & track', async() => {
+test('source & track', async () => {
   const input = '<audio controls="controls">' +
     '<source src="foo.wav">' +
     '<source src="far.wav">' +
@@ -2024,7 +2024,7 @@ test('source & track', async() => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(input);
 });
 
-test('mixed html and svg', async() => {
+test('mixed html and svg', async () => {
   const input = '<html><body>\n' +
     '  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"\n' +
     '     width="612px" height="502.174px" viewBox="0 65.326 612 502.174" enable-background="new 0 65.326 612 502.174"\n' +
@@ -2049,7 +2049,7 @@ test('mixed html and svg', async() => {
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-test('nested quotes', async() => {
+test('nested quotes', async () => {
   const input = '<div data=\'{"test":"\\"test\\""}\'></div>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { quoteCharacter: '\'' })).toBe(input);
@@ -2058,7 +2058,7 @@ test('nested quotes', async() => {
   expect(await minify(input, { quoteCharacter: '"' })).toBe(output);
 });
 
-test('script minification', async() => {
+test('script minification', async () => {
   let input, output;
 
   input = '<script></script>(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()';
@@ -2104,7 +2104,7 @@ test('script minification', async() => {
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-test('minification of scripts with different mimetypes', async() => {
+test('minification of scripts with different mimetypes', async () => {
   let input, output;
 
   input = '<script type="">function f(){  return 1  }</script>';
@@ -2134,7 +2134,7 @@ test('minification of scripts with different mimetypes', async() => {
   expect(await minify(input, { minifyJS: true })).toBe(input);
 });
 
-test('minification of scripts with custom fragments', async() => {
+test('minification of scripts with custom fragments', async () => {
   let input, output;
 
   input = '<script><?php ?></script>';
@@ -2232,7 +2232,7 @@ test('minification of scripts with custom fragments', async() => {
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
 });
 
-test('event minification', async() => {
+test('event minification', async () => {
   let input, output;
 
   input = '<div only="alert(a + b)" one=";return false;"></div>';
@@ -2289,13 +2289,13 @@ test('event minification', async() => {
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-test('escaping closing script tag', async() => {
+test('escaping closing script tag', async () => {
   const input = '<script>window.jQuery || document.write(\'<script src="jquery.js"><\\/script>\')</script>';
   const output = '<script>window.jQuery||document.write(\'<script src="jquery.js"><\\/script>\')</script>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
 
-test('style minification', async() => {
+test('style minification', async () => {
   let input, output;
 
   input = '<style></style>div#foo { background-color: red; color: white }';
@@ -2367,13 +2367,13 @@ test('style minification', async() => {
   })).toBe(output);
 });
 
-test('style attribute minification', async() => {
+test('style attribute minification', async () => {
   const input = '<div style="color: red; background-color: yellow; font-family: Verdana, Arial, sans-serif;"></div>';
   const output = '<div style="color:red;background-color:#ff0;font-family:Verdana,Arial,sans-serif"></div>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
 });
 
-test('minification of style with custom fragments', async() => {
+test('minification of style with custom fragments', async () => {
   let input;
 
   input = '<style><?foo?></style>';
@@ -2441,7 +2441,7 @@ test('minification of style with custom fragments', async() => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('url attribute minification', async() => {
+test('url attribute minification', async () => {
   let input, output;
 
   input = '<link rel="stylesheet" href="http://website.com/style.css"><form action="http://website.com/folder/folder2/index.html"><a href="http://website.com/folder/file.html">link</a></form>';
@@ -2503,7 +2503,7 @@ test('url attribute minification', async() => {
   expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
 });
 
-test('srcset attribute minification', async() => {
+test('srcset attribute minification', async () => {
   let output;
   const input = '<source srcset="http://site.com/foo.gif ,http://site.com/bar.jpg 1x, baz moo 42w,' +
     '\n\n\n\n\n\t    http://site.com/zo om.png 1.00x">';
@@ -2513,18 +2513,18 @@ test('srcset attribute minification', async() => {
   expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
 });
 
-test('valueless attributes', async() => {
+test('valueless attributes', async () => {
   const input = '<br foo>';
   expect(await minify(input)).toBe(input);
 });
 
-test('newlines becoming whitespaces', async() => {
+test('newlines becoming whitespaces', async () => {
   const input = 'test\n\n<input>\n\ntest';
   const output = 'test <input> test';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
 
-test('conservative collapse', async() => {
+test('conservative collapse', async () => {
   let input, output;
 
   input = '<b>   foo \n\n</b>';
@@ -2638,7 +2638,7 @@ test('conservative collapse', async() => {
   })).toBe(output);
 });
 
-test('collapse preseving a line break', async() => {
+test('collapse preseving a line break', async () => {
   let input, output;
 
   input = '\n\n\n<!DOCTYPE html>   \n<html lang="en" class="no-js">\n' +
@@ -2734,7 +2734,7 @@ test('collapse preseving a line break', async() => {
   })).toBe(output);
 });
 
-test('collapse inline tag whitespace', async() => {
+test('collapse inline tag whitespace', async () => {
   let input, output;
 
   input = '<button>a</button> <button>b</button>';
@@ -2761,7 +2761,7 @@ test('collapse inline tag whitespace', async() => {
   })).toBe(output);
 });
 
-test('ignore custom comments', async() => {
+test('ignore custom comments', async () => {
   let input;
 
   input = '<!--! test -->';
@@ -2808,7 +2808,7 @@ test('ignore custom comments', async() => {
   expect(await minify(input, { removeComments: true, ignoreCustomComments: [] })).toBe('');
 });
 
-test('processScripts', async() => {
+test('processScripts', async () => {
   const input = '<script type="text/ng-template"><!--test--><div>   <span> foobar </span> \n\n</div></script>';
   const output = '<script type="text/ng-template"><div><span>foobar</span></div></script>';
   expect(await minify(input, {
@@ -2818,7 +2818,7 @@ test('processScripts', async() => {
   })).toBe(output);
 });
 
-test('ignore', async() => {
+test('ignore', async () => {
   let input, output;
 
   input = '<!-- htmlmin:ignore --><div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div><!-- htmlmin:ignore -->' +
@@ -2862,7 +2862,7 @@ test('ignore', async() => {
   expect(await minify(input)).toBe('+0');
 });
 
-test('meta viewport', async() => {
+test('meta viewport', async () => {
   let input, output;
 
   input = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
@@ -2882,13 +2882,13 @@ test('meta viewport', async() => {
   expect(await minify(input)).toBe(output);
 });
 
-test('downlevel-revealed conditional comments', async() => {
+test('downlevel-revealed conditional comments', async () => {
   const input = '<![if !IE]><link href="non-ie.css" rel="stylesheet"><![endif]>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { removeComments: true })).toBe(input);
 });
 
-test('noscript', async() => {
+test('noscript', async () => {
   let input;
 
   input = '<SCRIPT SRC="x"></SCRIPT><NOSCRIPT>x</NOSCRIPT>';
@@ -2900,7 +2900,7 @@ test('noscript', async() => {
     '<noscript><a href="#">External Link</a></noscript>');
 });
 
-test('max line length', async() => {
+test('max line length', async () => {
   let input;
   const options = { maxLineLength: 25 };
 
@@ -2992,7 +2992,7 @@ test('max line length', async() => {
   expect(await minify('<a href>ok</a>', options)).toBe('<a href>ok</a>');
 });
 
-test('custom attribute collapse', async() => {
+test('custom attribute collapse', async () => {
   let input, output;
 
   input = '<div data-bind="\n' +
@@ -3029,13 +3029,13 @@ test('custom attribute collapse', async() => {
   expect(await minify(input, { customAttrCollapse: /ng-class/ })).toBe(output);
 });
 
-test('custom attribute collapse with empty attribute value', async() => {
+test('custom attribute collapse with empty attribute value', async () => {
   const input = '<div ng-some\n\n></div>';
   const output = '<div ng-some></div>';
   expect(await minify(input, { customAttrCollapse: /.+/ })).toBe(output);
 });
 
-test('custom attribute collapse with newlines, whitespace, and carriage returns', async() => {
+test('custom attribute collapse with newlines, whitespace, and carriage returns', async () => {
   const input = '<div ng-class="{ \n\r' +
     '               value:true, \n\r' +
     '               value2:false \n\r' +
@@ -3044,7 +3044,7 @@ test('custom attribute collapse with newlines, whitespace, and carriage returns'
   expect(await minify(input, { customAttrCollapse: /ng-class/ })).toBe(output);
 });
 
-test('do not escape attribute value', async() => {
+test('do not escape attribute value', async () => {
   let input;
 
   input = '<div data=\'{\n' +
@@ -3059,17 +3059,17 @@ test('do not escape attribute value', async() => {
   expect(await minify(input)).toBe(output);
 });
 
-test('quoteCharacter is single quote', async() => {
+test('quoteCharacter is single quote', async () => {
   expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
 });
 
-test('quoteCharacter is not single quote or double quote', async() => {
+test('quoteCharacter is not single quote or double quote', async () => {
   expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
 });
 
-test('remove space between attributes', async() => {
+test('remove space between attributes', async () => {
   let input, output;
   const options = {
     collapseBooleanAttributes: true,
@@ -3103,7 +3103,7 @@ test('remove space between attributes', async() => {
   expect(await minify(input, options)).toBe(output);
 });
 
-test('markups from Angular 2', async() => {
+test('markups from Angular 2', async () => {
   let output;
   const input = '<template ngFor #hero [ngForOf]="heroes">\n' +
     '  <hero-detail *ngIf="hero" [hero]="hero"></hero-detail>\n' +
@@ -3153,7 +3153,7 @@ test('markups from Angular 2', async() => {
   })).toBe(output);
 });
 
-test('auto-generated tags', async() => {
+test('auto-generated tags', async () => {
   let input, output;
 
   input = '</p>';
@@ -3204,7 +3204,7 @@ test('auto-generated tags', async() => {
   expect(await minify(input, { includeAutoGeneratedTags: true })).toBe(output);
 });
 
-test('sort attributes', async() => {
+test('sort attributes', async () => {
   let input, output;
 
   input = '<link href="foo">' +
@@ -3283,7 +3283,7 @@ test('sort attributes', async() => {
   expect(await minify(input, { sortAttributes: true })).toBe(input);
 });
 
-test('sort style classes', async() => {
+test('sort style classes', async () => {
   let input, output;
 
   input = '<a class="foo moo"></a>' +
@@ -3375,7 +3375,7 @@ test('sort style classes', async() => {
   expect(await minify(input, { sortClassName: true })).toBe(input);
 });
 
-test('decode entity characters', async() => {
+test('decode entity characters', async () => {
   let input, output;
 
   input = '<!-- &ne; -->';
@@ -3421,7 +3421,7 @@ test('decode entity characters', async() => {
   expect(await minify(input, { collapseWhitespace: true, decodeEntities: true })).toBe(output);
 });
 
-test('tests from PHPTAL', async() => {
+test('tests from PHPTAL', async () => {
   await Promise.all([
     // trailing </p> removed by minifier, but not by PHPTAL
     ['<p>foo bar baz', '<p>foo     \t bar\n\n\n baz</p>'],
@@ -3517,7 +3517,7 @@ test('tests from PHPTAL', async() => {
   }));
 });
 
-test('canCollapseWhitespace and canTrimWhitespace hooks', async() => {
+test('canCollapseWhitespace and canTrimWhitespace hooks', async () => {
   function canCollapseAndTrimWhitespace(tagName, attrs, defaultFn) {
     if ((attrs || []).some(function (attr) { return attr.name === 'class' && attr.value === 'leaveAlone'; })) {
       return false;
@@ -3557,7 +3557,7 @@ test('canCollapseWhitespace and canTrimWhitespace hooks', async() => {
   })).toBe(output);
 });
 
-test('minify Content-Security-Policy', async() => {
+test('minify Content-Security-Policy', async () => {
   let input, output;
 
   input = '<meta Http-Equiv="Content-Security-Policy"\t\t\t\tContent="default-src \'self\';\n\n\t\timg-src https://*;">';

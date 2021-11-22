@@ -1,5 +1,4 @@
-import Alpine from 'https://cdn.skypack.dev/alpinejs@3';
-
+import Alpine from 'alpinejs';
 import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
 
 const defaultOptions = [
@@ -268,7 +267,7 @@ Alpine.data('minifier', () => ({
     const options = getOptions(this.options);
 
     try {
-      const data = await HTMLMinifier.minify(this.input, options); // eslint-disable-line
+      const data = await HTMLMinifier.minify(this.input, options);
 
       const diff = this.input.length - data.length;
       const savings = this.input.length ? (100 * diff / this.input.length).toFixed(2) : 0;

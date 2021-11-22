@@ -10,7 +10,7 @@ bower_components
 
 ### grunt ###
 # Grunt usually compiles files inside this directory
-# dist/
+dist/
 
 # Grunt usually preprocesses files such as coffeescript, compass... inside the .tmp directory
 .tmp/
@@ -145,7 +145,7 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-# dist
+dist
 
 # Gatsby files
 .cache/
@@ -236,5 +236,7 @@ $RECYCLE.BIN/
 # and uncomment the following lines
 # .pnp.*
 
+### Project
+build/
 temp/
 tmp/

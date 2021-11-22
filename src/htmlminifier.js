@@ -1322,8 +1322,9 @@ async function minify(value, options, partialMarkup) {
 
 function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   var str;
-  var maxLineLength = options.maxLineLength,
-      noNewlinesBeforeTagClose = options.noNewlinesBeforeTagClose;
+  var maxLineLength = options.maxLineLength;
+  var noNewlinesBeforeTagClose = options.noNewlinesBeforeTagClose;
+
   if (maxLineLength) {
     var line = '', lines = [];
     while (results.length) {

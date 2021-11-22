@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@2
+        with:
+          node-version: 16
 
       - name: Install dependencies
         run: npm ci
-        with:
-          node-version: 16
 
       - name: Rollup
         run: npm run build

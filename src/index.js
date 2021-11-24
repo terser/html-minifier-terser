@@ -8,7 +8,7 @@ import createSorter from './options/sorter.js';
 import Serializer from './serializer.js';
 import processScripts from './options/process-scripts.js';
 import Context, { defaultContext } from './context.js';
-import collapseWhitespace from './options/collapse-whitespace.js';
+// import collapseWhitespace from './options/collapse-whitespace.js';
 
 const parseDocument = (data, parserOptions) => {
   const handler = new DomHandler();
@@ -48,9 +48,9 @@ const _minify = async (input = '', opts = defaultOptions, ctx = defaultContext) 
     await processScripts(tree, options, minifier);
   }
 
-  if (options.collapseWhitespace) {
-    collapseWhitespace(tree, options);
-  }
+  // if (options.collapseWhitespace) {
+  //   collapseWhitespace(tree, options, context);
+  // }
 
   const serializer = new Serializer(options);
   const output = serializer.render(tree);

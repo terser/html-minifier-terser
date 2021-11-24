@@ -1,5 +1,5 @@
 const STARTS_WITH_WHITESPACE_REGEX = /^\s/;
-const END_WITH_WHITESPACE_REGEX = /\s$/;
+const END_WITH_WHITESPACE_REGEX = /(?:^|\s)$/;
 
 export const EMPTY = '';
 export const SINGLE_SPACE = ' ';

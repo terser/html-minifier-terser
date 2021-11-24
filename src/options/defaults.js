@@ -48,7 +48,7 @@ const defaultOptions = {
 
   // whitespace
   collapseWhitespace: false,
-  collapseInlineTagWhitespace: true,
+  collapseInlineTagWhitespace: false,
   conservativeCollapse: false,
   preserveLineBreaks: false,
   trimCustomFragments: false,

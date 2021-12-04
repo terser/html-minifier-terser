@@ -1,7 +1,7 @@
 {
   "name": "html-minifier-terser",
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
-  "version": "6.1.0",
+  "version": "7.0.0-alpha.0",
   "license": "MIT",
   "repository": "https://github.com/terser/html-minifier-terser.git",
   "bugs": "https://github.com/terser/html-minifier-terser/issues",

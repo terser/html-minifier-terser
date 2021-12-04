@@ -82,11 +82,13 @@
     "terser": "^5.10.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^15.0.0",
     "@jest/globals": "^27.4.2",
     "@rollup/plugin-commonjs": "^21.0.1",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.6",
     "alpinejs": "^3.7.0",
+    "commitlint-config-non-conventional": "^1.0.0",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.3",

@@ -1,7 +1,7 @@
 'use strict';
 
 const CleanCSS = require('clean-css');
-const { decode } = require('he');
+const { decodeHTMLStrict, decodeHTML } = require('entities');
 const RelateUrl = require('relateurl');
 const Terser = require('terser');
 
@@ -549,7 +549,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   let attrValue = attr.value;
 
   if (options.decodeEntities && attrValue) {
-    attrValue = decode(attrValue, { isAttributeValue: true });
+    attrValue = decodeHTMLStrict(attrValue);
   }
 
   if ((options.removeRedundantAttributes &&
@@ -1128,7 +1128,7 @@ async function minify(value, options, partialMarkup) {
       prevTag = prevTag === '' ? 'comment' : prevTag;
       nextTag = nextTag === '' ? 'comment' : nextTag;
       if (options.decodeEntities && text && !specialContentTags(currentTag)) {
-        text = decode(text);
+        text = decodeHTML(text);
       }
       if (options.collapseWhitespace) {
         if (!stackNoTrimWhitespace.length) {

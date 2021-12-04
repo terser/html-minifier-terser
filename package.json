@@ -76,7 +76,7 @@
     "camel-case": "^4.1.2",
     "clean-css": "^5.2.2",
     "commander": "^8.3.0",
-    "he": "^1.2.0",
+    "entities": "^3.0.1",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
     "terser": "^5.10.0"
@@ -84,6 +84,7 @@
   "devDependencies": {
     "@jest/globals": "^27.3.1",
     "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.6",
     "alpinejs": "^3.5.2",
     "eslint": "^7.32.0",

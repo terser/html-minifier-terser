@@ -1,0 +1,43 @@
+name: Publish
+
+on:
+  push:
+    tags: v*
+
+env:
+  NODE_VERSION: 16
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://npm.im/html-minifier-terser
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - run: node --version
+      - run: npm --version
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Tests
+        run: npm run test
+
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

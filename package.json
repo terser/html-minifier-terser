@@ -63,8 +63,9 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "test:node": "jest --verbose --environment=node",
+    "test:node": "jest --verbose",
     "test:web": "jest --verbose --environment=jsdom",
+    "test:watch": "jest verbose --watch",
     "test": "npm run test:node",
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",

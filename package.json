@@ -69,7 +69,7 @@
     "test": "npm run test:node",
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",
-    "lint": "eslint .",
+    "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install"
   },
   "dependencies": {

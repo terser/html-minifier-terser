@@ -49,7 +49,7 @@ const config = defineConfig([
   {
     input: 'src/htmlminifier.js',
     output: {
-      file: 'dist/htmlminifier.js',
+      file: 'dist/htmlminifier.mjs',
       format: 'es'
     },
     plugins: [

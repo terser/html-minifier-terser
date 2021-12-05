@@ -43,18 +43,18 @@
   "engines": {
     "node": ">=12"
   },
-  "bin": {
-    "html-minifier-terser": "./cli.js"
-  },
   "main": "./src/htmlminifier.js",
-  "module": "./dist/htmlminifier.js",
+  "module": "./dist/htmlminifier.mjs",
   "exports": {
     ".": {
       "require": "./src/htmlminifier.js",
-      "imports": "./dist/htmlminifier.js"
+      "import": "./dist/htmlminifier.mjs"
     },
     "./dist/*": "./dist/*.js",
     "./package.json": "./package.json"
+  },
+  "bin": {
+    "html-minifier-terser": "./cli.js"
   },
   "files": [
     "dist/",

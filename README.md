@@ -5,7 +5,44 @@
 
 [HTMLMinifier](https://terser.org/html-minifier-terser/) is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
 
-See [corresponding blog post](http://perfectionkills.com/experimenting-with-html-minifier/) for all the gory details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier/#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier/#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier/#field_testing) and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier/#cost_and_benefits).
+## Installation
+
+From NPM for use as a command line app:
+
+```shell
+npm install html-minifier-terser -g
+```
+
+From NPM for programmatic use:
+
+```shell
+npm install html-minifier-terser
+```
+
+## Usage
+
+**Note** that almost all options are disabled by default. Experiment and find what works best for you and your project.
+
+For command line usage please see `html-minifier-terser --help` for a list of available options.
+
+**Sample command line:**
+
+```bash
+html-minifier-terser --collapse-whitespace --remove-comments --minify-js true
+```
+
+### Node.js
+
+```js
+const { minify } = require('html-minifier-terser');
+
+const result = await minify('<p title="blah" id="moo">foo</p>', {
+  removeAttributeQuotes: true,
+});
+result; // '<p title=blah id=moo>foo</p>'
+```
+
+See [corresponding blog post](http://perfectionkills.com/experimenting-with-html-minifier) for all the gory details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing) and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
 
 Also see corresponding [Ruby wrapper](https://github.com/stereobooster/html_minifier), and for Node.js, [Grunt plugin](https://github.com/gruntjs/grunt-contrib-htmlmin), [Gulp module](https://github.com/jonschlinkert/gulp-htmlmin), [Koa middleware wrapper](https://github.com/koajs/html-minifier) and [Express middleware wrapper](https://github.com/melonmanchan/express-minify-html).
 
@@ -109,49 +146,6 @@ Transformation of internal representation (e.g. removal of `id` attribute)
 Output of resulting markup (e.g. `<p>foo</p>`)
 
 HTMLMinifier can't know that original markup was only half of the tree; it does its best to try to parse it as a full tree and it loses information about tree being malformed or partial in the beginning. As a result, it can't create a partial/malformed tree at the time of the output.
-
-## Installation Instructions
-
-From NPM for use as a command line app:
-
-```shell
-npm install html-minifier-terser -g
-```
-
-From NPM for programmatic use:
-
-```shell
-npm install html-minifier-terser
-```
-
-From Git:
-
-```shell
-git clone git://github.com/terser/html-minifier-terser.git
-cd html-minifier-terser
-npm link .
-```
-
-## Usage
-
-Note that almost all options are disabled by default. For command line usage please see `html-minifier-terser --help` for a list of available options. Experiment and find what works best for you and your project.
-
-**Sample command line:**
-
-```bash
-html-minifier-terser --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true
-```
-
-### Node.js
-
-```js
-const { minify } = require('html-minifier-terser');
-
-const result = await minify('<p title="blah" id="moo">foo</p>', {
-  removeAttributeQuotes: true
-});
-result; // '<p title=blah id=moo>foo</p>'
-```
 
 ## Running benchmarks
 

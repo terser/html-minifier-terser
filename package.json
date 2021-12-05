@@ -41,14 +41,15 @@
     "uglify"
   ],
   "engines": {
-    "node": ">=12"
+    "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
   },
-  "main": "./src/htmlminifier.js",
-  "module": "./dist/htmlminifier.mjs",
+  "type": "module",
+  "main": "./dist/htmlminifier.cjs",
+  "module": "./src/htmlminifier.js",
   "exports": {
     ".": {
-      "require": "./src/htmlminifier.js",
-      "import": "./dist/htmlminifier.mjs"
+      "require": "./dist/htmlminifier.cjs",
+      "import": "./src/htmlminifier.js"
     },
     "./dist/*": "./dist/*.js",
     "./package.json": "./package.json"
@@ -63,9 +64,9 @@
   ],
   "scripts": {
     "build": "rollup -c",
-    "test:node": "jest --verbose",
-    "test:web": "jest --verbose --environment=jsdom",
-    "test:watch": "jest verbose --watch",
+    "test:node": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
+    "test:web": "NODE_OPTIONS=--experimental-vm-modules jest --verbose --environment=jsdom",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest verbose --watch",
     "test": "npm run test:node",
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",

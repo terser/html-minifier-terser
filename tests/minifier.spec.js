@@ -1,7 +1,5 @@
-'use strict';
-
-const { test, expect } = require('@jest/globals');
-const { minify } = require('../src/htmlminifier');
+import { test, expect } from '@jest/globals';
+import { minify } from '../src/htmlminifier';
 
 test('`minifiy` exists', () => {
   expect(minify).toBeDefined();

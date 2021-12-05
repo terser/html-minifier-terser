@@ -25,17 +25,17 @@
  *
  */
 
-'use strict';
+import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
+import { camelCase } from 'camel-case';
+import { paramCase } from 'param-case';
+import { Command } from 'commander';
+import { minify } from './src/htmlminifier.js';
 
-const fs = require('fs');
-const path = require('path');
-
-const { camelCase } = require('camel-case');
-const { paramCase } = require('param-case');
-const { Command } = require('commander');
+const require = createRequire(import.meta.url);
 
 const pkg = require('./package.json');
-const minify = require('./' + pkg.main).minify;
 
 const program = new Command();
 program.name(pkg.name);

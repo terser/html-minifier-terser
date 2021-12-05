@@ -1,5 +1,3 @@
-'use strict';
-
 class Sorter {
   sort(tokens, fromIndex = 0) {
     for (let i = 0, len = this.keys.length; i < len; i++) {
@@ -67,4 +65,4 @@ class TokenChain {
   }
 }
 
-module.exports = TokenChain;
+export default TokenChain;

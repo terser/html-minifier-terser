@@ -5,7 +5,7 @@ import { minify as terser } from 'terser';
 
 import { HTMLParser, endTag } from './htmlparser.js';
 import TokenChain from './tokenchain.js';
-import { createMapFromString as _createMapFromString, createMap, replaceAsync } from './utils.js';
+import { createMapFromString, createMap, replaceAsync } from './utils.js';
 
 function trimWhitespace(str) {
   return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
@@ -61,7 +61,6 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
   return lineBreakBefore + str + lineBreakAfter;
 }
 
-const createMapFromString = _createMapFromString;
 // non-empty tags that will maintain whitespace around them
 const inlineTags = createMapFromString('a,abbr,acronym,b,bdi,bdo,big,button,cite,code,del,dfn,em,font,i,ins,kbd,label,mark,math,nobr,object,q,rp,rt,rtc,ruby,s,samp,select,small,span,strike,strong,sub,sup,svg,textarea,time,tt,u,var');
 // non-empty tags that will maintain whitespace within them

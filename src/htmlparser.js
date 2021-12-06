@@ -26,6 +26,8 @@
  *
  */
 
+/* global ActiveXObject, DOMDocument */
+
 import { createMapFromString, replaceAsync } from './utils.js';
 
 function makeMap(values) {
@@ -427,3 +429,135 @@ export class HTMLParser {
     }
   }
 }
+
+export const HTMLtoXML = (html) => {
+  let results = '';
+
+  const parser = new HTMLParser(html, {
+    start: function (tag, attrs, unary) {
+      results += '<' + tag;
+
+      for (let i = 0, len = attrs.length; i < len; i++) {
+        results += ' ' + attrs[i].name + '="' + (attrs[i].value || '').replace(/"/g, '&#34;') + '"';
+      }
+
+      results += (unary ? '/' : '') + '>';
+    },
+    end: function (tag) {
+      results += '</' + tag + '>';
+    },
+    chars: function (text) {
+      results += text;
+    },
+    comment: function (text) {
+      results += '<!--' + text + '-->';
+    },
+    ignore: function (text) {
+      results += text;
+    }
+  });
+
+  parser.parse();
+
+  return results;
+};
+
+export const HTMLtoDOM = (html, doc) => {
+  // There can be only one of these elements
+  const one = {
+    html: true,
+    head: true,
+    body: true,
+    title: true
+  };
+
+  // Enforce a structure for the document
+  const structure = {
+    link: 'head',
+    base: 'head'
+  };
+
+  if (doc) {
+    doc = doc.ownerDocument || (doc.getOwnerDocument && doc.getOwnerDocument()) || doc;
+  } else if (typeof DOMDocument !== 'undefined') {
+    doc = new DOMDocument();
+  } else if (typeof document !== 'undefined' && document.implementation && document.implementation.createDocument) {
+    doc = document.implementation.createDocument('', '', null);
+  } else if (typeof ActiveX !== 'undefined') {
+    doc = new ActiveXObject('Msxml.DOMDocument');
+  }
+
+  const elems = [];
+  const documentElement = doc.documentElement || (doc.getDocumentElement && doc.getDocumentElement());
+
+  // If we're dealing with an empty document then we
+  // need to pre-populate it with the HTML document structure
+  if (!documentElement && doc.createElement) {
+    (function () {
+      const html = doc.createElement('html');
+      const head = doc.createElement('head');
+      head.appendChild(doc.createElement('title'));
+      html.appendChild(head);
+      html.appendChild(doc.createElement('body'));
+      doc.appendChild(html);
+    })();
+  }
+
+  // Find all the unique elements
+  if (doc.getElementsByTagName) {
+    for (const i in one) {
+      one[i] = doc.getElementsByTagName(i)[0];
+    }
+  }
+
+  // If we're working with a document, inject contents into
+  // the body element
+  let curParentNode = one.body;
+
+  const parser = new HTMLParser(html, {
+    start: function (tagName, attrs, unary) {
+      // If it's a pre-built element, then we can ignore
+      // its construction
+      if (one[tagName]) {
+        curParentNode = one[tagName];
+        return;
+      }
+
+      const elem = doc.createElement(tagName);
+
+      for (const attr in attrs) {
+        elem.setAttribute(attrs[attr].name, attrs[attr].value);
+      }
+
+      if (structure[tagName] && typeof one[structure[tagName]] !== 'boolean') {
+        one[structure[tagName]].appendChild(elem);
+      } else if (curParentNode && curParentNode.appendChild) {
+        curParentNode.appendChild(elem);
+      }
+
+      if (!unary) {
+        elems.push(elem);
+        curParentNode = elem;
+      }
+    },
+    end: function (/* tag */) {
+      elems.length -= 1;
+
+      // Init the new parentNode
+      curParentNode = elems[elems.length - 1];
+    },
+    chars: function (text) {
+      curParentNode.appendChild(doc.createTextNode(text));
+    },
+    comment: function (/* text */) {
+      // create comment node
+    },
+    ignore: function (/* text */) {
+      // What to do here?
+    }
+  });
+
+  parser.parse();
+
+  return doc;
+};

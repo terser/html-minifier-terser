@@ -1,4 +1,4 @@
-const { defineConfig } = require('vite');
+import { defineConfig } from 'vite';
 
 const config = defineConfig({
   root: 'demo',

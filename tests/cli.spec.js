@@ -1,9 +1,12 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { spawnSync } from 'child_process';
 
-const { describe, test, expect, beforeEach } = require('@jest/globals');
-const { spawnSync } = require('child_process');
-const { minify } = require('../src/htmlminifier');
+import { describe, test, expect, beforeEach } from '@jest/globals';
+import { minify } from '../src/htmlminifier';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const fixturesDir = path.resolve(__dirname, 'fixtures');
 const cliPath = path.resolve(process.cwd(), 'cli.js');

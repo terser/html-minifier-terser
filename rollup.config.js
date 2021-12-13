@@ -49,12 +49,10 @@ const config = defineConfig([
   {
     input: 'src/htmlminifier.js',
     output: {
-      file: 'dist/htmlminifier.mjs',
-      format: 'es'
+      file: 'dist/htmlminifier.cjs',
+      format: 'cjs',
+      exports: 'named'
     },
-    plugins: [
-      commonjs()
-    ],
     external: ['clean-css', 'terser', 'entities', 'relateurl']
   }
 ]);

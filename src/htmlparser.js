@@ -28,9 +28,7 @@
 
 /* global ActiveXObject, DOMDocument */
 
-'use strict';
-
-const { createMapFromString, replaceAsync } = require('./utils');
+import { createMapFromString, replaceAsync } from './utils.js';
 
 function makeMap(values) {
   return createMapFromString(values, true);
@@ -59,7 +57,7 @@ const qnameCapture = (function () {
 })();
 const startTagOpen = new RegExp('^<' + qnameCapture);
 const startTagClose = /^\s*(\/?)>/;
-const endTag = new RegExp('^<\\/' + qnameCapture + '[^>]*>');
+export const endTag = new RegExp('^<\\/' + qnameCapture + '[^>]*>');
 const doctype = /^<!DOCTYPE\s?[^>]+>/i;
 
 let IS_REGEX_CAPTURING_BROKEN = false;
@@ -116,7 +114,7 @@ function joinSingleAttrAssigns(handler) {
   }).join('|');
 }
 
-class HTMLParser {
+export class HTMLParser {
   constructor(html, handler) {
     this.html = html;
     this.handler = handler;
@@ -432,8 +430,7 @@ class HTMLParser {
   }
 }
 
-exports.HTMLParser = HTMLParser;
-exports.HTMLtoXML = function (html) {
+export const HTMLtoXML = (html) => {
   let results = '';
 
   const parser = new HTMLParser(html, {
@@ -465,7 +462,7 @@ exports.HTMLtoXML = function (html) {
   return results;
 };
 
-exports.HTMLtoDOM = function (html, doc) {
+export const HTMLtoDOM = (html, doc) => {
   // There can be only one of these elements
   const one = {
     html: true,
@@ -564,5 +561,3 @@ exports.HTMLtoDOM = function (html, doc) {
 
   return doc;
 };
-
-exports.endTag = endTag;

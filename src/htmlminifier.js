@@ -1,13 +1,11 @@
-'use strict';
+import CleanCSS from 'clean-css';
+import { decodeHTMLStrict, decodeHTML } from 'entities';
+import RelateURL from 'relateurl';
+import { minify as terser } from 'terser';
 
-const CleanCSS = require('clean-css');
-const { decodeHTMLStrict, decodeHTML } = require('entities');
-const RelateUrl = require('relateurl');
-const Terser = require('terser');
-
-const { HTMLParser, endTag } = require('./htmlparser');
-const TokenChain = require('./tokenchain');
-const utils = require('./utils');
+import { HTMLParser, endTag } from './htmlparser.js';
+import TokenChain from './tokenchain.js';
+import { createMapFromString, createMap, replaceAsync } from './utils.js';
 
 function trimWhitespace(str) {
   return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
@@ -63,7 +61,6 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
   return lineBreakBefore + str + lineBreakAfter;
 }
 
-const createMapFromString = utils.createMapFromString;
 // non-empty tags that will maintain whitespace around them
 const inlineTags = createMapFromString('a,abbr,acronym,b,bdi,bdo,big,button,cite,code,del,dfn,em,font,i,ins,kbd,label,mark,math,nobr,object,q,rp,rt,rtc,ruby,s,samp,select,small,span,strike,strong,sub,sup,svg,textarea,time,tt,u,var');
 // non-empty tags that will maintain whitespace within them
@@ -155,7 +152,7 @@ function isAttributeRedundant(tag, attrName, attrValue, attrs) {
 
 // https://mathiasbynens.be/demo/javascript-mime-type
 // https://developer.mozilla.org/en/docs/Web/HTML/Element/script#attr-type
-const executableScriptsMimetypes = utils.createMap([
+const executableScriptsMimetypes = createMap([
   'text/javascript',
   'text/ecmascript',
   'text/jscript',
@@ -165,7 +162,7 @@ const executableScriptsMimetypes = utils.createMap([
   'module'
 ]);
 
-const keepScriptsMimetypes = utils.createMap([
+const keepScriptsMimetypes = createMap([
   'module'
 ]);
 
@@ -381,8 +378,8 @@ function unwrapCSS(text, type) {
 
 async function cleanConditionalComment(comment, options) {
   return options.processConditionalComments
-    ? await utils.replaceAsync(comment, /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/, async function (match, prefix, text, suffix) {
-      return prefix + await minify(text, options, true) + suffix;
+    ? await replaceAsync(comment, /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/, async function (match, prefix, text, suffix) {
+      return prefix + await minifyHTML(text, options, true) + suffix;
     })
     : comment;
 }
@@ -391,7 +388,7 @@ async function processScript(text, options, currentAttrs) {
   for (let i = 0, len = currentAttrs.length; i < len; i++) {
     if (currentAttrs[i].name.toLowerCase() === 'type' &&
       options.processScripts.indexOf(currentAttrs[i].value) > -1) {
-      return await minify(text, options);
+      return await minifyHTML(text, options);
     }
   }
   return text;
@@ -696,7 +693,7 @@ function processOptions(values) {
         const code = start ? text.slice(start[0].length).replace(/\n\s*-->\s*$/, '') : text;
         value.parse.bare_returns = inline;
         try {
-          const result = await Terser.minify(code, value);
+          const result = await terser(code, value);
           return result.code.replace(/;$/, '');
         } catch (error) {
           options.log(error);
@@ -714,7 +711,7 @@ function processOptions(values) {
       }
       options.minifyURLs = function (text) {
         try {
-          return RelateUrl.relate(text, value);
+          return RelateURL.relate(text, value);
         } catch (err) {
           options.log(err);
           return text;
@@ -793,7 +790,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
   options.log = identity;
   options.sortAttributes = false;
   options.sortClassName = false;
-  await scan(await minify(value, options));
+  await scan(await minifyHTML(value, options));
   options.log = log;
   if (attrChains) {
     const attrSorters = Object.create(null);
@@ -822,7 +819,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
   }
 }
 
-async function minify(value, options, partialMarkup) {
+async function minifyHTML(value, options, partialMarkup) {
   if (options.collapseWhitespace) {
     value = collapseWhitespace(value, options, true, true);
   }
@@ -1327,10 +1324,12 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   return options.collapseWhitespace ? collapseWhitespace(str, options, true, true) : str;
 }
 
-exports.minify = async function (value, options) {
+export const minify = async function (value, options) {
   const start = Date.now();
   options = processOptions(options || {});
-  const result = await minify(value, options);
+  const result = await minifyHTML(value, options);
   options.log('minified in: ' + (Date.now() - start) + 'ms');
   return result;
 };
+
+export default { minify };

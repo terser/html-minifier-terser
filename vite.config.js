@@ -7,6 +7,9 @@ const config = defineConfig({
   },
   server: {
     port: 3456
+  },
+  define: {
+    'process.env': {}
   }
 });
 

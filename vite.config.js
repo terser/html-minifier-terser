@@ -10,7 +10,7 @@ const config = defineConfig({
   },
   define: {
     'process.env': {},
-    'process.platform': process.platform
+    'process.platform': JSON.stringify(process.platform)
   }
 });
 

@@ -630,7 +630,7 @@ function identity(value) {
   return value;
 }
 
-function processOptions(values) {
+const processOptions = (inputOptions) => {
   const options = {
     name: function (name) {
       return name.toLowerCase();
@@ -652,77 +652,89 @@ function processOptions(values) {
     minifyJS: identity,
     minifyURLs: identity
   };
-  Object.keys(values).forEach(function (key) {
-    let value = values[key];
+
+  Object.keys(inputOptions).forEach(function (key) {
+    const option = inputOptions[key];
+
     if (key === 'caseSensitive') {
-      if (value) {
+      if (option) {
         options.name = identity;
       }
     } else if (key === 'log') {
-      if (typeof value === 'function') {
-        options.log = value;
+      if (typeof option === 'function') {
+        options.log = option;
       }
-    } else if (key === 'minifyCSS' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyCSS' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value !== 'object') {
-        value = {};
-      }
+
+      const cleanCssOptions = typeof option === 'object' ? option : {};
+
       options.minifyCSS = function (text, type) {
         text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, function (match, prefix, quote, url, suffix) {
           return prefix + quote + options.minifyURLs(url) + quote + suffix;
         });
-        const cleanCssOutput = new CleanCSS(value).minify(wrapCSS(text, type));
+        const cleanCssOutput = new CleanCSS(cleanCssOptions).minify(wrapCSS(text, type));
         if (cleanCssOutput.errors.length > 0) {
           cleanCssOutput.errors.forEach(options.log);
           return text;
         }
         return unwrapCSS(cleanCssOutput.styles, type);
       };
-    } else if (key === 'minifyJS' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyJS' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value !== 'object') {
-        value = {};
-      }
-      (value.parse || (value.parse = {})).bare_returns = false;
+
+      const terserOptions = typeof option === 'object' ? option : {};
+
+      terserOptions.parse = {
+        ...terserOptions.parse,
+        bare_returns: false
+      };
+
       options.minifyJS = async function (text, inline) {
         const start = text.match(/^\s*<!--.*/);
         const code = start ? text.slice(start[0].length).replace(/\n\s*-->\s*$/, '') : text;
-        value.parse.bare_returns = inline;
+
+        terserOptions.parse.bare_returns = inline;
+
         try {
-          const result = await terser(code, value);
+          const result = await terser(code, terserOptions);
           return result.code.replace(/;$/, '');
         } catch (error) {
           options.log(error);
           return text;
         }
       };
-    } else if (key === 'minifyURLs' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyURLs' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value === 'string') {
-        value = { site: value };
-      } else if (typeof value !== 'object') {
-        value = {};
+
+      let relateUrlOptions = option;
+
+      if (typeof option === 'string') {
+        relateUrlOptions = { site: option };
+      } else if (typeof option !== 'object') {
+        relateUrlOptions = {};
       }
+
       options.minifyURLs = function (text) {
         try {
-          return RelateURL.relate(text, value);
+          return RelateURL.relate(text, relateUrlOptions);
         } catch (err) {
           options.log(err);
           return text;
         }
       };
     } else {
-      options[key] = value;
+      options[key] = option;
     }
   });
   return options;
-}
+};
 
 function uniqueId(value) {
   let id;

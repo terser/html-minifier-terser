@@ -5,7 +5,7 @@ import { minify as terser } from 'terser';
 
 import { HTMLParser, endTag } from './htmlparser.js';
 import TokenChain from './tokenchain.js';
-import { createMapFromString, createMap, replaceAsync } from './utils.js';
+import { replaceAsync } from './utils.js';
 
 function trimWhitespace(str) {
   return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
@@ -62,20 +62,20 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
 }
 
 // non-empty tags that will maintain whitespace around them
-const inlineTags = createMapFromString('a,abbr,acronym,b,bdi,bdo,big,button,cite,code,del,dfn,em,font,i,ins,kbd,label,mark,math,nobr,object,q,rp,rt,rtc,ruby,s,samp,select,small,span,strike,strong,sub,sup,svg,textarea,time,tt,u,var');
+const inlineTags = new Set(['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var']);
 // non-empty tags that will maintain whitespace within them
-const inlineTextTags = createMapFromString('a,abbr,acronym,b,big,del,em,font,i,ins,kbd,mark,nobr,rp,s,samp,small,span,strike,strong,sub,sup,time,tt,u,var');
+const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // self-closing tags that will maintain whitespace around them
-const selfClosingInlineTags = createMapFromString('comment,img,input,wbr');
+const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
 
 function collapseWhitespaceSmart(str, prevTag, nextTag, options) {
-  let trimLeft = prevTag && !selfClosingInlineTags(prevTag);
+  let trimLeft = prevTag && !selfClosingInlineTags.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
-    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags(prevTag.slice(1)) : !inlineTextTags(prevTag);
+    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextTags.has(prevTag);
   }
-  let trimRight = nextTag && !selfClosingInlineTags(nextTag);
+  let trimRight = nextTag && !selfClosingInlineTags.has(nextTag);
   if (trimRight && !options.collapseInlineTagWhitespace) {
-    trimRight = nextTag.charAt(0) === '/' ? !inlineTextTags(nextTag.slice(1)) : !inlineTags(nextTag);
+    trimRight = nextTag.charAt(0) === '/' ? !inlineTextTags.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
   }
   return collapseWhitespace(str, options, trimLeft, trimRight, prevTag && nextTag);
 }
@@ -152,7 +152,7 @@ function isAttributeRedundant(tag, attrName, attrValue, attrs) {
 
 // https://mathiasbynens.be/demo/javascript-mime-type
 // https://developer.mozilla.org/en/docs/Web/HTML/Element/script#attr-type
-const executableScriptsMimetypes = createMap([
+const executableScriptsMimetypes = new Set([
   'text/javascript',
   'text/ecmascript',
   'text/jscript',
@@ -162,18 +162,18 @@ const executableScriptsMimetypes = createMap([
   'module'
 ]);
 
-const keepScriptsMimetypes = createMap([
+const keepScriptsMimetypes = new Set([
   'module'
 ]);
 
 function isScriptTypeAttribute(attrValue) {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
-  return attrValue === '' || executableScriptsMimetypes(attrValue);
+  return attrValue === '' || executableScriptsMimetypes.has(attrValue);
 }
 
 function keepScriptTypeAttribute(attrValue) {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
-  return keepScriptsMimetypes(attrValue);
+  return keepScriptsMimetypes.has(attrValue);
 }
 
 function isExecutableScript(tag, attrs) {
@@ -207,11 +207,11 @@ function isStyleSheet(tag, attrs) {
   return true;
 }
 
-const isSimpleBoolean = createMapFromString('allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,truespeed,typemustmatch,visible');
-const isBooleanValue = createMapFromString('true,false');
+const isSimpleBoolean = new Set(['allowfullscreen', 'async', 'autofocus', 'autoplay', 'checked', 'compact', 'controls', 'declare', 'default', 'defaultchecked', 'defaultmuted', 'defaultselected', 'defer', 'disabled', 'enabled', 'formnovalidate', 'hidden', 'indeterminate', 'inert', 'ismap', 'itemscope', 'loop', 'multiple', 'muted', 'nohref', 'noresize', 'noshade', 'novalidate', 'nowrap', 'open', 'pauseonexit', 'readonly', 'required', 'reversed', 'scoped', 'seamless', 'selected', 'sortable', 'truespeed', 'typemustmatch', 'visible']);
+const isBooleanValue = new Set(['true', 'false']);
 
 function isBooleanAttribute(attrName, attrValue) {
-  return isSimpleBoolean(attrName) || (attrName === 'draggable' && !isBooleanValue(attrValue));
+  return isSimpleBoolean.has(attrName) || (attrName === 'draggable' && !isBooleanValue.has(attrValue));
 }
 
 function isUriTypeAttribute(attrName, tag) {
@@ -256,10 +256,10 @@ function isMediaQuery(tag, attrs, attrName) {
   return attrName === 'media' && (isLinkType(tag, attrs, 'stylesheet') || isStyleSheet(tag, attrs));
 }
 
-const srcsetTags = createMapFromString('img,source');
+const srcsetTags = new Set(['img', 'source']);
 
 function isSrcset(attrName, tag) {
-  return attrName === 'srcset' && srcsetTags(tag);
+  return attrName === 'srcset' && srcsetTags.has(tag);
 }
 
 async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
@@ -399,23 +399,23 @@ async function processScript(text, options, currentAttrs) {
 // - retain <body> if followed by <noscript>
 // - </rb>, </rt>, </rtc>, </rp> & </tfoot> follow https://www.w3.org/TR/html5/syntax.html#optional-tags
 // - retain all tags which are adjacent to non-standard HTML tags
-const optionalStartTags = createMapFromString('html,head,body,colgroup,tbody');
-const optionalEndTags = createMapFromString('html,head,body,li,dt,dd,p,rb,rt,rtc,rp,optgroup,option,colgroup,caption,thead,tbody,tfoot,tr,td,th');
-const headerTags = createMapFromString('meta,link,script,style,template,noscript');
-const descriptionTags = createMapFromString('dt,dd');
-const pBlockTags = createMapFromString('address,article,aside,blockquote,details,div,dl,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,hr,main,menu,nav,ol,p,pre,section,table,ul');
-const pInlineTags = createMapFromString('a,audio,del,ins,map,noscript,video');
-const rubyTags = createMapFromString('rb,rt,rtc,rp');
-const rtcTag = createMapFromString('rb,rtc,rp');
-const optionTag = createMapFromString('option,optgroup');
-const tableContentTags = createMapFromString('tbody,tfoot');
-const tableSectionTags = createMapFromString('thead,tbody,tfoot');
-const cellTags = createMapFromString('td,th');
-const topLevelTags = createMapFromString('html,head,body');
-const compactTags = createMapFromString('html,body');
-const looseTags = createMapFromString('head,colgroup,caption');
-const trailingTags = createMapFromString('dt,thead');
-const htmlTags = createMapFromString('a,abbr,acronym,address,applet,area,article,aside,audio,b,base,basefont,bdi,bdo,bgsound,big,blink,blockquote,body,br,button,canvas,caption,center,cite,code,col,colgroup,command,content,data,datalist,dd,del,details,dfn,dialog,dir,div,dl,dt,element,em,embed,fieldset,figcaption,figure,font,footer,form,frame,frameset,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,i,iframe,image,img,input,ins,isindex,kbd,keygen,label,legend,li,link,listing,main,map,mark,marquee,menu,menuitem,meta,meter,multicol,nav,nobr,noembed,noframes,noscript,object,ol,optgroup,option,output,p,param,picture,plaintext,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,shadow,small,source,spacer,span,strike,strong,style,sub,summary,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,tt,u,ul,var,video,wbr,xmp');
+const optionalStartTags = new Set(['html', 'head', 'body', 'colgroup', 'tbody']);
+const optionalEndTags = new Set(['html', 'head', 'body', 'li', 'dt', 'dd', 'p', 'rb', 'rt', 'rtc', 'rp', 'optgroup', 'option', 'colgroup', 'caption', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
+const headerTags = new Set(['meta', 'link', 'script', 'style', 'template', 'noscript']);
+const descriptionTags = new Set(['dt', 'dd']);
+const pBlockTags = new Set(['address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'p', 'pre', 'section', 'table', 'ul']);
+const pInlineTags = new Set(['a', 'audio', 'del', 'ins', 'map', 'noscript', 'video']);
+const rubyTags = new Set(['rb', 'rt', 'rtc', 'rp']);
+const rtcTag = new Set(['rb', 'rtc', 'rp']);
+const optionTag = new Set(['option', 'optgroup']);
+const tableContentTags = new Set(['tbody', 'tfoot']);
+const tableSectionTags = new Set(['thead', 'tbody', 'tfoot']);
+const cellTags = new Set(['td', 'th']);
+const topLevelTags = new Set(['html', 'head', 'body']);
+const compactTags = new Set(['html', 'body']);
+const looseTags = new Set(['head', 'colgroup', 'caption']);
+const trailingTags = new Set(['dt', 'thead']);
+const htmlTags = new Set(['a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside', 'audio', 'b', 'base', 'basefont', 'bdi', 'bdo', 'bgsound', 'big', 'blink', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'command', 'content', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'element', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'image', 'img', 'input', 'ins', 'isindex', 'kbd', 'keygen', 'label', 'legend', 'li', 'link', 'listing', 'main', 'map', 'mark', 'marquee', 'menu', 'menuitem', 'meta', 'meter', 'multicol', 'nav', 'nobr', 'noembed', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'plaintext', 'pre', 'progress', 'q', 'rb', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'script', 'section', 'select', 'shadow', 'small', 'source', 'spacer', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr', 'xmp']);
 
 function canRemoveParentTag(optionalStartTag, tag) {
   switch (optionalStartTag) {
@@ -423,7 +423,7 @@ function canRemoveParentTag(optionalStartTag, tag) {
     case 'head':
       return true;
     case 'body':
-      return !headerTags(tag);
+      return !headerTags.has(tag);
     case 'colgroup':
       return tag === 'col';
     case 'tbody':
@@ -437,7 +437,7 @@ function isStartTagMandatory(optionalEndTag, tag) {
     case 'colgroup':
       return optionalEndTag === 'colgroup';
     case 'tbody':
-      return tableSectionTags(optionalEndTag);
+      return tableSectionTags.has(optionalEndTag);
   }
   return false;
 }
@@ -456,25 +456,25 @@ function canRemovePrecedingTag(optionalEndTag, tag) {
       return tag === optionalEndTag;
     case 'dt':
     case 'dd':
-      return descriptionTags(tag);
+      return descriptionTags.has(tag);
     case 'p':
-      return pBlockTags(tag);
+      return pBlockTags.has(tag);
     case 'rb':
     case 'rt':
     case 'rp':
-      return rubyTags(tag);
+      return rubyTags.has(tag);
     case 'rtc':
-      return rtcTag(tag);
+      return rtcTag.has(tag);
     case 'option':
-      return optionTag(tag);
+      return optionTag.has(tag);
     case 'thead':
     case 'tbody':
-      return tableContentTags(tag);
+      return tableContentTags.has(tag);
     case 'tfoot':
       return tag === 'tbody';
     case 'td':
     case 'th':
-      return cellTags(tag);
+      return cellTags.has(tag);
   }
   return false;
 }
@@ -744,7 +744,7 @@ function uniqueId(value) {
   return id;
 }
 
-const specialContentTags = createMapFromString('script,style');
+const specialContentTags = new Set(['script', 'style']);
 
 async function createSortFns(value, options, uidIgnore, uidAttr) {
   const attrChains = options.sortAttributes && Object.create(null);
@@ -788,7 +788,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
         currentTag = '';
       },
       chars: async function (text) {
-        if (options.processScripts && specialContentTags(currentTag) &&
+        if (options.processScripts && specialContentTags.has(currentTag) &&
           options.processScripts.indexOf(currentType) > -1) {
           await scan(text);
         }
@@ -996,7 +996,7 @@ async function minifyHTML(value, options, partialMarkup) {
       tag = options.name(tag);
       currentTag = tag;
       charsPrevTag = tag;
-      if (!inlineTextTags(tag)) {
+      if (!inlineTextTags.has(tag)) {
         currentChars = '';
       }
       hasChars = false;
@@ -1004,7 +1004,7 @@ async function minifyHTML(value, options, partialMarkup) {
 
       let optional = options.removeOptionalTags;
       if (optional) {
-        const htmlTag = htmlTags(tag);
+        const htmlTag = htmlTags.has(tag);
         // <html> may be omitted if first thing inside is not comment
         // <head> may be omitted if first thing inside is an element
         // <body> may be omitted if first thing inside is not space, comment, <meta>, <link>, <script>, <style> or <template>
@@ -1059,7 +1059,7 @@ async function minifyHTML(value, options, partialMarkup) {
       if (parts.length > 0) {
         buffer.push(' ');
         buffer.push.apply(buffer, parts);
-      } else if (optional && optionalStartTags(tag)) {
+      } else if (optional && optionalStartTags.has(tag)) {
         // start tag must never be omitted if it has any attributes
         optionalStartTag = tag;
       }
@@ -1100,7 +1100,7 @@ async function minifyHTML(value, options, partialMarkup) {
 
       if (options.removeOptionalTags) {
         // <html>, <head> or <body> may be omitted if the element is empty
-        if (isElementEmpty && topLevelTags(optionalStartTag)) {
+        if (isElementEmpty && topLevelTags.has(optionalStartTag)) {
           removeStartTag();
         }
         optionalStartTag = '';
@@ -1108,10 +1108,10 @@ async function minifyHTML(value, options, partialMarkup) {
         // </head> may be omitted if not followed by space or comment
         // </p> may be omitted if no more content in non-</a> parent
         // except for </dt> or </thead>, end tags may be omitted if no more content in parent element
-        if (htmlTags(tag) && optionalEndTag && !trailingTags(optionalEndTag) && (optionalEndTag !== 'p' || !pInlineTags(tag))) {
+        if (htmlTags.has(tag) && optionalEndTag && !trailingTags.has(optionalEndTag) && (optionalEndTag !== 'p' || !pInlineTags.has(tag))) {
           removeEndTag();
         }
-        optionalEndTag = optionalEndTags(tag) ? tag : '';
+        optionalEndTag = optionalEndTags.has(tag) ? tag : '';
       }
 
       if (options.removeEmptyElements && isElementEmpty && canRemoveElement(tag, attrs)) {
@@ -1126,7 +1126,7 @@ async function minifyHTML(value, options, partialMarkup) {
           buffer.push('</' + tag + '>');
         }
         charsPrevTag = '/' + tag;
-        if (!inlineTags(tag)) {
+        if (!inlineTags.has(tag)) {
           currentChars = '';
         } else if (isElementEmpty) {
           currentChars += '|';
@@ -1136,7 +1136,7 @@ async function minifyHTML(value, options, partialMarkup) {
     chars: async function (text, prevTag, nextTag) {
       prevTag = prevTag === '' ? 'comment' : prevTag;
       nextTag = nextTag === '' ? 'comment' : nextTag;
-      if (options.decodeEntities && text && !specialContentTags(currentTag)) {
+      if (options.decodeEntities && text && !specialContentTags.has(currentTag)) {
         text = decodeHTML(text);
       }
       if (options.collapseWhitespace) {
@@ -1165,7 +1165,7 @@ async function minifyHTML(value, options, partialMarkup) {
                 }
                 trimTrailingWhitespace(tagIndex - 1, 'br');
               }
-            } else if (inlineTextTags(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
+            } else if (inlineTextTags.has(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
               text = collapseWhitespace(text, options, /(?:^|\s)$/.test(currentChars));
             }
           }
@@ -1182,7 +1182,7 @@ async function minifyHTML(value, options, partialMarkup) {
           text = collapseWhitespace(text, options, false, false, true);
         }
       }
-      if (options.processScripts && specialContentTags(currentTag)) {
+      if (options.processScripts && specialContentTags.has(currentTag)) {
         text = await processScript(text, options, currentAttrs);
       }
       if (isExecutableScript(currentTag, currentAttrs)) {
@@ -1200,13 +1200,13 @@ async function minifyHTML(value, options, partialMarkup) {
         optionalStartTag = '';
         // </html> or </body> may be omitted if not followed by comment
         // </head>, </colgroup> or </caption> may be omitted if not followed by space or comment
-        if (compactTags(optionalEndTag) || (looseTags(optionalEndTag) && !/^\s/.test(text))) {
+        if (compactTags.has(optionalEndTag) || (looseTags.has(optionalEndTag) && !/^\s/.test(text))) {
           removeEndTag();
         }
         optionalEndTag = '';
       }
       charsPrevTag = /^\s*$/.test(text) ? prevTag : 'comment';
-      if (options.decodeEntities && text && !specialContentTags(currentTag)) {
+      if (options.decodeEntities && text && !specialContentTags.has(currentTag)) {
         // Escape any `&` symbols that start either:
         // 1) a legacy named character reference (i.e. one that doesn't end with `;`)
         // 2) or any other character reference (i.e. one that does end with `;`)
@@ -1259,11 +1259,11 @@ async function minifyHTML(value, options, partialMarkup) {
   if (options.removeOptionalTags) {
     // <html> may be omitted if first thing inside is not comment
     // <head> or <body> may be omitted if empty
-    if (topLevelTags(optionalStartTag)) {
+    if (topLevelTags.has(optionalStartTag)) {
       removeStartTag();
     }
     // except for </dt> or </thead>, end tags may be omitted if no more content in parent element
-    if (optionalEndTag && !trailingTags(optionalEndTag)) {
+    if (optionalEndTag && !trailingTags.has(optionalEndTag)) {
       removeEndTag();
     }
   }

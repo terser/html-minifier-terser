@@ -804,12 +804,17 @@ test('custom processors', async () => {
     return (type || 'Normal') + ' CSS';
   }
 
+  async function asyncCss(text, type) {
+    return (type || 'Normal') + ' CSS';
+  }
+
   input = '<style>\n.foo { font: 12pt "bar" } </style>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { minifyCSS: null })).toBe(input);
   expect(await minify(input, { minifyCSS: false })).toBe(input);
   output = '<style>Normal CSS</style>';
   expect(await minify(input, { minifyCSS: css })).toBe(output);
+  expect(await minify(input, { minifyCSS: asyncCss })).toBe(output);
 
   input = '<p style="font: 12pt \'bar\'"></p>';
   expect(await minify(input)).toBe(input);

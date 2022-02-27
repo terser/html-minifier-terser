@@ -2,23 +2,6 @@
 
 'use strict';
 
-let packages = require('./package.json').benchmarkDependencies;
-packages = Object.keys(packages).map(function (name) {
-  return name + '@' + packages[name];
-});
-packages.unshift('install', '--no-save', '--no-optional');
-const installed = require('child_process').spawnSync('npm', packages, {
-  encoding: 'utf-8',
-  shell: true
-});
-if (installed.error) {
-  throw installed.error;
-} else if (installed.status) {
-  console.log(installed.stdout);
-  console.error(installed.stderr);
-  process.exit(installed.status);
-}
-
 const fs = require('fs');
 const zlib = require('zlib');
 const https = require('https');
@@ -31,7 +14,7 @@ const Minimize = require('minimize');
 const Progress = require('progress');
 const Table = require('cli-table3');
 
-const urls = require('./benchmarks');
+const urls = require('./sites.json');
 const fileNames = Object.keys(urls);
 
 const minimize = new Minimize();
@@ -201,22 +184,22 @@ function displayTable() {
 }
 
 run(fileNames.map(function (fileName) {
-  const filePath = path.join('benchmarks/', fileName + '.html');
+  const filePath = path.join('./sources', fileName + '.html');
 
   function processFile(site, done) {
     const original = {
       filePath: filePath,
-      gzFilePath: path.join('benchmarks/generated/', fileName + '.html.gz'),
-      lzFilePath: path.join('benchmarks/generated/', fileName + '.html.lz'),
-      brFilePath: path.join('benchmarks/generated/', fileName + '.html.br')
+      gzFilePath: path.join('./generated/', fileName + '.html.gz'),
+      lzFilePath: path.join('./generated/', fileName + '.html.lz'),
+      brFilePath: path.join('./generated/', fileName + '.html.br')
     };
     const infos = {};
     ['minifier', 'minimize', 'willpeavy', 'compressor'].forEach(function (name) {
       infos[name] = {
-        filePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html'),
-        gzFilePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html.gz'),
-        lzFilePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html.lz'),
-        brFilePath: path.join('benchmarks/generated/', fileName + '.' + name + '.html.br')
+        filePath: path.join('./generated/', fileName + '.' + name + '.html'),
+        gzFilePath: path.join('./generated/', fileName + '.' + name + '.html.gz'),
+        lzFilePath: path.join('./generated/', fileName + '.' + name + '.html.lz'),
+        brFilePath: path.join('./generated/', fileName + '.' + name + '.html.br')
       };
     });
 
@@ -277,7 +260,7 @@ run(fileNames.map(function (fileName) {
       const info = infos.minifier;
       info.startTime = Date.now();
       const args = [filePath, '-c', 'sample-cli-config-file.conf', '--minify-urls', site, '-o', info.filePath];
-      fork('./cli', args).on('exit', function () {
+      fork('../cli', args).on('exit', function () {
         readSizes(info, done);
       });
     }
@@ -334,7 +317,7 @@ run(fileNames.map(function (fileName) {
 
     function testHTMLCompressor(done) {
       readText(filePath, function (data) {
-        const url = new URL('https://htmlcompressor.com/compress_ajax_v2.php');
+        const url = new URL('https://htmlcompressor.com/compress');
         const options = {
           method: 'POST',
           headers: {
@@ -470,7 +453,7 @@ run(fileNames.map(function (fileName) {
 }), function () {
   displayTable();
   const content = generateMarkdownTable();
-  const readme = './README.md';
+  const readme = '../README.md';
   readText(readme, function (data) {
     let start = data.indexOf('## Minification comparison');
     start = data.indexOf('|', start);

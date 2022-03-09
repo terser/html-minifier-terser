@@ -1,0 +1,15 @@
+{
+  "name": "html-minifer-terser-benchmarks",
+  "private": "true",
+  "scripts": {
+    "backtest": "node backtest.cjs",
+    "benchmark": "node benchmark.cjs"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.1",
+    "lzma": "^2.3.2",
+    "minimize": "^2.2.0",
+    "progress": "^2.0.3"
+  }
+}

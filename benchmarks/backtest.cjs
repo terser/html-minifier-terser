@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const Progress = require('progress');
 
-const urls = require('./benchmarks');
+const urls = require('./sites.json');
 const fileNames = Object.keys(urls);
 
 function git() {
@@ -59,7 +59,7 @@ function minify(hash, options) {
   process.send('ready');
   let count = fileNames.length;
   fileNames.forEach(function (fileName) {
-    readText(path.join('benchmarks/', fileName + '.html'), function (err, data) {
+    readText(path.join('./', fileName + '.html'), function (err, data) {
       if (err) {
         throw err;
       } else {

@@ -1,1 +1,1 @@
-"*.js": eslint --fix --ignore-path .gitignore
+"*.{js,cjs}": eslint --fix --ignore-path .gitignore

@@ -240,3 +240,5 @@ $RECYCLE.BIN/
 build/
 temp/
 tmp/
+benchmarks/sources/*.html
+benchmarks/generated/

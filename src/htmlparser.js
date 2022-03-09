@@ -28,10 +28,12 @@
 
 /* global ActiveXObject, DOMDocument */
 
-import { createMapFromString, replaceAsync } from './utils.js';
+import { replaceAsync } from './utils.js';
 
-function makeMap(values) {
-  return createMapFromString(values, true);
+class CaseInsensitiveSet extends Set {
+  has(str) {
+    return super.has(str.toLowerCase());
+  }
 }
 
 // Regular Expressions for parsing tags and attributes
@@ -66,24 +68,24 @@ let IS_REGEX_CAPTURING_BROKEN = false;
 });
 
 // Empty Elements
-const empty = makeMap('area,base,basefont,br,col,embed,frame,hr,img,input,isindex,keygen,link,meta,param,source,track,wbr');
+const empty = new CaseInsensitiveSet(['area', 'base', 'basefont', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input', 'isindex', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
 
 // Inline Elements
-const inline = makeMap('a,abbr,acronym,applet,b,basefont,bdo,big,br,button,cite,code,del,dfn,em,font,i,iframe,img,input,ins,kbd,label,map,noscript,object,q,s,samp,script,select,small,span,strike,strong,sub,sup,svg,textarea,tt,u,var');
+const inline = new CaseInsensitiveSet(['a', 'abbr', 'acronym', 'applet', 'b', 'basefont', 'bdo', 'big', 'br', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'map', 'noscript', 'object', 'q', 's', 'samp', 'script', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'tt', 'u', 'var']);
 
 // Elements that you can, intentionally, leave open
 // (and which close themselves)
-const closeSelf = makeMap('colgroup,dd,dt,li,option,p,td,tfoot,th,thead,tr,source');
+const closeSelf = new CaseInsensitiveSet(['colgroup', 'dd', 'dt', 'li', 'option', 'p', 'td', 'tfoot', 'th', 'thead', 'tr', 'source']);
 
 // Attributes that have their values filled in disabled='disabled'
-const fillAttrs = makeMap('checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected');
+const fillAttrs = new CaseInsensitiveSet(['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap', 'multiple', 'nohref', 'noresize', 'noshade', 'nowrap', 'readonly', 'selected']);
 
 // Special Elements (can contain anything)
-const special = makeMap('script,style');
+const special = new CaseInsensitiveSet(['script', 'style']);
 
 // HTML5 tags https://html.spec.whatwg.org/multipage/indices.html#elements-3
 // Phrasing Content https://html.spec.whatwg.org/multipage/dom.html#phrasing-content
-const nonPhrasing = makeMap('address,article,aside,base,blockquote,body,caption,col,colgroup,dd,details,dialog,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,legend,li,menuitem,meta,ol,optgroup,option,param,rp,rt,source,style,summary,tbody,td,tfoot,th,thead,title,tr,track,ul');
+const nonPhrasing = new CaseInsensitiveSet(['address', 'article', 'aside', 'base', 'blockquote', 'body', 'caption', 'col', 'colgroup', 'dd', 'details', 'dialog', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'legend', 'li', 'menuitem', 'meta', 'ol', 'optgroup', 'option', 'param', 'rp', 'rt', 'source', 'style', 'summary', 'tbody', 'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul']);
 
 const reCache = {};
 
@@ -130,7 +132,7 @@ export class HTMLParser {
     while (html) {
       last = html;
       // Make sure we're not in a script or style element
-      if (!lastTag || !special(lastTag)) {
+      if (!lastTag || !special.has(lastTag)) {
         let textEnd = html.indexOf('<');
         if (textEnd === 0) {
           // Comment:
@@ -286,7 +288,7 @@ export class HTMLParser {
       let unarySlash = match.unarySlash;
 
       if (handler.html5) {
-        if (lastTag === 'p' && nonPhrasing(tagName)) {
+        if (lastTag === 'p' && nonPhrasing.has(tagName)) {
           await parseEndTag('', lastTag);
         } else if (tagName === 'tbody') {
           await closeIfFound('thead');
@@ -304,17 +306,17 @@ export class HTMLParser {
         }
       }
 
-      if (!handler.html5 && !inline(tagName)) {
-        while (lastTag && inline(lastTag)) {
+      if (!handler.html5 && !inline.has(tagName)) {
+        while (lastTag && inline.has(lastTag)) {
           await parseEndTag('', lastTag);
         }
       }
 
-      if (closeSelf(tagName) && lastTag === tagName) {
+      if (closeSelf.has(tagName) && lastTag === tagName) {
         await parseEndTag('', tagName);
       }
 
-      const unary = empty(tagName) || (tagName === 'html' && lastTag === 'head') || !!unarySlash;
+      const unary = empty.has(tagName) || (tagName === 'html' && lastTag === 'head') || !!unarySlash;
 
       const attrs = match.attrs.map(function (args) {
         let name, value, customOpen, customClose, customAssign, quote;
@@ -338,7 +340,7 @@ export class HTMLParser {
             return '\'';
           }
           value = args[index + 3];
-          if (typeof value === 'undefined' && fillAttrs(name)) {
+          if (typeof value === 'undefined' && fillAttrs.has(name)) {
             value = name;
           }
           return '';

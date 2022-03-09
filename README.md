@@ -54,18 +54,18 @@ How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Pe
 
 | Site                                                                         | Original size *(KB)* | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
 | ---------------------------------------------------------------------------- |:--------------------:| ------------:| --------:| ----------:| ------------------:|
-| [Google](https://www.google.com/)                                            | 45                   | **41**       | 45       | 46         | 45                 |
-| [Stack Overflow](https://stackoverflow.com/)                                 | 115                  | **82**       | 90       | 92         | 88                 |
-| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 132                  | **105**      | 118      | 123        | 118                |
-| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | 229        | 269                |
-| [Twitter](https://twitter.com/)                                              | 289                  | **238**      | 282      | 314        | 282                |
-| [BBC](https://www.bbc.co.uk/)                                                | 298                  | **233**      | 289      | 291        | 269                |
-| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 574                  | **468**      | 557      | 578        | 557                |
-| [Amazon](https://www.amazon.co.uk/)                                          | 702                  | **343**      | 692      | 704        | n/a                |
-| [NBC](https://www.nbc.com/)                                                  | 844                  | **805**      | 843      | 844        | n/a                |
+| [Google](https://www.google.com/)                                            | 50                   | **46**       | 50       | 52         | n/a                |
+| [Stack Overflow](https://stackoverflow.com/)                                 | 177                  | **143**      | 154      | 154        | n/a                |
+| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 269                  | **155**      | 247      | 268        | n/a                |
+| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | 229        | n/a                |
+| [BBC](https://www.bbc.co.uk/)                                                | 360                  | **328**      | 357      | 349        | n/a                |
+| [Twitter](https://twitter.com/)                                              | 409                  | **341**      | 402      | 447        | n/a                |
+| [Amazon](https://www.amazon.co.uk/)                                          | 528                  | **483**      | 517      | 537        | n/a                |
+| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 703                  | **568**      | 681      | 708        | n/a                |
 | [Eloquent Javascript](https://eloquentjavascript.net/1st_edition/print.html) | 870                  | **815**      | 840      | 864        | n/a                |
-| [New York Times](https://www.nytimes.com/)                                   | 1304                 | **1183**     | 1301     | 1295       | n/a                |
-| [ES draft](https://tc39.github.io/ecma262/)                                  | 6347                 | **5686**     | 5863     | n/a        | n/a                |
+| [NBC](https://www.nbc.com/)                                                  | 1688                 | **1553**     | 1676     | 1692       | n/a                |
+| [New York Times](https://www.nytimes.com/)                                   | 1917                 | **1746**     | 1911     | 1863       | n/a                |
+| [ES draft](https://tc39.github.io/ecma262/)                                  | 6302                 | **5544**     | 5739     | n/a        | n/a                |
 
 ## Options Quick Reference
 
@@ -152,7 +152,9 @@ HTMLMinifier can't know that original markup was only half of the tree; it does 
 Benchmarks for minified HTML:
 
 ```shell
-node benchmark.js
+cd benchmarks
+npm install
+npm run benchmark
 ```
 
 ## Running local server

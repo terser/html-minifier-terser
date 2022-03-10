@@ -1,7 +1,7 @@
 {
   "name": "html-minifier-terser",
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
-  "version": "7.0.0-alpha.1",
+  "version": "7.0.0-alpha.2",
   "license": "MIT",
   "repository": "https://github.com/terser/html-minifier-terser.git",
   "bugs": "https://github.com/terser/html-minifier-terser/issues",
@@ -80,7 +80,7 @@
     "entities": "^3.0.1",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
-    "terser": "^5.11.0"
+    "terser": "^5.12.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^16.2.1",
@@ -88,7 +88,7 @@
     "@rollup/plugin-commonjs": "^21.0.2",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.1.3",
-    "alpinejs": "^3.9.0",
+    "alpinejs": "^3.9.1",
     "commitlint-config-non-conventional": "^1.0.1",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
@@ -98,10 +98,10 @@
     "husky": "^7.0.4",
     "is-ci": "^3.0.1",
     "jest": "^27.5.1",
-    "lint-staged": "^12.3.4",
-    "rollup": "^2.68.0",
+    "lint-staged": "^12.3.5",
+    "rollup": "^2.70.0",
     "rollup-plugin-polyfill-node": "^0.8.0",
     "rollup-plugin-terser": "^7.0.2",
-    "vite": "^2.8.4"
+    "vite": "^2.8.6"
   }
 }

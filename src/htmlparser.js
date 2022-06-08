@@ -364,8 +364,8 @@ export class HTMLParser {
         }
 
         return {
-          name: name,
-          value: value,
+          name,
+          value,
           customAssign: customAssign || '=',
           customOpen: customOpen || '',
           customClose: customClose || '',
@@ -374,7 +374,7 @@ export class HTMLParser {
       });
 
       if (!unary) {
-        stack.push({ tag: tagName, attrs: attrs });
+        stack.push({ tag: tagName, attrs });
         lastTag = tagName;
         unarySlash = '';
       }

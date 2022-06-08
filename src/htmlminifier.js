@@ -572,7 +572,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   }
 
   return {
-    attr: attr,
+    attr,
     name: attrName,
     value: attrValue
   };
@@ -639,8 +639,8 @@ const processOptions = (inputOptions) => {
     name: function (name) {
       return name.toLowerCase();
     },
-    canCollapseWhitespace: canCollapseWhitespace,
-    canTrimWhitespace: canTrimWhitespace,
+    canCollapseWhitespace,
+    canTrimWhitespace,
     html5: true,
     ignoreCustomComments: [
       /^!/,
@@ -999,7 +999,7 @@ async function minifyHTML(value, options, partialMarkup) {
   }
 
   const parser = new HTMLParser(value, {
-    partialMarkup: partialMarkup,
+    partialMarkup,
     continueOnParseError: options.continueOnParseError,
     customAttrAssign: options.customAttrAssign,
     customAttrSurround: options.customAttrSurround,

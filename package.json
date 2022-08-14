@@ -77,7 +77,7 @@
     "camel-case": "^4.1.2",
     "clean-css": "5.2.0",
     "commander": "^9.3.0",
-    "entities": "^4.3.0",
+    "entities": "^4.3.1",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
     "terser": "^5.14.0"

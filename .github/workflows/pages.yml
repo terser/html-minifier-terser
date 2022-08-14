@@ -28,13 +28,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Rollup
+      - name: Build lib
         run: npm run build
 
-      - name: Build
+      - name: Build site
         run: npm run build:docs
 
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-pages-artifact@v1
         with:
           path: './demo/build'

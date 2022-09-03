@@ -1107,6 +1107,12 @@ test('removing javascript type attributes', async () => {
   output = '<script>alert(1)</script>';
   expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
 
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<script type>alert(1)</script>';
+  expect(await minify(input, { removeScriptTypeAttributes: false })).toBe(input);
+  output = '<script>alert(1)</script>';
+  expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
+
   input = '<script type="modules">alert(1)</script>';
   expect(await minify(input, { removeScriptTypeAttributes: false })).toBe(input);
   output = '<script type="modules">alert(1)</script>';
@@ -1138,6 +1144,12 @@ test('removing type="text/css" attributes', async () => {
   output = '<style>.foo { color: red }</style>';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<style type>.foo { color: red }</style>';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: false })).toBe(input);
+  output = '<style>.foo { color: red }</style>';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
+
   input = '<style type="text/css">.foo { color: red }</style>';
   expect(await minify(input, { removeStyleLinkTypeAttributes: false })).toBe(input);
   output = '<style>.foo { color: red }</style>';
@@ -1151,6 +1163,11 @@ test('removing type="text/css" attributes', async () => {
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(input);
 
   input = '<link rel="stylesheet" type="text/css" href="http://example.com">';
+  output = '<link rel="stylesheet" href="http://example.com">';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
+
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<link rel="stylesheet" type href="http://example.com">';
   output = '<link rel="stylesheet" href="http://example.com">';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 

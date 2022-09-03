@@ -166,12 +166,12 @@ const keepScriptsMimetypes = new Set([
   'module'
 ]);
 
-function isScriptTypeAttribute(attrValue) {
+function isScriptTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
   return attrValue === '' || executableScriptsMimetypes.has(attrValue);
 }
 
-function keepScriptTypeAttribute(attrValue) {
+function keepScriptTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
   return keepScriptsMimetypes.has(attrValue);
 }
@@ -189,7 +189,7 @@ function isExecutableScript(tag, attrs) {
   return true;
 }
 
-function isStyleLinkTypeAttribute(attrValue) {
+function isStyleLinkTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue).toLowerCase();
   return attrValue === '' || attrValue === 'text/css';
 }

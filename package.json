@@ -80,7 +80,7 @@
     "entities": "^4.4.0",
     "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
-    "terser": "^5.14.2"
+    "terser": "^5.15.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.3.0",

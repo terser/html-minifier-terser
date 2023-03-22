@@ -75,7 +75,7 @@
   },
   "dependencies": {
     "camel-case": "^4.1.2",
-    "clean-css": "5.2.0",
+    "clean-css": "~5.2.4",
     "commander": "^9.4.1",
     "entities": "^4.4.0",
     "param-case": "^3.0.4",

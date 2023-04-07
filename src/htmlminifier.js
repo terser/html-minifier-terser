@@ -1517,7 +1517,8 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
  */
 export async function minify (value, options = {}) {
   const start = Date.now();
-  const result = await minifyHTML(value, processOptions(options));
+  options = processOptions(options);
+  const result = await minifyHTML(value, options);
   options.log(`minified in: ${Date.now() - start} ms`);
   return result;
 };

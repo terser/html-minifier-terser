@@ -1,5 +1,5 @@
 import { test, expect, fit } from '@jest/globals';
-import { minify } from '../src/index.js';
+import { minify } from '../src/index';
 
 fit('`minifiy` exists', () => {
   expect(minify).toBeDefined();
@@ -810,12 +810,17 @@ test('custom processors', async () => {
     return (type || 'Normal') + ' CSS';
   }
 
+  async function asyncCss(text, type) {
+    return (type || 'Normal') + ' CSS';
+  }
+
   input = '<style>\n.foo { font: 12pt "bar" } </style>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { minifyCSS: null })).toBe(input);
   expect(await minify(input, { minifyCSS: false })).toBe(input);
   output = '<style>Normal CSS</style>';
   expect(await minify(input, { minifyCSS: css })).toBe(output);
+  expect(await minify(input, { minifyCSS: asyncCss })).toBe(output);
 
   input = '<p style="font: 12pt \'bar\'"></p>';
   expect(await minify(input)).toBe(input);
@@ -1108,6 +1113,12 @@ fit('removing javascript type attributes', async () => {
   output = '<script>alert(1)</script>';
   expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
 
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<script type>alert(1)</script>';
+  expect(await minify(input, { removeScriptTypeAttributes: false })).toBe(input);
+  output = '<script>alert(1)</script>';
+  expect(await minify(input, { removeScriptTypeAttributes: true })).toBe(output);
+
   input = '<script type="modules">alert(1)</script>';
   expect(await minify(input, { removeScriptTypeAttributes: false })).toBe(input);
   output = '<script type="modules">alert(1)</script>';
@@ -1139,6 +1150,12 @@ fit('removing type="text/css" attributes', async () => {
   output = '<style>.foo { color: red }</style>';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<style type>.foo { color: red }</style>';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: false })).toBe(input);
+  output = '<style>.foo { color: red }</style>';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
+
   input = '<style type="text/css">.foo { color: red }</style>';
   expect(await minify(input, { removeStyleLinkTypeAttributes: false })).toBe(input);
   output = '<style>.foo { color: red }</style>';
@@ -1152,6 +1169,11 @@ fit('removing type="text/css" attributes', async () => {
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(input);
 
   input = '<link rel="stylesheet" type="text/css" href="http://example.com">';
+  output = '<link rel="stylesheet" href="http://example.com">';
+  expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
+
+  // https://github.com/terser/html-minifier-terser/issues/132
+  input = '<link rel="stylesheet" type href="http://example.com">';
   output = '<link rel="stylesheet" href="http://example.com">';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 
@@ -3410,7 +3432,7 @@ fit('decode entity characters', async () => {
   output = '<div style="font:&quot">foo&dollar;</div>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   expect(await minify(input, { decodeEntities: false, minifyCSS: true })).toBe(output);
-  output = '<div style="font:monospace">foo$</div>';
+  output = '<div style=\'font:"monospace"\'>foo$</div>';
   expect(await minify(input, { decodeEntities: true, minifyCSS: true })).toBe(output);
 
   input = '<a href="/?foo=1&amp;bar=&lt;2&gt;">baz&lt;moo&gt;&copy;</a>';

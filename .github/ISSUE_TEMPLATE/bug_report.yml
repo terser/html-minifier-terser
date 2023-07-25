@@ -1,0 +1,52 @@
+name: Bug Report
+title: "[Bug]: "
+description: File a bug report
+
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also describe the steps to reproduce the problem and what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of html-minifier are you using? If it is not latest, make sure to try reproducing the issue in latest version.
+      placeholder: v7.0.x
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: What browsers are you seeing the problem on?
+      multiple: true
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+  - type: input
+    id: link-to-reproduce
+    attributes:
+      label: Link to reproduce
+      description: A Github repo or a stackblitz/codesandbox link to reproduce the issue and speedup the process
+      placeholder: "https://stackblitz.com/edit/..."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: dropdown
+    id: submit-pr
+    attributes:
+      label: Willing to submit a PR?
+      options:
+        - 'Yes'
+        - 'No'

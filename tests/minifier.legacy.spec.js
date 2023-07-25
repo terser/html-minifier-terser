@@ -3402,7 +3402,7 @@ describe('legacy minfier', () => {
     output = '<div style="font:&quot">foo&dollar;</div>';
     expect(await minify(input, { minifyCSS: true })).toBe(output);
     expect(await minify(input, { decodeEntities: false, minifyCSS: true })).toBe(output);
-    output = '<div style="font:monospace">foo$</div>';
+    output = '<div style=\'font:"monospace"\'>foo$</div>';
     expect(await minify(input, { decodeEntities: true, minifyCSS: true })).toBe(output);
 
     input = '<a href="/?foo=1&amp;bar=&lt;2&gt;">baz&lt;moo&gt;&copy;</a>';

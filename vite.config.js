@@ -1,4 +1,4 @@
-const { defineConfig } = require('vite');
+import { defineConfig } from 'vite';
 
 const config = defineConfig({
   root: 'demo',
@@ -7,6 +7,10 @@ const config = defineConfig({
   },
   server: {
     port: 3456
+  },
+  define: {
+    'process.env': {},
+    'process.platform': JSON.stringify(process.platform)
   }
 });
 

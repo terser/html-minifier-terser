@@ -1,13 +1,11 @@
-'use strict';
+import CleanCSS from 'clean-css';
+import { decodeHTMLStrict, decodeHTML } from 'entities';
+import RelateURL from 'relateurl';
+import { minify as terser } from 'terser';
 
-const CleanCSS = require('clean-css');
-const { decode } = require('he');
-const RelateUrl = require('relateurl');
-const Terser = require('terser');
-
-const { HTMLParser, endTag } = require('./htmlparser');
-const TokenChain = require('./tokenchain');
-const utils = require('./utils');
+import { HTMLParser, endTag } from './htmlparser.js';
+import TokenChain from './tokenchain.js';
+import { replaceAsync } from './utils.js';
 
 function trimWhitespace(str) {
   return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
@@ -63,22 +61,21 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
   return lineBreakBefore + str + lineBreakAfter;
 }
 
-const createMapFromString = utils.createMapFromString;
 // non-empty tags that will maintain whitespace around them
-const inlineTags = createMapFromString('a,abbr,acronym,b,bdi,bdo,big,button,cite,code,del,dfn,em,font,i,ins,kbd,label,mark,math,nobr,object,q,rp,rt,rtc,ruby,s,samp,select,small,span,strike,strong,sub,sup,svg,textarea,time,tt,u,var');
+const inlineTags = new Set(['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var']);
 // non-empty tags that will maintain whitespace within them
-const inlineTextTags = createMapFromString('a,abbr,acronym,b,big,del,em,font,i,ins,kbd,mark,nobr,rp,s,samp,small,span,strike,strong,sub,sup,time,tt,u,var');
+const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // self-closing tags that will maintain whitespace around them
-const selfClosingInlineTags = createMapFromString('comment,img,input,wbr');
+const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
 
 function collapseWhitespaceSmart(str, prevTag, nextTag, options) {
-  let trimLeft = prevTag && !selfClosingInlineTags(prevTag);
+  let trimLeft = prevTag && !selfClosingInlineTags.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
-    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags(prevTag.slice(1)) : !inlineTextTags(prevTag);
+    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextTags.has(prevTag);
   }
-  let trimRight = nextTag && !selfClosingInlineTags(nextTag);
+  let trimRight = nextTag && !selfClosingInlineTags.has(nextTag);
   if (trimRight && !options.collapseInlineTagWhitespace) {
-    trimRight = nextTag.charAt(0) === '/' ? !inlineTextTags(nextTag.slice(1)) : !inlineTags(nextTag);
+    trimRight = nextTag.charAt(0) === '/' ? !inlineTextTags.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
   }
   return collapseWhitespace(str, options, trimLeft, trimRight, prevTag && nextTag);
 }
@@ -155,7 +152,7 @@ function isAttributeRedundant(tag, attrName, attrValue, attrs) {
 
 // https://mathiasbynens.be/demo/javascript-mime-type
 // https://developer.mozilla.org/en/docs/Web/HTML/Element/script#attr-type
-const executableScriptsMimetypes = utils.createMap([
+const executableScriptsMimetypes = new Set([
   'text/javascript',
   'text/ecmascript',
   'text/jscript',
@@ -165,18 +162,18 @@ const executableScriptsMimetypes = utils.createMap([
   'module'
 ]);
 
-const keepScriptsMimetypes = utils.createMap([
+const keepScriptsMimetypes = new Set([
   'module'
 ]);
 
-function isScriptTypeAttribute(attrValue) {
+function isScriptTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
-  return attrValue === '' || executableScriptsMimetypes(attrValue);
+  return attrValue === '' || executableScriptsMimetypes.has(attrValue);
 }
 
-function keepScriptTypeAttribute(attrValue) {
+function keepScriptTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
-  return keepScriptsMimetypes(attrValue);
+  return keepScriptsMimetypes.has(attrValue);
 }
 
 function isExecutableScript(tag, attrs) {
@@ -192,7 +189,7 @@ function isExecutableScript(tag, attrs) {
   return true;
 }
 
-function isStyleLinkTypeAttribute(attrValue) {
+function isStyleLinkTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue).toLowerCase();
   return attrValue === '' || attrValue === 'text/css';
 }
@@ -210,11 +207,11 @@ function isStyleSheet(tag, attrs) {
   return true;
 }
 
-const isSimpleBoolean = createMapFromString('allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,default,defaultchecked,defaultmuted,defaultselected,defer,disabled,enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,muted,nohref,noresize,noshade,novalidate,nowrap,open,pauseonexit,readonly,required,reversed,scoped,seamless,selected,sortable,truespeed,typemustmatch,visible');
-const isBooleanValue = createMapFromString('true,false');
+const isSimpleBoolean = new Set(['allowfullscreen', 'async', 'autofocus', 'autoplay', 'checked', 'compact', 'controls', 'declare', 'default', 'defaultchecked', 'defaultmuted', 'defaultselected', 'defer', 'disabled', 'enabled', 'formnovalidate', 'hidden', 'indeterminate', 'inert', 'ismap', 'itemscope', 'loop', 'multiple', 'muted', 'nohref', 'noresize', 'noshade', 'novalidate', 'nowrap', 'open', 'pauseonexit', 'readonly', 'required', 'reversed', 'scoped', 'seamless', 'selected', 'sortable', 'truespeed', 'typemustmatch', 'visible']);
+const isBooleanValue = new Set(['true', 'false']);
 
 function isBooleanAttribute(attrName, attrValue) {
-  return isSimpleBoolean(attrName) || (attrName === 'draggable' && !isBooleanValue(attrValue));
+  return isSimpleBoolean.has(attrName) || (attrName === 'draggable' && !isBooleanValue.has(attrValue));
 }
 
 function isUriTypeAttribute(attrName, tag) {
@@ -259,16 +256,16 @@ function isMediaQuery(tag, attrs, attrName) {
   return attrName === 'media' && (isLinkType(tag, attrs, 'stylesheet') || isStyleSheet(tag, attrs));
 }
 
-const srcsetTags = createMapFromString('img,source');
+const srcsetTags = new Set(['img', 'source']);
 
 function isSrcset(attrName, tag) {
-  return attrName === 'srcset' && srcsetTags(tag);
+  return attrName === 'srcset' && srcsetTags.has(tag);
 }
 
 async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
   if (isEventAttribute(attrName, options)) {
     attrValue = trimWhitespace(attrValue).replace(/^javascript:\s*/i, '');
-    return await options.minifyJS(attrValue, true);
+    return options.minifyJS(attrValue, true);
   } else if (attrName === 'class') {
     attrValue = trimWhitespace(attrValue);
     if (options.sortClassName) {
@@ -288,7 +285,7 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
       if (/;$/.test(attrValue) && !/&#?[0-9a-zA-Z]+;$/.test(attrValue)) {
         attrValue = attrValue.replace(/\s*;$/, ';');
       }
-      attrValue = options.minifyCSS(attrValue, 'inline');
+      attrValue = await options.minifyCSS(attrValue, 'inline');
     }
     return attrValue;
   } else if (isSrcset(attrName, tag)) {
@@ -381,8 +378,8 @@ function unwrapCSS(text, type) {
 
 async function cleanConditionalComment(comment, options) {
   return options.processConditionalComments
-    ? await utils.replaceAsync(comment, /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/, async function (match, prefix, text, suffix) {
-      return prefix + await minify(text, options, true) + suffix;
+    ? await replaceAsync(comment, /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/, async function (match, prefix, text, suffix) {
+      return prefix + await minifyHTML(text, options, true) + suffix;
     })
     : comment;
 }
@@ -391,7 +388,7 @@ async function processScript(text, options, currentAttrs) {
   for (let i = 0, len = currentAttrs.length; i < len; i++) {
     if (currentAttrs[i].name.toLowerCase() === 'type' &&
       options.processScripts.indexOf(currentAttrs[i].value) > -1) {
-      return await minify(text, options);
+      return await minifyHTML(text, options);
     }
   }
   return text;
@@ -402,23 +399,23 @@ async function processScript(text, options, currentAttrs) {
 // - retain <body> if followed by <noscript>
 // - </rb>, </rt>, </rtc>, </rp> & </tfoot> follow https://www.w3.org/TR/html5/syntax.html#optional-tags
 // - retain all tags which are adjacent to non-standard HTML tags
-const optionalStartTags = createMapFromString('html,head,body,colgroup,tbody');
-const optionalEndTags = createMapFromString('html,head,body,li,dt,dd,p,rb,rt,rtc,rp,optgroup,option,colgroup,caption,thead,tbody,tfoot,tr,td,th');
-const headerTags = createMapFromString('meta,link,script,style,template,noscript');
-const descriptionTags = createMapFromString('dt,dd');
-const pBlockTags = createMapFromString('address,article,aside,blockquote,details,div,dl,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hgroup,hr,main,menu,nav,ol,p,pre,section,table,ul');
-const pInlineTags = createMapFromString('a,audio,del,ins,map,noscript,video');
-const rubyTags = createMapFromString('rb,rt,rtc,rp');
-const rtcTag = createMapFromString('rb,rtc,rp');
-const optionTag = createMapFromString('option,optgroup');
-const tableContentTags = createMapFromString('tbody,tfoot');
-const tableSectionTags = createMapFromString('thead,tbody,tfoot');
-const cellTags = createMapFromString('td,th');
-const topLevelTags = createMapFromString('html,head,body');
-const compactTags = createMapFromString('html,body');
-const looseTags = createMapFromString('head,colgroup,caption');
-const trailingTags = createMapFromString('dt,thead');
-const htmlTags = createMapFromString('a,abbr,acronym,address,applet,area,article,aside,audio,b,base,basefont,bdi,bdo,bgsound,big,blink,blockquote,body,br,button,canvas,caption,center,cite,code,col,colgroup,command,content,data,datalist,dd,del,details,dfn,dialog,dir,div,dl,dt,element,em,embed,fieldset,figcaption,figure,font,footer,form,frame,frameset,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,i,iframe,image,img,input,ins,isindex,kbd,keygen,label,legend,li,link,listing,main,map,mark,marquee,menu,menuitem,meta,meter,multicol,nav,nobr,noembed,noframes,noscript,object,ol,optgroup,option,output,p,param,picture,plaintext,pre,progress,q,rb,rp,rt,rtc,ruby,s,samp,script,section,select,shadow,small,source,spacer,span,strike,strong,style,sub,summary,sup,table,tbody,td,template,textarea,tfoot,th,thead,time,title,tr,track,tt,u,ul,var,video,wbr,xmp');
+const optionalStartTags = new Set(['html', 'head', 'body', 'colgroup', 'tbody']);
+const optionalEndTags = new Set(['html', 'head', 'body', 'li', 'dt', 'dd', 'p', 'rb', 'rt', 'rtc', 'rp', 'optgroup', 'option', 'colgroup', 'caption', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
+const headerTags = new Set(['meta', 'link', 'script', 'style', 'template', 'noscript']);
+const descriptionTags = new Set(['dt', 'dd']);
+const pBlockTags = new Set(['address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'p', 'pre', 'section', 'table', 'ul']);
+const pInlineTags = new Set(['a', 'audio', 'del', 'ins', 'map', 'noscript', 'video']);
+const rubyTags = new Set(['rb', 'rt', 'rtc', 'rp']);
+const rtcTag = new Set(['rb', 'rtc', 'rp']);
+const optionTag = new Set(['option', 'optgroup']);
+const tableContentTags = new Set(['tbody', 'tfoot']);
+const tableSectionTags = new Set(['thead', 'tbody', 'tfoot']);
+const cellTags = new Set(['td', 'th']);
+const topLevelTags = new Set(['html', 'head', 'body']);
+const compactTags = new Set(['html', 'body']);
+const looseTags = new Set(['head', 'colgroup', 'caption']);
+const trailingTags = new Set(['dt', 'thead']);
+const htmlTags = new Set(['a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside', 'audio', 'b', 'base', 'basefont', 'bdi', 'bdo', 'bgsound', 'big', 'blink', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'command', 'content', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'element', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'image', 'img', 'input', 'ins', 'isindex', 'kbd', 'keygen', 'label', 'legend', 'li', 'link', 'listing', 'main', 'map', 'mark', 'marquee', 'menu', 'menuitem', 'meta', 'meter', 'multicol', 'nav', 'nobr', 'noembed', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'plaintext', 'pre', 'progress', 'q', 'rb', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'script', 'section', 'select', 'shadow', 'small', 'source', 'spacer', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr', 'xmp']);
 
 function canRemoveParentTag(optionalStartTag, tag) {
   switch (optionalStartTag) {
@@ -426,7 +423,7 @@ function canRemoveParentTag(optionalStartTag, tag) {
     case 'head':
       return true;
     case 'body':
-      return !headerTags(tag);
+      return !headerTags.has(tag);
     case 'colgroup':
       return tag === 'col';
     case 'tbody':
@@ -440,7 +437,7 @@ function isStartTagMandatory(optionalEndTag, tag) {
     case 'colgroup':
       return optionalEndTag === 'colgroup';
     case 'tbody':
-      return tableSectionTags(optionalEndTag);
+      return tableSectionTags.has(optionalEndTag);
   }
   return false;
 }
@@ -459,25 +456,25 @@ function canRemovePrecedingTag(optionalEndTag, tag) {
       return tag === optionalEndTag;
     case 'dt':
     case 'dd':
-      return descriptionTags(tag);
+      return descriptionTags.has(tag);
     case 'p':
-      return pBlockTags(tag);
+      return pBlockTags.has(tag);
     case 'rb':
     case 'rt':
     case 'rp':
-      return rubyTags(tag);
+      return rubyTags.has(tag);
     case 'rtc':
-      return rtcTag(tag);
+      return rtcTag.has(tag);
     case 'option':
-      return optionTag(tag);
+      return optionTag.has(tag);
     case 'thead':
     case 'tbody':
-      return tableContentTags(tag);
+      return tableContentTags.has(tag);
     case 'tfoot':
       return tag === 'tbody';
     case 'td':
     case 'th':
-      return cellTags(tag);
+      return cellTags.has(tag);
   }
   return false;
 }
@@ -549,7 +546,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   let attrValue = attr.value;
 
   if (options.decodeEntities && attrValue) {
-    attrValue = decode(attrValue, { isAttributeValue: true });
+    attrValue = decodeHTMLStrict(attrValue);
   }
 
   if ((options.removeRedundantAttributes &&
@@ -575,7 +572,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   }
 
   return {
-    attr: attr,
+    attr,
     name: attrName,
     value: attrValue
   };
@@ -633,13 +630,17 @@ function identity(value) {
   return value;
 }
 
-function processOptions(values) {
+function identityAsync(value) {
+  return Promise.resolve(value);
+}
+
+const processOptions = (inputOptions) => {
   const options = {
     name: function (name) {
       return name.toLowerCase();
     },
-    canCollapseWhitespace: canCollapseWhitespace,
-    canTrimWhitespace: canTrimWhitespace,
+    canCollapseWhitespace,
+    canTrimWhitespace,
     html5: true,
     ignoreCustomComments: [
       /^!/,
@@ -651,81 +652,101 @@ function processOptions(values) {
     ],
     includeAutoGeneratedTags: true,
     log: identity,
-    minifyCSS: identity,
+    minifyCSS: identityAsync,
     minifyJS: identity,
     minifyURLs: identity
   };
-  Object.keys(values).forEach(function (key) {
-    let value = values[key];
+
+  Object.keys(inputOptions).forEach(function (key) {
+    const option = inputOptions[key];
+
     if (key === 'caseSensitive') {
-      if (value) {
+      if (option) {
         options.name = identity;
       }
     } else if (key === 'log') {
-      if (typeof value === 'function') {
-        options.log = value;
+      if (typeof option === 'function') {
+        options.log = option;
       }
-    } else if (key === 'minifyCSS' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyCSS' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value !== 'object') {
-        value = {};
-      }
-      options.minifyCSS = function (text, type) {
+
+      const cleanCssOptions = typeof option === 'object' ? option : {};
+
+      options.minifyCSS = async function (text, type) {
         text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, function (match, prefix, quote, url, suffix) {
           return prefix + quote + options.minifyURLs(url) + quote + suffix;
         });
-        const cleanCssOutput = new CleanCSS(value).minify(wrapCSS(text, type));
-        if (cleanCssOutput.errors.length > 0) {
-          cleanCssOutput.errors.forEach(options.log);
-          return text;
-        }
-        return unwrapCSS(cleanCssOutput.styles, type);
+
+        const inputCSS = wrapCSS(text, type);
+
+        return new Promise((resolve) => {
+          new CleanCSS(cleanCssOptions).minify(inputCSS, (_err, output) => {
+            if (output.errors.length > 0) {
+              output.errors.forEach(options.log);
+              resolve(text);
+            }
+
+            const outputCSS = unwrapCSS(output.styles, type);
+            resolve(outputCSS);
+          });
+        });
       };
-    } else if (key === 'minifyJS' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyJS' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value !== 'object') {
-        value = {};
-      }
-      (value.parse || (value.parse = {})).bare_returns = false;
+
+      const terserOptions = typeof option === 'object' ? option : {};
+
+      terserOptions.parse = {
+        ...terserOptions.parse,
+        bare_returns: false
+      };
+
       options.minifyJS = async function (text, inline) {
         const start = text.match(/^\s*<!--.*/);
         const code = start ? text.slice(start[0].length).replace(/\n\s*-->\s*$/, '') : text;
-        value.parse.bare_returns = inline;
+
+        terserOptions.parse.bare_returns = inline;
+
         try {
-          const result = await Terser.minify(code, value);
+          const result = await terser(code, terserOptions);
           return result.code.replace(/;$/, '');
         } catch (error) {
           options.log(error);
           return text;
         }
       };
-    } else if (key === 'minifyURLs' && typeof value !== 'function') {
-      if (!value) {
+    } else if (key === 'minifyURLs' && typeof option !== 'function') {
+      if (!option) {
         return;
       }
-      if (typeof value === 'string') {
-        value = { site: value };
-      } else if (typeof value !== 'object') {
-        value = {};
+
+      let relateUrlOptions = option;
+
+      if (typeof option === 'string') {
+        relateUrlOptions = { site: option };
+      } else if (typeof option !== 'object') {
+        relateUrlOptions = {};
       }
+
       options.minifyURLs = function (text) {
         try {
-          return RelateUrl.relate(text, value);
+          return RelateURL.relate(text, relateUrlOptions);
         } catch (err) {
           options.log(err);
           return text;
         }
       };
     } else {
-      options[key] = value;
+      options[key] = option;
     }
   });
   return options;
-}
+};
 
 function uniqueId(value) {
   let id;
@@ -735,7 +756,7 @@ function uniqueId(value) {
   return id;
 }
 
-const specialContentTags = createMapFromString('script,style');
+const specialContentTags = new Set(['script', 'style']);
 
 async function createSortFns(value, options, uidIgnore, uidAttr) {
   const attrChains = options.sortAttributes && Object.create(null);
@@ -779,7 +800,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
         currentTag = '';
       },
       chars: async function (text) {
-        if (options.processScripts && specialContentTags(currentTag) &&
+        if (options.processScripts && specialContentTags.has(currentTag) &&
           options.processScripts.indexOf(currentType) > -1) {
           await scan(text);
         }
@@ -793,7 +814,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
   options.log = identity;
   options.sortAttributes = false;
   options.sortClassName = false;
-  await scan(await minify(value, options));
+  await scan(await minifyHTML(value, options));
   options.log = log;
   if (attrChains) {
     const attrSorters = Object.create(null);
@@ -822,7 +843,7 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
   }
 }
 
-async function minify(value, options, partialMarkup) {
+async function minifyHTML(value, options, partialMarkup) {
   if (options.collapseWhitespace) {
     value = collapseWhitespace(value, options, true, true);
   }
@@ -873,6 +894,7 @@ async function minify(value, options, partialMarkup) {
       if (!uidAttr) {
         uidAttr = uniqueId(value);
         uidPattern = new RegExp('(\\s*)' + uidAttr + '([0-9]+)' + uidAttr + '(\\s*)', 'g');
+
         if (options.minifyCSS) {
           options.minifyCSS = (function (fn) {
             return function (text, type) {
@@ -880,6 +902,7 @@ async function minify(value, options, partialMarkup) {
                 const chunks = ignoredCustomMarkupChunks[+index];
                 return chunks[1] + uidAttr + index + uidAttr + chunks[2];
               });
+
               const ids = [];
               new CleanCSS().minify(wrapCSS(text, type)).warnings.forEach(function (warning) {
                 const match = uidPattern.exec(warning);
@@ -889,14 +912,18 @@ async function minify(value, options, partialMarkup) {
                   ids.push(id);
                 }
               });
-              text = fn(text, type);
-              ids.forEach(function (id) {
-                text = text.replace(ignoreCSS(id), id);
+
+              return fn(text, type).then(chunk => {
+                ids.forEach(function (id) {
+                  chunk = chunk.replace(ignoreCSS(id), id);
+                });
+
+                return chunk;
               });
-              return text;
             };
           })(options.minifyCSS);
         }
+
         if (options.minifyJS) {
           options.minifyJS = (function (fn) {
             return function (text, type) {
@@ -908,6 +935,7 @@ async function minify(value, options, partialMarkup) {
           })(options.minifyJS);
         }
       }
+
       const token = uidAttr + ignoredCustomMarkupChunks.length + uidAttr;
       ignoredCustomMarkupChunks.push(/^(\s*)[\s\S]*?(\s*)$/.exec(match));
       return '\t' + token + '\t';
@@ -971,7 +999,7 @@ async function minify(value, options, partialMarkup) {
   }
 
   const parser = new HTMLParser(value, {
-    partialMarkup: partialMarkup,
+    partialMarkup,
     continueOnParseError: options.continueOnParseError,
     customAttrAssign: options.customAttrAssign,
     customAttrSurround: options.customAttrSurround,
@@ -987,7 +1015,7 @@ async function minify(value, options, partialMarkup) {
       tag = options.name(tag);
       currentTag = tag;
       charsPrevTag = tag;
-      if (!inlineTextTags(tag)) {
+      if (!inlineTextTags.has(tag)) {
         currentChars = '';
       }
       hasChars = false;
@@ -995,7 +1023,7 @@ async function minify(value, options, partialMarkup) {
 
       let optional = options.removeOptionalTags;
       if (optional) {
-        const htmlTag = htmlTags(tag);
+        const htmlTag = htmlTags.has(tag);
         // <html> may be omitted if first thing inside is not comment
         // <head> may be omitted if first thing inside is an element
         // <body> may be omitted if first thing inside is not space, comment, <meta>, <link>, <script>, <style> or <template>
@@ -1050,7 +1078,7 @@ async function minify(value, options, partialMarkup) {
       if (parts.length > 0) {
         buffer.push(' ');
         buffer.push.apply(buffer, parts);
-      } else if (optional && optionalStartTags(tag)) {
+      } else if (optional && optionalStartTags.has(tag)) {
         // start tag must never be omitted if it has any attributes
         optionalStartTag = tag;
       }
@@ -1091,7 +1119,7 @@ async function minify(value, options, partialMarkup) {
 
       if (options.removeOptionalTags) {
         // <html>, <head> or <body> may be omitted if the element is empty
-        if (isElementEmpty && topLevelTags(optionalStartTag)) {
+        if (isElementEmpty && topLevelTags.has(optionalStartTag)) {
           removeStartTag();
         }
         optionalStartTag = '';
@@ -1099,10 +1127,10 @@ async function minify(value, options, partialMarkup) {
         // </head> may be omitted if not followed by space or comment
         // </p> may be omitted if no more content in non-</a> parent
         // except for </dt> or </thead>, end tags may be omitted if no more content in parent element
-        if (htmlTags(tag) && optionalEndTag && !trailingTags(optionalEndTag) && (optionalEndTag !== 'p' || !pInlineTags(tag))) {
+        if (htmlTags.has(tag) && optionalEndTag && !trailingTags.has(optionalEndTag) && (optionalEndTag !== 'p' || !pInlineTags.has(tag))) {
           removeEndTag();
         }
-        optionalEndTag = optionalEndTags(tag) ? tag : '';
+        optionalEndTag = optionalEndTags.has(tag) ? tag : '';
       }
 
       if (options.removeEmptyElements && isElementEmpty && canRemoveElement(tag, attrs)) {
@@ -1117,7 +1145,7 @@ async function minify(value, options, partialMarkup) {
           buffer.push('</' + tag + '>');
         }
         charsPrevTag = '/' + tag;
-        if (!inlineTags(tag)) {
+        if (!inlineTags.has(tag)) {
           currentChars = '';
         } else if (isElementEmpty) {
           currentChars += '|';
@@ -1127,8 +1155,8 @@ async function minify(value, options, partialMarkup) {
     chars: async function (text, prevTag, nextTag) {
       prevTag = prevTag === '' ? 'comment' : prevTag;
       nextTag = nextTag === '' ? 'comment' : nextTag;
-      if (options.decodeEntities && text && !specialContentTags(currentTag)) {
-        text = decode(text);
+      if (options.decodeEntities && text && !specialContentTags.has(currentTag)) {
+        text = decodeHTML(text);
       }
       if (options.collapseWhitespace) {
         if (!stackNoTrimWhitespace.length) {
@@ -1156,7 +1184,7 @@ async function minify(value, options, partialMarkup) {
                 }
                 trimTrailingWhitespace(tagIndex - 1, 'br');
               }
-            } else if (inlineTextTags(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
+            } else if (inlineTextTags.has(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
               text = collapseWhitespace(text, options, /(?:^|\s)$/.test(currentChars));
             }
           }
@@ -1173,14 +1201,14 @@ async function minify(value, options, partialMarkup) {
           text = collapseWhitespace(text, options, false, false, true);
         }
       }
-      if (options.processScripts && specialContentTags(currentTag)) {
+      if (options.processScripts && specialContentTags.has(currentTag)) {
         text = await processScript(text, options, currentAttrs);
       }
       if (isExecutableScript(currentTag, currentAttrs)) {
         text = await options.minifyJS(text);
       }
       if (isStyleSheet(currentTag, currentAttrs)) {
-        text = options.minifyCSS(text);
+        text = await options.minifyCSS(text);
       }
       if (options.removeOptionalTags && text) {
         // <html> may be omitted if first thing inside is not comment
@@ -1191,13 +1219,13 @@ async function minify(value, options, partialMarkup) {
         optionalStartTag = '';
         // </html> or </body> may be omitted if not followed by comment
         // </head>, </colgroup> or </caption> may be omitted if not followed by space or comment
-        if (compactTags(optionalEndTag) || (looseTags(optionalEndTag) && !/^\s/.test(text))) {
+        if (compactTags.has(optionalEndTag) || (looseTags.has(optionalEndTag) && !/^\s/.test(text))) {
           removeEndTag();
         }
         optionalEndTag = '';
       }
       charsPrevTag = /^\s*$/.test(text) ? prevTag : 'comment';
-      if (options.decodeEntities && text && !specialContentTags(currentTag)) {
+      if (options.decodeEntities && text && !specialContentTags.has(currentTag)) {
         // Escape any `&` symbols that start either:
         // 1) a legacy named character reference (i.e. one that doesn't end with `;`)
         // 2) or any other character reference (i.e. one that does end with `;`)
@@ -1250,11 +1278,11 @@ async function minify(value, options, partialMarkup) {
   if (options.removeOptionalTags) {
     // <html> may be omitted if first thing inside is not comment
     // <head> or <body> may be omitted if empty
-    if (topLevelTags(optionalStartTag)) {
+    if (topLevelTags.has(optionalStartTag)) {
       removeStartTag();
     }
     // except for </dt> or </thead>, end tags may be omitted if no more content in parent element
-    if (optionalEndTag && !trailingTags(optionalEndTag)) {
+    if (optionalEndTag && !trailingTags.has(optionalEndTag)) {
       removeEndTag();
     }
   }
@@ -1327,10 +1355,12 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   return options.collapseWhitespace ? collapseWhitespace(str, options, true, true) : str;
 }
 
-exports.minify = async function (value, options) {
+export const minify = async function (value, options) {
   const start = Date.now();
   options = processOptions(options || {});
-  const result = await minify(value, options);
+  const result = await minifyHTML(value, options);
   options.log('minified in: ' + (Date.now() - start) + 'ms');
   return result;
 };
+
+export default { minify };

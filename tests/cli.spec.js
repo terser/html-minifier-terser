@@ -46,7 +46,7 @@ const execCli = (args = []) => {
   }
 };
 
-describe.skip('cli', () => {
+describe('cli', () => {
   beforeEach(async () => {
     await removeFixture('tmp');
   });

@@ -31,7 +31,7 @@ import { createRequire } from 'module';
 import { camelCase } from 'camel-case';
 import { paramCase } from 'param-case';
 import { Command } from 'commander';
-import { minify } from './src/htmlminifier.js';
+import { minify } from './legacy/htmlminifier.js';
 
 const require = createRequire(import.meta.url);
 

@@ -136,7 +136,7 @@ export class HTMLParser {
         let textEnd = html.indexOf('<');
         if (textEnd === 0) {
           // Comment:
-          if (/^<!--/.test(html)) {
+          if (html.startsWith('<!--')) {
             const commentEnd = html.indexOf('-->');
 
             if (commentEnd >= 0) {
@@ -150,7 +150,7 @@ export class HTMLParser {
           }
 
           // https://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
-          if (/^<!\[/.test(html)) {
+          if (html.startsWith('<![')) {
             const conditionalEnd = html.indexOf(']>');
 
             if (conditionalEnd >= 0) {

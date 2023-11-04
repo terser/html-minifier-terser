@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: [14, 16, 18, 'current']
+        node: [14, 16, 18, 20, 'current']
     name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     steps:
@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: [14, 16, 18, 'current']
+        node: [14, 16, 18, 20, 'current']
     name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     steps:

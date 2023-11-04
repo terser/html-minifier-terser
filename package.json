@@ -41,7 +41,7 @@
     "uglify"
   ],
   "engines": {
-    "node": "^14.13.1 || >=16.0.0"
+    "node": ">=14.13 || >=16"
   },
   "type": "module",
   "main": "./dist/htmlminifier.cjs",

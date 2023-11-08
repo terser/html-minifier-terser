@@ -2838,6 +2838,88 @@ test('processScripts', async () => {
   })).toBe(output);
 });
 
+test.each([
+  ['', '', true],
+  ['a', 'a', true],
+  ['{}', '{}', true],
+  ['\t\n {\t\n }\t\n ', '{}', true],
+  ['\t\n {\t\n "key":\t\n "value\\t\\n value"\t\n }\t\n ', '{"key":"value\\t\\n value"}', true],
+  ['', '', false],
+  ['a', 'a', false],
+  ['{}', '{}', false],
+  ['\t\n {\t\n }\t\n ', '\t\n {\t\n }\t\n ', false],
+  ['\t\n {\t\n "key":\t\n "value\t\n value"\t\n }\t\n ', '\t\n {\t\n "key":\t\n "value\t\n value"\t\n }\t\n ', false]
+])('minifyJSON %#', async (input, output, collapseWhitespace) => {
+  const types = [
+    'application/x+json',
+    'importmap',
+    'application/ld+json',
+    'application/x+json'
+  ];
+  for (const type of types) {
+    expect(await minify(`<script type="${type}">${input}</script>`, {
+      collapseWhitespace,
+      processScripts: [type]
+    })).toBe(`<script type="${type}">${output}</script>`);
+  }
+});
+
+test.each([
+  [
+    'application/json',
+    '\t\n{\n    "key" \t: {\n      "value":"v \\t\\n\\"1\\"","otherKey": "o",\n  \t    "otherKey": { "arr":\n[ "s", 1, -2.1E+35, \ttrue, false, null], "i": -4, "x": 0.2, "t": true, "f":false, "n": null  }\n  }\n} \n',
+    '{"key":{"value":"v \\t\\n\\"1\\"","otherKey":{"arr":["s",1,-2.1e+35,true,false,null],"i":-4,"x":0.2,"t":true,"f":false,"n":null}}}',
+    true
+  ],
+  [
+    'application/json',
+    '\t\n{\n    "key" \t: {\n      "value":"v \\t\\n\\"1\\"",\n  \t    "otherKey": { "arr":\n[ "s", 1, -2.1e+35, \ttrue, false, null], "i": -4, "x": 0.2, "t": true, "f":false, "n": null  }\n  }\n} \n',
+    '\t\n{\n    "key" \t: {\n      "value":"v \\t\\n\\"1\\"",\n  \t    "otherKey": { "arr":\n[ "s", 1, -2.1e+35, \ttrue, false, null], "i": -4, "x": 0.2, "t": true, "f":false, "n": null  }\n  }\n} \n',
+    false
+  ],
+  [
+    'importmap',
+    '\t\n{\n    "imports": {\n      "shapes/": "./module/shapes/",\n  \t    "othershapes": "https://example.com/modules/shapes/"\n    }\n  }\n',
+    '{"imports":{"shapes/":"./module/shapes/","othershapes":"https://example.com/modules/shapes/"}}',
+    true
+  ],
+  [
+    'importmap',
+    '\t\n{\n    "imports": {\n      "shapes/": "./module/shapes/",\n  \t    "othershapes": "https://example.com/modules/shapes/"\n    }\n  }\n',
+    '\t\n{\n    "imports": {\n      "shapes/": "./module/shapes/",\n  \t    "othershapes": "https://example.com/modules/shapes/"\n    }\n  }\n',
+    false
+  ],
+  [
+    'application/ld+json',
+    '\t\n{      "@context":\n"https://json-ld.org/contexts/person.jsonld",\n  \t    "@id":"http://dbpedia.org/resource/John_Lennon"\n, "name": "John Lennon", "born": "1940-10-09", "spouse": "http://dbpedia.org/resource/Cynthia_Lennon"\n}\n',
+    '{"@context":"https://json-ld.org/contexts/person.jsonld","@id":"http://dbpedia.org/resource/John_Lennon","name":"John Lennon","born":"1940-10-09","spouse":"http://dbpedia.org/resource/Cynthia_Lennon"}',
+    true
+  ],
+  [
+    'application/ld+json',
+    '\t\n{      "@context":\n"https://json-ld.org/contexts/person.jsonld",\n  \t    "@id":"http://dbpedia.org/resource/John_Lennon"\n, "name": "John Lennon", "born": "1940-10-09", "spouse": "http://dbpedia.org/resource/Cynthia_Lennon"\n}\n',
+    '\t\n{      "@context":\n"https://json-ld.org/contexts/person.jsonld",\n  \t    "@id":"http://dbpedia.org/resource/John_Lennon"\n, "name": "John Lennon", "born": "1940-10-09", "spouse": "http://dbpedia.org/resource/Cynthia_Lennon"\n}\n',
+    false
+  ],
+  [
+    'application/x+json',
+    '\t\n{ "key": "ignored",  "key": -2.1E+35     \n}\n',
+    '{"key":-2.1e+35}',
+    true
+  ],
+  [
+    'application/x+json',
+    '\t\n{ "key": "ignored",  "key": -2.1E+35}     \n}\n',
+    '\t\n{ "key": "ignored",  "key": -2.1E+35}     \n}\n',
+    false
+  ]
+])('minifyJSON - with type %#', async (type, input, output, collapseWhitespace) => {
+  expect(await minify(`<script type="${type}">${input}</script>`, {
+    collapseWhitespace,
+    processScripts: [type]
+  })).toBe(`<script type="${type}">${output}</script>`);
+});
+
 test('ignore', async () => {
   let input, output;
 

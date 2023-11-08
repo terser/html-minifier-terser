@@ -123,9 +123,13 @@ Minifier options like `sortAttributes` and `sortClassName` won't impact the plai
 
 If you have chunks of markup you would like preserved, you can wrap them `<!-- htmlmin:ignore -->`.
 
-### Minifying JSON-LD
+### Minifying JSON-structured script tags
 
-You can minify script tags with JSON-LD by setting the option `{ processScripts: ['application/ld+json'] }`. Note that this minification is very rudimentary, it is mainly useful for removing newlines and excessive whitespace. 
+You can minify JSON-structured script tags by supplying an appropriate MIME type and `collapseWhitespace: true`; e.g.: 
+
+* `{ processScripts: ['importmap'], collapseWhitespace: true }`
+* `{ processScripts: ['application/json'], collapseWhitespace: true }`
+* `{ processScripts: ['application/ld+json'], collapseWhitespace: true }`
 
 ### Preserving SVG tags
 

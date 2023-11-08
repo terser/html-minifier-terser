@@ -388,7 +388,9 @@ async function processScript(text, options, currentAttrs) {
   for (let i = 0, len = currentAttrs.length; i < len; i++) {
     if (currentAttrs[i].name.toLowerCase() === 'type' &&
       options.processScripts.indexOf(currentAttrs[i].value) > -1) {
-      return await minifyHTML(text, options);
+      return isJSONScriptType(currentAttrs[i].value)
+        ? minifyJSON(text, options)
+        : await minifyHTML(text, options);
     }
   }
   return text;
@@ -841,6 +843,26 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
       return sorter.sort(value.split(/[ \n\f\r]+/)).join(' ');
     };
   }
+}
+
+function isJSONScriptType(type) {
+  if (type === 'importmap') {
+    return true;
+  } else if (/^application\/(.+\+)?json$/.test(type)) {
+    return true;
+  }
+  return false;
+}
+
+function minifyJSON(value, options) {
+  if (options.collapseWhitespace) {
+    try {
+      return JSON.stringify(JSON.parse(value));
+    } catch (e) {
+      // ignore
+    }
+  }
+  return value;
 }
 
 async function minifyHTML(value, options, partialMarkup) {

@@ -74,11 +74,10 @@
     "prepare": "is-ci || husky install"
   },
   "dependencies": {
-    "camel-case": "^4.1.2",
+    "change-case": "^5.4.4",
     "clean-css": "~5.3.2",
     "commander": "^10.0.0",
     "entities": "^4.4.0",
-    "param-case": "^3.0.4",
     "relateurl": "^0.2.7",
     "terser": "^5.15.1"
   },

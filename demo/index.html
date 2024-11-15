@@ -20,9 +20,36 @@
     <div class="main" x-data="minifier" x-cloak>
       <div class="workspace">
         <textarea rows="8" cols="40" class="input-content" x-model="input"></textarea>
-        <div class="mr-1"><button type="button" @click="minify()">Minify</button></div>
+        <div class="mr-1">
+          <button type="button" @click="minify()">Minify</button>
+          <template x-if="supportsFileReader">
+            <input type="file" x-ref="file" x-on:change="selectedFile">
+          </template>
+          <p x-text="stats.text" :class="stats.result"></p>
+          <template x-if="variants.length > 0">
+            <table>
+              <thead>
+                <tr>
+                  <td>Minified time (<span x-text="elapsed"></span> ms)</td>
+                  <td>Size (bytes)</td>
+                  <td>Compressed size (bytes)</td>
+                  <td>Compressed time (ms)</td>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="variant in variants">
+                  <tr>
+                    <td align="right" x-text="variant.title"></td>
+                    <td align="right" x-text="variant.size"></td>
+                    <td align="right" x-text="variant.compression.size"></td>
+                    <td align="right" x-text="variant.compression.elapsed"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </template>
+        </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>
-        <p x-text="stats.text" :class="stats.result"></p>
       </div>
       <div class="options">
         <form class="mr-1">

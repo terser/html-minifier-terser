@@ -75,6 +75,13 @@ Alpine.data('minifier', () => ({
       this.minify();
     };
   },
+  async minifyHTML(code, options) {
+    try {
+      return [null, await HTMLMinifier.minify(code, options)];
+    } catch (error) {
+      return [error, code];
+    }
+  },
   async minify() {
     this.stats = {
       result: '',
@@ -85,7 +92,7 @@ Alpine.data('minifier', () => ({
     const options = getOptions(this.options);
     try {
       const start = performance.now();
-      const data = await HTMLMinifier.minify(this.input, options);
+      const [err, data] = await this.minifyHTML(this.input, options);
       const end = performance.now() - start;
       this.output = data;
       this.stats.result = 'success';
@@ -110,6 +117,9 @@ Alpine.data('minifier', () => ({
         .sort((a, b) => a.compression.size - b.compression.size);
       this.stats.variants = variants;
       this.selectVariant(variants[0]);
+      if (err) {
+        throw err;
+      }
     } catch (err) {
       this.stats.result = 'failure';
       this.stats.text = err + '';

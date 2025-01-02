@@ -23,11 +23,10 @@
         <div class="mr-1">
           <button type="button" @click="minify()">Minify</button>
           <template x-if="support.fileReader">
-            <input type="file" x-model="files" x-on:change="selectFile">
+            <input type="file" x-ref="file" @change="selectFile">
           </template>
         </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>
-        <p x-text="stats.text" :class="stats.result"></p>
         <template x-if="stats.variants.length != 0">
           <table width="100%" cellpadding="5" border="1">
             <thead>
@@ -59,6 +58,7 @@
             </tbody>
           </table>
         </template>
+        <p x-text="stats.text" :class="stats.result"></p>
       </div>
       <div class="options">
         <form class="mr-1">

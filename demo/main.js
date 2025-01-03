@@ -3,7 +3,15 @@ import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
 import pkg from '../package.json';
 import defaultOptions from './defaultOptions.js';
 import Pako from 'pako';
-
+const fileToResult = async (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new window.FileReader();
+    reader.readAsText(file);
+    reader.onload = () => {
+      resolve(reader.result);
+    };
+  });
+};
 const percentage = (a, b) => {
   const diff = a - b;
   const savings = ((100 * diff / a) || 0).toFixed(2);
@@ -63,17 +71,13 @@ Alpine.data('minifier', () => ({
       elapsed: (elapsed + performance.now() - start).toFixed(2)
     };
   },
-  selectFile(event) {
-    const file = event.target.files[0];
-    const reader = new window.FileReader();
-    if (event.target.files.length < 1) {
-      return;
-    }
-    reader.readAsText(file);
-    reader.onload = () => {
-      this.input = reader.result;
-      this.minify();
-    };
+  async selectFile(event) {
+    this.minify(await Promise.all(
+      [...event.target.files].map(async (file) => ({
+        name: file.name,
+        value: await fileToResult(file)
+      }))
+    ));
   },
   async minifyHTML(code, options) {
     try {
@@ -82,44 +86,49 @@ Alpine.data('minifier', () => ({
       return [error, code];
     }
   },
-  async minify() {
+  async minifyInput() {
+    this.minify([
+      {
+        name: 'Input',
+        value: this.input
+      }
+    ]);
+  },
+  async variants(name, value) {
+    const options = getOptions(this.options);
+    const start = performance.now();
+    const [err, data] = await this.minifyHTML(value, options);
+    const end = performance.now() - start;
+    const algorithms = ['gzip', 'deflate'];
+    const levels = [4, 6, 9];
+    const variants = [
+      [`${name} minified`, data, end],
+      [`${name} raw`, value, 0]
+    ].flatMap(([title, data, elapsed]) => (
+      [
+        { title, compression: this.compress('raw', data, 0) },
+        ...algorithms.flatMap((alg) =>
+          levels.map(
+            level => ({
+              title: `${title} ${alg} ${level}`,
+              compression: this.compress(alg, data, level)
+            })
+          )
+        )
+      ]
+    ));
+    return { err, variants };
+  },
+  async minify(values) {
     this.stats = {
       result: '',
       text: '',
       variants: []
     };
-
-    const options = getOptions(this.options);
     try {
-      const start = performance.now();
-      const [err, data] = await this.minifyHTML(this.input, options);
-      const end = performance.now() - start;
-      this.output = data;
-      this.stats.result = 'success';
-      const algorithms = ['gzip', 'deflate'];
-      const levels = [4, 6, 9];
-      const variants = [
-        ['minified', data, end],
-        ['raw', this.input, 0]
-      ].flatMap(([title, data, elapsed]) => (
-        [
-          { title, compression: this.compress('raw', data, 0) },
-          ...algorithms.flatMap((alg) =>
-            levels.map(
-              level => ({
-                title: `${title} ${alg} ${level}`,
-                compression: this.compress(alg, data, level)
-              })
-            )
-          )
-        ]
-      ))
+      this.stats.variants = (await Promise.all(values.map((val) => this.variants(val.name, val.value)))).flatMap(result => result.variants)
         .sort((a, b) => a.compression.size - b.compression.size);
-      this.stats.variants = variants;
-      this.selectVariant(variants[0]);
-      if (err) {
-        throw err;
-      }
+      this.selectVariant(this.stats.variants[0]);
     } catch (err) {
       this.stats.result = 'failure';
       this.stats.text = err + '';

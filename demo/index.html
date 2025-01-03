@@ -21,9 +21,9 @@
       <div class="workspace">
         <textarea rows="8" cols="40" class="input-content" x-model="input"></textarea>
         <div class="mr-1">
-          <button type="button" @click="minify()">Minify</button>
+          <button type="button" @click="minifyInput()">Minify</button>
           <template x-if="support.fileReader">
-            <input type="file" x-ref="file" @change="selectFile">
+            <input type="file" x-ref="file" multiple @change="selectFile">
           </template>
         </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>

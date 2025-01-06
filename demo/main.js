@@ -126,9 +126,14 @@ Alpine.data('minifier', () => ({
       variants: []
     };
     try {
-      this.stats.variants = (await Promise.all(values.map((val) => this.variants(val.name, val.value)))).flatMap(result => result.variants)
-        .sort((a, b) => a.compression.size - b.compression.size);
-      this.selectVariant(this.stats.variants[0]);
+      const results = await Promise.all(values.map(({ name, value }) => this.variants(name, value)));
+      const variants = results.flatMap(result => result.variants).sort((a, b) => a.compression.size - b.compression.size);
+      const errors = results.filter(result => result.err).map(result => result.err);
+      this.stats.variants = variants;
+      variants && this.selectVariant(variants[0]);
+      if (errors.length) {
+        throw new Error(errors.map(String).join('\n'));
+      }
     } catch (err) {
       this.stats.result = 'failure';
       this.stats.text = err + '';

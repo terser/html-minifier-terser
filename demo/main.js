@@ -128,11 +128,11 @@ Alpine.data('minifier', () => ({
     try {
       const results = await Promise.all(values.map(({ name, value }) => this.variants(name, value)));
       const variants = results.flatMap(result => result.variants).sort((a, b) => a.compression.size - b.compression.size);
-      const errors = results.filter(result => result.err).map(result => result.err);
+      const errors = results.filter(result => result.err).map(result => '' + result.err);
       this.stats.variants = variants;
       variants && this.selectVariant(variants[0]);
       if (errors.length) {
-        throw new Error(errors.map(String).join('\n'));
+        throw new Error(errors.join('\n'));
       }
     } catch (err) {
       this.stats.result = 'failure';

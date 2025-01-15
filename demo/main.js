@@ -1,8 +1,29 @@
+import 'lodash.product';
+import _ from 'lodash';
 import Alpine from 'alpinejs';
 import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
 import pkg from '../package.json';
 import defaultOptions from './defaultOptions.js';
 import Pako from 'pako';
+
+const algorithms = ['gzip', 'deflate'];
+const levels = [4, 6, 9];
+const minifierVariants = [
+  ['Original', null],
+  [
+    'Attribute With Quotes',
+    {
+      removeAttributeQuotes: false
+    }
+  ],
+  [
+    'Attribute Without Quotes',
+    {
+      removeAttributeQuotes: true
+    }
+  ]
+];
+
 const fileToResult = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new window.FileReader();
@@ -14,7 +35,7 @@ const fileToResult = async (file) => {
 };
 const percentage = (a, b) => {
   const diff = a - b;
-  const savings = ((100 * diff / a) || 0).toFixed(2);
+  const savings = ((100 * diff) / a || 0).toFixed(2);
   return savings;
 };
 
@@ -58,7 +79,7 @@ Alpine.data('minifier', () => ({
   support: {
     fileReader: 'FileReader' in window
   },
-  compress(alg, data, level, elapsed = 0) {
+  compress(alg, data, level) {
     const start = performance.now();
     const compressed =
       alg === 'raw'
@@ -68,16 +89,18 @@ Alpine.data('minifier', () => ({
         });
     return {
       size: compressed.length,
-      elapsed: (elapsed + performance.now() - start).toFixed(2)
+      elapsed: (performance.now() - start).toFixed(2)
     };
   },
   async selectFile(event) {
-    this.minify(await Promise.all(
-      [...event.target.files].map(async (file) => ({
-        name: file.name,
-        value: await fileToResult(file)
-      }))
-    ));
+    this.minify(
+      await Promise.all(
+        [...event.target.files].map(async (file) => ({
+          name: file.name,
+          value: await fileToResult(file)
+        }))
+      )
+    );
   },
   async minifyHTML(code, options) {
     try {
@@ -94,51 +117,36 @@ Alpine.data('minifier', () => ({
       }
     ]);
   },
+
   async variants(name, value) {
     const options = getOptions(this.options);
-    const optionVariants = [
-      ['Attribute With Quotes', {
-        removeAttributeQuotes: false
-      }],
-      ['Attribute Without Quotes', {
-        removeAttributeQuotes: true
-      }]
-    ];
-    const results = await Promise.all(optionVariants.map(async ([variantName, variantOptions]) =>
-      this.minifyVariants(
-        `${name} ${variantName}`, value, {
-          ...options,
-          ...variantOptions
-        })
-    ));
-    const err = results.filter(r => r.err).map(r => r.err).join('\n');
-    const variants = results.flatMap(r => r.variants);
-    return { err, variants };
-  },
-  async minifyVariants(name, value, options) {
-    const start = performance.now();
-    const [err, data] = await this.minifyHTML(value, options);
-    const end = performance.now() - start;
-    const algorithms = ['gzip', 'deflate'];
-    const levels = [4, 6, 9];
+    let err = null;
+    const sources = await Promise.all(
+      minifierVariants.map(async ([name, minifierOptions]) => {
+        if (minifierOptions == null) {
+          return { name, data: value };
+        }
+        minifierOptions = { ...options, ...minifierOptions };
+        const [minifierErr, data] = await this.minifyHTML(value, minifierOptions);
+        err = minifierErr;
+        return { name, data };
+      })
+    );
     const variants = [
-      [`${name} minified`, data, end],
-      [`${name} raw`, value, 0]
-    ].flatMap(([title, data, elapsed]) => (
-      [
-        { data, value, title, compression: this.compress('raw', data, 0) },
-        ...algorithms.flatMap((alg) =>
-          levels.map(
-            level => ({
-              value,
-              data,
-              title: `${title} ${alg} ${level}`,
-              compression: this.compress(alg, data, level)
-            })
-          )
-        )
-      ]
-    ));
+      {
+        value,
+        data: value,
+        title: `${name} Raw`,
+        compression: this.compress('raw', value, 0)
+      },
+      ...(await Promise.all(_.product(sources, algorithms, levels).map(
+        async ([{ name: minifierName, data }, alg, level]) => ({
+          value,
+          data,
+          title: `${name} ${minifierName} ${alg} ${level}`,
+          compression: this.compress(alg, data, level)
+        })
+      )))];
     return { err, variants };
   },
   async minify(values) {
@@ -148,9 +156,15 @@ Alpine.data('minifier', () => ({
       variants: []
     };
     try {
-      const results = await Promise.all(values.map(({ name, value }) => this.variants(name, value)));
-      const variants = results.flatMap(result => result.variants).sort((a, b) => a.compression.size - b.compression.size);
-      const errors = results.filter(result => result.err).map(result => '' + result.err);
+      const results = await Promise.all(
+        values.map(({ name, value }) => this.variants(name, value))
+      );
+      const variants = results
+        .flatMap((result) => result.variants)
+        .sort((a, b) => a.compression.size - b.compression.size);
+      const errors = results
+        .filter((result) => result.err)
+        .map((result) => '' + result.err);
       this.stats.variants = variants;
       variants && this.selectVariant(variants[0]);
       if (errors.length) {
@@ -166,10 +180,16 @@ Alpine.data('minifier', () => ({
     this.selectedVariant = selectedVariant;
     this.input = selectedVariant.value;
     this.output = selectedVariant.data;
-    this.stats.variants.forEach(variant => {
+    this.stats.variants.forEach((variant) => {
       variant.ratio = {
-        size: percentage(selectedVariant.compression.size, variant.compression.size),
-        elapsed: percentage(selectedVariant.compression.elapsed, variant.compression.elapsed)
+        size: percentage(
+          selectedVariant.compression.size,
+          variant.compression.size
+        ),
+        elapsed: percentage(
+          selectedVariant.compression.elapsed,
+          variant.compression.elapsed
+        )
       };
     });
   },

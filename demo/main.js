@@ -96,6 +96,26 @@ Alpine.data('minifier', () => ({
   },
   async variants(name, value) {
     const options = getOptions(this.options);
+    const optionVariants = [
+      ['Attribute With Quotes', {
+        removeAttributeQuotes: false
+      }],
+      ['Attribute Without Quotes', {
+        removeAttributeQuotes: true
+      }]
+    ];
+    const results = await Promise.all(optionVariants.map(async ([variantName, variantOptions]) =>
+      this.minifyVariants(
+        `${name} ${variantName}`, value, {
+          ...options,
+          ...variantOptions
+        })
+    ));
+    const err = results.filter(r => r.err).map(r => r.err).join('\n');
+    const variants = results.flatMap(r => r.variants);
+    return { err, variants };
+  },
+  async minifyVariants(name, value, options) {
     const start = performance.now();
     const [err, data] = await this.minifyHTML(value, options);
     const end = performance.now() - start;
@@ -106,10 +126,12 @@ Alpine.data('minifier', () => ({
       [`${name} raw`, value, 0]
     ].flatMap(([title, data, elapsed]) => (
       [
-        { title, compression: this.compress('raw', data, 0) },
+        { data, value, title, compression: this.compress('raw', data, 0) },
         ...algorithms.flatMap((alg) =>
           levels.map(
             level => ({
+              value,
+              data,
               title: `${title} ${alg} ${level}`,
               compression: this.compress(alg, data, level)
             })
@@ -142,6 +164,8 @@ Alpine.data('minifier', () => ({
   },
   selectVariant(selectedVariant) {
     this.selectedVariant = selectedVariant;
+    this.input = selectedVariant.value;
+    this.output = selectedVariant.data;
     this.stats.variants.forEach(variant => {
       variant.ratio = {
         size: percentage(selectedVariant.compression.size, variant.compression.size),

@@ -6,10 +6,8 @@ import pkg from '../package.json';
 import defaultOptions from './defaultOptions.js';
 import Pako from 'pako';
 
-const algorithms = ['gzip', 'deflate'];
-const levels = [4, 6, 9];
 const minifierVariants = [
-  ['Original', null],
+  ['raw', null],
   [
     'Attribute With Quotes',
     {
@@ -79,6 +77,7 @@ Alpine.data('minifier', () => ({
   support: {
     fileReader: 'FileReader' in window
   },
+  selectedVariant: null,
   compress(alg, data, level) {
     const start = performance.now();
     const compressed =
@@ -118,6 +117,9 @@ Alpine.data('minifier', () => ({
     ]);
   },
 
+  dataUrl() {
+    return `data:text/html,${encodeURIComponent(this.selectedVariant.data)}`;
+  },
   async variants(name, value) {
     const options = getOptions(this.options);
     let err = null;
@@ -132,22 +134,28 @@ Alpine.data('minifier', () => ({
         return { name, data };
       })
     );
-    const variants = [
-      {
-        value,
-        data: value,
-        title: `${name} Raw`,
-        compression: this.compress('raw', value, 0)
-      },
-      ...(await Promise.all(_.product(sources, algorithms, levels).map(
-        async ([{ name: minifierName, data }, alg, level]) => ({
+    const levels = (options.compressionLevels || '').split(',').filter(Boolean).filter(Boolean).map(
+      (level) => parseInt(level)
+    );
+    const algorithms = (options.compressionAlgorithms || '').split(',');
+    const algLevels = [
+      ['raw', 0],
+      ..._.product(algorithms, levels)
+    ];
+    const variants = _.product(sources, algLevels).map(
+      async ([{ name: optionName, data }, [alg, level]]) => {
+        const minifiedTitle = optionName === 'raw' ? '' : ` ${optionName}`;
+        const algTitle = alg === 'raw' ? '' : ` ${alg} ${level}`;
+        return ({
+          name,
           value,
           data,
-          title: `${name} ${minifierName} ${alg} ${level}`,
+          title: `${name}${minifiedTitle}${algTitle}`,
           compression: this.compress(alg, data, level)
-        })
-      )))];
-    return { err, variants };
+        });
+      }
+    );
+    return { err, variants: await Promise.all(variants) };
   },
   async minify(values) {
     this.stats = {

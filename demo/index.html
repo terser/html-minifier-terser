@@ -25,6 +25,11 @@
           <template x-if="support.fileReader">
             <input type="file" x-ref="file" multiple @change="selectFile">
           </template>
+          <template x-if="selectedVariant">
+            <a :href="dataUrl()" :download="selectedVariant.name">
+              Download
+            </a>
+          </template>
         </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>
         <template x-if="stats.variants.length != 0">

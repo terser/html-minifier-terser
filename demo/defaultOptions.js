@@ -1,10 +1,16 @@
 export default [
   {
-    id: 'compressionLevel',
-    type: 'number',
-    label: 'Compression level',
-    helpText: 'Gzip compression level',
-    value: 6
+    id: 'compressionLevels',
+    type: 'text',
+    label: 'Compression levels',
+    helpText: 'Comma-delimited string corresponding to compression levels. (e.g. <code>0-9</code>)',
+    value: '4,6,9'
+  }, {
+    id: 'compressionAlgorithms',
+    type: 'text',
+    label: 'Compression algorithms',
+    helpText: 'Comma-delimited string corresponding to compression algorithms. (e.g. <code>gzip,deflate</code>)',
+    value: 'gzip,deflate'
   },
   {
     id: 'caseSensitive',

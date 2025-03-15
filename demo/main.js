@@ -9,15 +9,29 @@ import Pako from 'pako';
 const minifierVariants = [
   ['raw', null],
   [
+    'Sorted Attributes', {
+      sortAttributes: true,
+      sortClassName: true,
+    }
+  ],
+  [
+    'Unsorted Attributes', {
+      sortAttributes: false,
+      sortClassName: false,
+    }
+  ],
+  [
     'Attribute With Quotes',
     {
-      removeAttributeQuotes: false
+      removeAttributeQuotes: false,
+      removeTagWhitespace: false,
     }
   ],
   [
     'Attribute Without Quotes',
     {
-      removeAttributeQuotes: true
+      removeAttributeQuotes: true,
+      removeTagWhitespace: true,
     }
   ]
 ];

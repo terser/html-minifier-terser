@@ -20,8 +20,49 @@
     <div class="main" x-data="minifier" x-cloak>
       <div class="workspace">
         <textarea rows="8" cols="40" class="input-content" x-model="input"></textarea>
-        <div class="mr-1"><button type="button" @click="minify()">Minify</button></div>
+        <div class="mr-1">
+          <button type="button" @click="minifyInput()">Minify</button>
+          <template x-if="support.fileReader">
+            <input type="file" x-ref="file" multiple @change="selectFile">
+          </template>
+          <template x-if="selectedVariant">
+            <a :href="dataUrl()" :download="selectedVariant.name">
+              Download
+            </a>
+          </template>
+        </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>
+        <template x-if="stats.variants.length != 0">
+          <table width="100%" cellpadding="5" border="1">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th colspan="2">Size (bytes / percentage)</th>
+                <th colspan="2">Elapsed (ms / percentage)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="variant in stats.variants">
+                <tr @click="selectVariant(variant)"
+                  :style="variant.title == selectedVariant.title ? 'border-bottom: 1px solid black' : ''">
+                  <td x-text="variant.title"></td>
+                  <td align="right">
+                    <span x-text="variant.compression.size"></span>
+                  </td>
+                  <td align="right">
+                    <span x-text="variant.ratio.size"></span>%
+                  </td>
+                  <td align="right">
+                    <span x-text="variant.compression.elapsed"></span>
+                  </td>
+                  <td align="right">
+                    <span x-text="variant.ratio.elapsed"></span>%
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </template>
         <p x-text="stats.text" :class="stats.result"></p>
       </div>
       <div class="options">

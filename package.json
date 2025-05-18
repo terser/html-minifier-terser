@@ -23,7 +23,7 @@
     "@rollup/plugin-terser": "^0.4.3",
     "alpinejs": "^3.12.2",
     "commitlint-config-non-conventional": "^1.0.1",
-    "eslint": "^9.25.1",
+    "eslint": "^8.0.1",
     "eslint-config-standard": "^17.1.0",
     "husky": "^9.1.7",
     "is-ci": "^3.0.1",
@@ -81,14 +81,14 @@
   "scripts": {
     "build": "rollup -c",
     "build:docs": "vite build --base /html-minifier-guard/",
+    "deploy": "npm run build:docs",
     "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install",
     "serve": "npm run build && vite",
     "test": "npm run test:node",
-    "test:node": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest verbose --watch",
-    "test:web": "NODE_OPTIONS=--experimental-vm-modules jest --verbose --environment=jsdom",
-    "deploy": "npm run build:docs"
+    "test:node": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest verbose --watch",
+    "test:web": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --environment=jsdom"
   },
   "type": "module",
   "version": "7.2.0"

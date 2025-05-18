@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 
 const config = defineConfig({
   root: 'demo',
+  base: '/html-minifier-guard/', // Base path for GitHub Pages
   build: {
     outDir: 'build'
   },

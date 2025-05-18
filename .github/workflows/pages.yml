@@ -59,7 +59,7 @@ jobs:
 
     steps:
       - name: "Debug artifact"
-        run: { echo "Artifact name: github-pages" }
+        run: echo "Artifact name: github-pages"
 
       - name: "Deploy to GitHub Pages"
         id: deployment

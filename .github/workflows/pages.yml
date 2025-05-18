@@ -47,6 +47,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+          name: github-pages # Ensure the artifact name matches what deploy-pages expects
 
   deploy:
     runs-on: ubuntu-latest
@@ -57,6 +58,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      - name: "Debug artifact"
+        run: { echo "Artifact name: github-pages" }
+
       - name: "Deploy to GitHub Pages"
         id: deployment
         uses: actions/deploy-pages@v2

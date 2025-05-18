@@ -1,4 +1,4 @@
-name: CI
+name: "CI"
 
 on: [push, pull_request]
 
@@ -8,7 +8,7 @@ jobs:
       matrix:
         platform: [ubuntu-latest]
         node: [14, 16, 18, 'current']
-    name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
+    name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
@@ -16,11 +16,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - name: Install npm latest
+      - name: "Install npm latest"
         run: npm i -g npm
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: npm ci
-      - name: Run tests
+      - name: "Run tests"
         run: npm run test:node
 
   test-web:
@@ -28,7 +28,7 @@ jobs:
       matrix:
         platform: [ubuntu-latest]
         node: [14, 16, 18, 'current']
-    name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
+    name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
@@ -36,9 +36,9 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - name: Install npm latest
+      - name: "Install npm latest"
         run: npm i -g npm
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: npm ci
-      - name: Run tests
+      - name: "Run tests"
         run: npm run test:web

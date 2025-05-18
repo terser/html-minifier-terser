@@ -25,7 +25,7 @@ const progress = new Progress('[:bar] :etas :fileName', {
 });
 
 const table = new Table({
-  head: ['File', 'Before', 'After', 'Minimize', 'Will Peavy', 'htmlcompressor.com', 'Savings', 'Time'],
+  head: ['File', 'Before', 'After', 'Minimize', 'htmlcompressor.com', 'Savings', 'Time'],
   colWidths: [fileNames.reduce(function (length, fileName) {
     return Math.max(length, fileName.length);
   }, 0) + 2, 25, 25, 25, 25, 25, 20, 10]
@@ -133,7 +133,6 @@ function generateMarkdownTable() {
     'Original size (KB)',
     'HTMLMinifier',
     'minimize',
-    'Will Peavy',
     'htmlcompressor.com'
   ];
 
@@ -205,7 +204,7 @@ run(fileNames.map(function (fileName) {
       brFilePath: path.join('./generated/', fileName + '.html.br')
     };
     const infos = {};
-    ['minifier', 'minimize', 'willpeavy', 'compressor'].forEach(function (name) {
+    ['minifier', 'minimize', 'compressor'].forEach(function (name) {
       infos[name] = {
         filePath: path.join('./generated/', fileName + '.' + name + '.html'),
         gzFilePath: path.join('./generated/', fileName + '.' + name + '.html.gz'),
@@ -287,46 +286,6 @@ run(fileNames.map(function (fileName) {
       });
     }
 
-    // @@ Remove
-    function testWillPeavy(done) {
-      readText(filePath, function (data) {
-        const url = new URL('https://www.willpeavy.com/tools/minifier/');
-        const options = {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        };
-
-        https.request(url, options, function (res) {
-          res.setEncoding('utf8');
-          let response = '';
-          res.on('data', function (chunk) {
-            response += chunk;
-          }).on('end', function () {
-            const info = infos.willpeavy;
-            if (res.statusCode === 200) {
-              // Extract result from <textarea/>
-              const start = response.indexOf('>', response.indexOf('<textarea'));
-              const end = response.lastIndexOf('</textarea>');
-              const result = response.slice(start + 1, end).replace(/<\\\//g, '</');
-              writeText(info.filePath, result, function () {
-                readSizes(info, done);
-              });
-            } else { // Site refused to process content
-              info.size = 0;
-              info.gzSize = 0;
-              info.lzSize = 0;
-              info.brSize = 0;
-              done();
-            }
-          });
-        }).end(new URLSearchParams({
-          html: data
-        }).toString());
-      });
-    }
-
     // @@ Check if tool is still accessible, if not, remove
     function testHTMLCompressor(done) {
       readText(filePath, function (data) {
@@ -398,7 +357,6 @@ run(fileNames.map(function (fileName) {
       },
       testHTMLMinifier,
       testMinimize,
-      testWillPeavy,
       testHTMLCompressor
     ], function () {
       const display = [

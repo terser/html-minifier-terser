@@ -87,7 +87,8 @@
     "test": "npm run test:node",
     "test:node": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest verbose --watch",
-    "test:web": "NODE_OPTIONS=--experimental-vm-modules jest --verbose --environment=jsdom"
+    "test:web": "NODE_OPTIONS=--experimental-vm-modules jest --verbose --environment=jsdom",
+    "deploy": "npm run build:docs"
   },
   "type": "module",
   "version": "7.2.0"

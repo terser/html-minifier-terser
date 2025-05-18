@@ -50,7 +50,7 @@
     "dist/",
     "src/"
   ],
-  "homepage": "https://terser.org/html-minifier-guard/",
+  "homepage": "https://j9t.github.io/html-minifier-guard/",
   "keywords": [
     "cli",
     "compress",

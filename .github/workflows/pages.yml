@@ -25,15 +25,7 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: "Cache Node.js modules"
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: "Setup Pages"
+      - name: "Setup GitHub Pages"
         uses: actions/configure-pages@v2
 
       - name: "Install dependencies"

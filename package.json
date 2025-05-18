@@ -76,7 +76,7 @@
   "license": "MIT",
   "main": "./dist/htmlminifier.cjs",
   "module": "./src/htmlminifier.js",
-  "name": "html-minifier-next",
+  "name": "@j9t/html-minifier-next",
   "repository": "https://github.com/j9t/html-minifier-next.git",
   "scripts": {
     "build": "rollup -c",

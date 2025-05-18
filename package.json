@@ -76,7 +76,7 @@
   "license": "MIT",
   "main": "./dist/htmlminifier.cjs",
   "module": "./src/htmlminifier.js",
-  "name": "@j9t/html-minifier-next",
+  "name": "html-minifier-next",
   "repository": "https://github.com/j9t/html-minifier-next.git",
   "scripts": {
     "build": "rollup -c",
@@ -91,5 +91,5 @@
     "test:web": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --environment=jsdom"
   },
   "type": "module",
-  "version": "1.0.2"
+  "version": "1.0.0"
 }

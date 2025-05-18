@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * html-minifier-guard CLI tool
+ * html-minifier-next CLI tool
  *
  * The MIT License (MIT)
  *

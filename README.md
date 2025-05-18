@@ -1,7 +1,7 @@
-# HTML Minifier Guard (HTMLMinifier)
+# HTML Minifier Next (HTMLMinifier)
 
-[![NPM version](https://img.shields.io/npm/v/html-minifier-guard.svg)](https://www.npmjs.com/package/html-minifier-guard)
-<!-- [![Build Status](https://github.com/j9t/html-minifier-guard/workflows/CI/badge.svg)](https://github.com/guard/html-minifier-guard/actions?workflow=CI) -->
+[![NPM version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
+<!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
 
 (This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. If the project is maintainable by me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)
 
@@ -12,31 +12,31 @@ HTMLMinifier is a highly **configurable**, **well-tested**, JavaScript-based HTM
 From NPM for use as a command line app:
 
 ```shell
-npm install html-minifier-guard -g
+npm install html-minifier-next -g
 ```
 
 From NPM for programmatic use:
 
 ```shell
-npm install html-minifier-guard
+npm install html-minifier-next
 ```
 
 ## Usage
 
 **Note** that almost all options are disabled by default. Experiment and find what works best for you and your project.
 
-For command line usage please see `html-minifier-guard --help` for a list of available options.
+For command line usage please see `html-minifier-next --help` for a list of available options.
 
 **Sample command line:**
 
 ```bash
-html-minifier-guard --collapse-whitespace --remove-comments --minify-js true
+html-minifier-next --collapse-whitespace --remove-comments --minify-js true
 ```
 
 ### Node.js
 
 ```js
-const { minify } = require('html-minifier-guard');
+const { minify } = require('html-minifier-next');
 
 const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true,

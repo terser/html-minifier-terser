@@ -1,9 +1,9 @@
 {
   "author": "Jens Oliver Meiert",
   "bin": {
-    "html-minifier-guard": "./cli.js"
+    "html-minifier-next": "./cli.js"
   },
-  "bugs": "https://github.com/j9t/html-minifier-guard/issues",
+  "bugs": "https://github.com/j9t/html-minifier-next/issues",
   "dependencies": {
     "camel-case": "^5.0.0",
     "clean-css": "~5.3.2",
@@ -50,7 +50,7 @@
     "dist/",
     "src/"
   ],
-  "homepage": "https://j9t.github.io/html-minifier-guard/",
+  "homepage": "https://j9t.github.io/html-minifier-next/",
   "keywords": [
     "cli",
     "compress",
@@ -76,11 +76,11 @@
   "license": "MIT",
   "main": "./dist/htmlminifier.cjs",
   "module": "./src/htmlminifier.js",
-  "name": "html-minifier-guard",
-  "repository": "https://github.com/j9t/html-minifier-guard.git",
+  "name": "html-minifier-next",
+  "repository": "https://github.com/j9t/html-minifier-next.git",
   "scripts": {
     "build": "rollup -c",
-    "build:docs": "vite build --base /html-minifier-guard/ --outDir build",
+    "build:docs": "vite build --base /html-minifier-next/ --outDir build",
     "deploy": "npm run build && npm run build:docs",
     "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install",

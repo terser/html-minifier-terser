@@ -15,7 +15,7 @@
   },
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "devDependencies": {
-    "@commitlint/cli": "^17.6.6",
+    "@commitlint/cli": "^19.8.1",
     "@jest/globals": "^29.5.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-json": "^6.0.0",

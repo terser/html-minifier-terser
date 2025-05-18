@@ -12,7 +12,7 @@ HTMLMinifier is a highly **configurable, well-tested, JavaScript-based HTML mini
 From npm for use as a command line app:
 
 ```shell
-npm i -g @j9t/html-minifier-next # experimental
+npm i -g @j9t/html-minifier-next
 ```
 
 From npm for programmatic use:

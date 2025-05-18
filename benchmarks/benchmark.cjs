@@ -136,17 +136,28 @@ function generateMarkdownTable() {
     'Will Peavy',
     'htmlcompressor.com'
   ];
+
   fileNames.forEach(function (fileName) {
+    // Add a check for `rows[fileName]`
+    if (!rows[fileName] || !rows[fileName].report) {
+      console.error(`Skipping ${fileName}: row or report is missing`);
+      return;
+    }
+
     const row = rows[fileName].report;
     row[2] = '**' + row[2] + '**';
   });
+
   const widths = headers.map(function (header, index) {
     let width = header.length;
     fileNames.forEach(function (fileName) {
-      width = Math.max(width, rows[fileName].report[index].length);
+      if (rows[fileName] && rows[fileName].report) {
+        width = Math.max(width, rows[fileName].report[index].length);
+      }
     });
     return width;
   });
+
   let content = '';
 
   function output(row) {
@@ -159,25 +170,25 @@ function generateMarkdownTable() {
 
   output(headers);
   widths.forEach(function (width, index) {
-    content += '|';
-    content += index === 1 ? ':' : ' ';
-    content += new Array(width + 1).join('-');
-    content += index === 0 ? ' ' : ':';
+    content += '| ' + '-'.repeat(width) + ' ';
   });
   content += '|\n';
-  fileNames.sort(function (a, b) {
-    const r = +rows[a].report[1];
-    const s = +rows[b].report[1];
-    return r < s ? -1 : r > s ? 1 : a < b ? -1 : a > b ? 1 : 0;
-  }).forEach(function (fileName) {
+
+  fileNames.forEach(function (fileName) {
+    if (!rows[fileName] || !rows[fileName].report) return; // Prevent outputting rows with missing data
     output(rows[fileName].report);
   });
+
   return content;
 }
 
 function displayTable() {
   fileNames.forEach(function (fileName) {
-    table.push(rows[fileName].display);
+    if (rows[fileName]) { // Ensure the `fileName` exists in rows
+      table.push(rows[fileName].display);
+    } else {
+      console.warn(`Warning: No data available for ${fileName}. Skipping.`);
+    }
   });
   console.log();
   console.log(table.toString());
@@ -439,14 +450,24 @@ run(fileNames.map(function (fileName) {
       } else if (status >= 300 && status < 400 && res.headers.location) {
         get(new URL(res.headers.location, site), callback);
       } else {
-        throw new Error('HTTP error ' + status + '\n' + site);
+        console.warn(`Warning: HTTP error ${status} for ${site}`);
+        callback(null); // Pass `null` to indicate failure
       }
+    }).on('error', function (err) {
+      console.error(`Error: Failed to fetch ${site} - ${err.message}`);
+      callback(null); // Pass `null` to indicate failure
     });
   }
 
   return function (done) {
     progress.tick(0, { fileName: fileName });
     get(urls[fileName], function (site) {
+      if (!site) {
+        console.warn(`Skipping ${fileName} due to download failure.`);
+        rows[fileName] = null; // Explicitly mark as skipped
+        done(); // Skip processing this file
+        return;
+      }
       processFile(site, done);
     });
   };

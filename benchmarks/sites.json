@@ -1,14 +1,15 @@
 {
-  "Amazon": "https://www.amazon.co.uk/",
+  "Amazon": "https://www.amazon.com/",
   "BBC": "https://www.bbc.co.uk/",
-  "Bootstrap CSS": "https://getbootstrap.com/docs/3.3/css/",
+  "Bootstrap": "https://getbootstrap.com/docs/",
   "Eloquent Javascript": "https://eloquentjavascript.net/1st_edition/print.html",
-  "ES draft": "https://tc39.github.io/ecma262/",
+  "ECMAScript": "https://tc39.es/ecma262/",
+  "Frontend Dogma": "https://frontenddogma.com/",
   "Google": "https://www.google.com/",
   "HTMLMinifier": "https://github.com/kangax/html-minifier",
   "NBC": "https://www.nbc.com/",
   "New York Times": "https://www.nytimes.com/",
-  "Stack Overflow": "https://stackoverflow.com/",
-  "Twitter": "https://twitter.com/",
-  "Wikipedia": "https://en.wikipedia.org/wiki/President_of_the_United_States"
+  "Mastodon": "https://mastodon.social/explore",
+  "United Nations": "https://www.un.org/",
+  "Wikipedia": "https://en.wikipedia.org/wiki/Main_Page"
 }

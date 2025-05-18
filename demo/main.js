@@ -281,7 +281,7 @@ Alpine.data('minifier', () => ({
 
       this.output = data;
       this.stats.result = 'success';
-      this.stats.text = `Original Size: ${this.input.length}, Minfied Size: ${data.length}, Savings: ${diff} (${savings}%)`;
+      this.stats.text = `Original Size: ${this.input.length}, minified size: ${data.length}, savings: ${diff} (${savings}%)`;
     } catch (err) {
       this.stats.result = 'failure';
       this.stats.text = err + '';

@@ -1,40 +1,40 @@
 # HTMLMinifier
 
-[![NPM version](https://img.shields.io/npm/v/html-minifier-terser.svg)](https://www.npmjs.com/package/html-minifier-terser)
-[![Build Status](https://github.com/terser/html-minifier-terser/workflows/CI/badge.svg)](https://github.com/terser/html-minifier-terser/actions?workflow=CI)
+[![NPM version](https://img.shields.io/npm/v/html-minifier-guard.svg)](https://www.npmjs.com/package/html-minifier-guard)
+[![Build Status](https://github.com/j9t/html-minifier-guard/workflows/CI/badge.svg)](https://github.com/guard/html-minifier-guard/actions?workflow=CI)
 
-[HTMLMinifier](https://terser.org/html-minifier-terser/) is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
+HTMLMinifier is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
 
 ## Installation
 
 From NPM for use as a command line app:
 
 ```shell
-npm install html-minifier-terser -g
+npm install html-minifier-guard -g
 ```
 
 From NPM for programmatic use:
 
 ```shell
-npm install html-minifier-terser
+npm install html-minifier-guard
 ```
 
 ## Usage
 
 **Note** that almost all options are disabled by default. Experiment and find what works best for you and your project.
 
-For command line usage please see `html-minifier-terser --help` for a list of available options.
+For command line usage please see `html-minifier-guard --help` for a list of available options.
 
 **Sample command line:**
 
 ```bash
-html-minifier-terser --collapse-whitespace --remove-comments --minify-js true
+html-minifier-guard --collapse-whitespace --remove-comments --minify-js true
 ```
 
 ### Node.js
 
 ```js
-const { minify } = require('html-minifier-terser');
+const { minify } = require('html-minifier-guard');
 
 const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true,
@@ -42,9 +42,7 @@ const result = await minify('<p title="blah" id="moo">foo</p>', {
 result; // '<p title=blah id=moo>foo</p>'
 ```
 
-See [corresponding blog post](http://perfectionkills.com/experimenting-with-html-minifier) for all the gory details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing) and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
-
-Also see corresponding [Ruby wrapper](https://github.com/stereobooster/html_minifier), and for Node.js, [Grunt plugin](https://github.com/gruntjs/grunt-contrib-htmlmin), [Gulp plugin](https://github.com/pioug/gulp-html-minifier-terser), [Koa middleware wrapper](https://github.com/koajs/html-minifier) and [Express middleware wrapper](https://github.com/melonmanchan/express-minify-html).
+See [the origina blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
 
 For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/html-lint).
 

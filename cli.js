@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * html-minifier-terser CLI tool
+ * html-minifier-guard CLI tool
  *
  * The MIT License (MIT)
  *
@@ -118,7 +118,7 @@ const mainOptions = {
   keepClosingSlash: 'Keep the trailing slash on singleton elements',
   maxLineLength: ['Max line length', parseInt],
   minifyCSS: ['Minify CSS in style elements and style attributes (uses clean-css)', parseJSON],
-  minifyJS: ['Minify Javascript in script elements and on* attributes (uses terser)', parseJSON],
+  minifyJS: ['Minify Javascript in script elements and on* attributes', parseJSON],
   minifyURLs: ['Minify URLs in various attributes (uses relateurl)', parseJSON],
   noNewlinesBeforeTagClose: 'Never add a newline before a tag that closes an element',
   preserveLineBreaks: 'Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break.',

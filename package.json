@@ -1,23 +1,12 @@
 {
-  "name": "html-minifier-terser",
+  "name": "html-minifier-guard",
   "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "version": "7.2.0",
   "license": "MIT",
-  "repository": "https://github.com/terser/html-minifier-terser.git",
-  "bugs": "https://github.com/terser/html-minifier-terser/issues",
-  "homepage": "https://terser.org/html-minifier-terser/",
-  "author": "Daniel Ruf",
-  "maintainers": [
-    "Daniel Ruf <daniel@daniel-ruf.de",
-    "Alex Lam <alexlamsl@gmail.com>",
-    "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)",
-    "Sibiraj <sibiraj.dev>"
-  ],
-  "contributors": [
-    "Gilmore Davidson (https://github.com/gilmoreorless)",
-    "Hugo Wetterberg <hugo@wetterberg.nu>",
-    "Zoltan Frombach <tssajo@gmail.com>"
-  ],
+  "repository": "https://github.com/j9t/html-minifier-guard.git",
+  "bugs": "https://github.com/j9t/html-minifier-guard/issues",
+  "homepage": "https://terser.org/html-minifier-guard/",
+  "author": "Jens Oliver Meiert",
   "keywords": [
     "cli",
     "compress",
@@ -55,7 +44,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "html-minifier-terser": "./cli.js"
+    "html-minifier-guard": "./cli.js"
   },
   "files": [
     "dist/",
@@ -69,7 +58,7 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest verbose --watch",
     "test": "npm run test:node",
     "serve": "vite",
-    "build:docs": "vite build --base /html-minifier-terser/",
+    "build:docs": "vite build --base /html-minifier-guard/",
     "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install"
   },

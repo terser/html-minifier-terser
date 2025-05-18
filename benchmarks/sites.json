@@ -1,16 +1,16 @@
 {
   "Amazon": "https://www.amazon.com/",
   "BBC": "https://www.bbc.co.uk/",
-  "Eloquent JavaScript": "https://eloquentjavascript.net/",
   "ECMAScript": "https://tc39.es/ecma262/",
   "EFF": "https://www.eff.org/",
+  "Eloquent JavaScript": "https://eloquentjavascript.net/",
   "FAZ": "https://www.faz.net/aktuell/",
   "Frontend Dogma": "https://frontenddogma.com/",
   "Google": "https://www.google.com/",
   "HTMLMinifier": "https://github.com/kangax/html-minifier",
+  "Mastodon": "https://mastodon.social/explore",
   "NBC": "https://www.nbc.com/",
   "New York Times": "https://www.nytimes.com/",
-  "Mastodon": "https://mastodon.social/explore",
   "United Nations": "https://www.un.org/",
   "W3C": "https://www.w3.org/",
   "Wikipedia": "https://en.wikipedia.org/wiki/Main_Page"

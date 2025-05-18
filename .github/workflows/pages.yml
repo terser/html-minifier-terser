@@ -45,6 +45,9 @@ jobs:
       - name: "Build site"
         run: npm run build:docs
 
+      - name: "Verify build output"
+        run: test -d ./build || { echo "Build directory not found!"; exit 1; }
+
       - name: "Upload build artifact"
         uses: actions/upload-pages-artifact@v3
         with:

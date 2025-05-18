@@ -28,8 +28,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
-import { camelCase } from 'camel-case';
-import { paramCase } from 'param-case';
+import { camelCase, paramCase } from 'change-case';
 import { Command } from 'commander';
 import { minify } from './src/htmlminifier.js';
 

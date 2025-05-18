@@ -287,6 +287,7 @@ run(fileNames.map(function (fileName) {
       });
     }
 
+    // @@ Remove
     function testWillPeavy(done) {
       readText(filePath, function (data) {
         const url = new URL('https://www.willpeavy.com/tools/minifier/');
@@ -326,6 +327,7 @@ run(fileNames.map(function (fileName) {
       });
     }
 
+    // @@ Check if tool is still accessible, if not, remove
     function testHTMLCompressor(done) {
       readText(filePath, function (data) {
         const url = new URL('https://htmlcompressor.com/compress');

@@ -52,20 +52,23 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Peavy](http://www.willpeavy.com/minifier/) (1st result in [Google search for “html minifier”](https://www.google.com/#q=html+minifier)) as well as [htmlcompressor.com](http://htmlcompressor.com) and [minimize](https://github.com/Swaagie/minimize)?
 
-| Site | Original size (KB) | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
-| --- | --- | --- | --- | --- | --- |
-| [Amazon](https://www.amazon.com/) | 340 | **285** | 330 | n/a | n/a |
-| [BBC](https://www.bbc.co.uk/) | 759 | **699** | 752 | n/a | n/a |
-| [Eloquent JavaScript](https://eloquentjavascript.net/1st_edition/print.html) | 870 | **815** | 840 | n/a | n/a |
-| [ECMAScript](https://tc39.es/ecma262/) | 7195 | **6352** | 6571 | n/a | n/a |
-| [Frontend Dogma](https://frontenddogma.com/) | 119 | **115** | 128 | n/a | n/a |
-| [Google](https://www.google.com/) | 50 | **46** | 50 | n/a | n/a |
-| [HTMLMinifier](https://github.com/kangax/html-minifier) | 363 | **243** | 341 | n/a | n/a |
-| [NBC](https://www.nbc.com/) | 1204 | **1099** | 1191 | n/a | n/a |
-| [New York Times](https://www.nytimes.com/) | 896 | **757** | 886 | n/a | n/a |
-| [Mastodon](https://mastodon.social/explore) | 22 | **13** | 21 | n/a | n/a |
-| [United Nations](https://www.un.org/) | 10 | **7** | 8 | n/a | n/a |
-| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a | n/a |
+| Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
+| --- | --- | --- | --- | --- |
+| [Amazon](https://www.amazon.com/) | 6 | **4** | 4 | n/a |
+| [BBC](https://www.bbc.co.uk/) | 759 | **699** | 752 | n/a |
+| [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | n/a |
+| [ECMAScript](https://tc39.es/ecma262/) | 7195 | **6352** | 6571 | n/a |
+| [EFF](https://www.eff.org/) | 60 | **51** | 54 | n/a |
+| [FAZ](https://www.faz.net/aktuell/) | 1738 | **1614** | 1649 | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 119 | **115** | 128 | n/a |
+| [Google](https://www.google.com/) | 50 | **46** | 50 | n/a |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 363 | **243** | 341 | n/a |
+| [NBC](https://www.nbc.com/) | 1204 | **1099** | 1191 | n/a |
+| [New York Times](https://www.nytimes.com/) | 900 | **760** | 890 | n/a |
+| [Mastodon](https://mastodon.social/explore) | 22 | **13** | 21 | n/a |
+| [United Nations](https://www.un.org/) | 10 | **7** | 8 | n/a |
+| [W3C](https://www.w3.org/) | 51 | **36** | 42 | n/a |
+| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a |
 
 ## Options Quick Reference
 

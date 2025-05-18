@@ -46,7 +46,7 @@ jobs:
         run: npm run build:docs
 
       - name: "Upload build artifact"
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: './build'
 

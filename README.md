@@ -52,20 +52,20 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Peavy](http://www.willpeavy.com/minifier/) (1st result in [Google search for “html minifier”](https://www.google.com/#q=html+minifier)) as well as [htmlcompressor.com](http://htmlcompressor.com) and [minimize](https://github.com/Swaagie/minimize)?
 
-| Site | Original size *(KB)* | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
-| --- |:---:| ---:| ---:| ---:| ---:|
-| [Google](https://www.google.com/) | 52 | **48** | 52 | 54 | n/a |
-| [Stack Overflow](https://stackoverflow.com/) | 177 | **143** | 154 | 154 | n/a |
-| [HTMLMinifier](https://github.com/kangax/html-minifier) | 252 | **171** | 230 | 250 | n/a |
-| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/) | 271 | **260** | 269 | 229 | n/a |
-| [BBC](https://www.bbc.co.uk/) | 355 | **324** | 353 | 344 | n/a |
-| [Amazon](https://www.amazon.co.uk/) | 466 | **430** | 456 | 474 | n/a |
-| [Twitter](https://twitter.com/) | 469 | **394** | 462 | 513 | n/a |
-| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States) | 703 | **569** | 682 | 708 | n/a |
-| [Eloquent Javascript](https://eloquentjavascript.net/1st_edition/print.html) | 870 | **815** | 840 | 864 | n/a |
-| [NBC](https://www.nbc.com/) | 1701 | **1566** | 1689 | 1705 | n/a |
-| [New York Times](https://www.nytimes.com/) | 1731 | **1583** | 1726 | 1680 | n/a |
-| [ES draft](https://tc39.github.io/ecma262/) | 6296 | **5538** | 5733 | n/a | n/a |
+| Site | Original size (KB) | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
+| --- | --- | --- | --- | --- | --- |
+| [Amazon](https://www.amazon.com/) | 340 | **285** | 330 | n/a | n/a |
+| [BBC](https://www.bbc.co.uk/) | 759 | **699** | 752 | n/a | n/a |
+| [Eloquent JavaScript](https://eloquentjavascript.net/1st_edition/print.html) | 870 | **815** | 840 | n/a | n/a |
+| [ECMAScript](https://tc39.es/ecma262/) | 7195 | **6352** | 6571 | n/a | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 119 | **115** | 128 | n/a | n/a |
+| [Google](https://www.google.com/) | 50 | **46** | 50 | n/a | n/a |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 363 | **243** | 341 | n/a | n/a |
+| [NBC](https://www.nbc.com/) | 1204 | **1099** | 1191 | n/a | n/a |
+| [New York Times](https://www.nytimes.com/) | 896 | **757** | 886 | n/a | n/a |
+| [Mastodon](https://mastodon.social/explore) | 22 | **13** | 21 | n/a | n/a |
+| [United Nations](https://www.un.org/) | 10 | **7** | 8 | n/a | n/a |
+| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a | n/a |
 
 ## Options Quick Reference
 

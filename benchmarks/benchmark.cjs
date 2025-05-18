@@ -130,7 +130,7 @@ const rows = {};
 function generateMarkdownTable() {
   const headers = [
     'Site',
-    'Original size *(KB)*',
+    'Original size (KB)',
     'HTMLMinifier',
     'minimize',
     'Will Peavy',

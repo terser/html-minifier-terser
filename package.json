@@ -83,7 +83,7 @@
     "build:docs": "vite build --base /html-minifier-guard/",
     "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install",
-    "serve": "vite",
+    "serve": "npm run build && vite",
     "test": "npm run test:node",
     "test:node": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest verbose --watch",

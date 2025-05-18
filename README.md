@@ -1,6 +1,6 @@
 # HTML Minifier Next (HTMLMinifier)
 
-[![NPM version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
+[![NPM version](https://img.shields.io/npm/v/@j9t/html-minifier-next.svg)](https://www.npmjs.com/package/@j9t/html-minifier-next)
 <!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
 
 (This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. **This project is currently under test.** If it seems maintainable to me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)

@@ -3,22 +3,22 @@
 [![NPM version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
 <!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
 
-(This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. If the project is maintainable by me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)
+(This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. **This project is currently under test.** If it seems maintainable to me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)
 
-HTMLMinifier is a highly **configurable**, **well-tested**, JavaScript-based HTML minifier.
+HTMLMinifier is a highly **configurable, well-tested, JavaScript-based HTML minifier**.
 
 ## Installation
 
-From NPM for use as a command line app:
+From npm for use as a command line app:
 
 ```shell
-npm install html-minifier-next -g
+npm i -g @j9t/html-minifier-next # experimental
 ```
 
-From NPM for programmatic use:
+From npm for programmatic use:
 
 ```shell
-npm install html-minifier-next
+npm i @j9t/html-minifier-next
 ```
 
 ## Usage

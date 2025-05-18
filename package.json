@@ -80,7 +80,7 @@
   "repository": "https://github.com/j9t/html-minifier-guard.git",
   "scripts": {
     "build": "rollup -c",
-    "build:docs": "vite build --base /html-minifier-guard/ --outDir dist",
+    "build:docs": "vite build --base /html-minifier-guard/ --outDir build",
     "deploy": "npm run build && npm run build:docs",
     "lint": "eslint . --ignore-path .gitignore",
     "prepare": "is-ci || husky install",

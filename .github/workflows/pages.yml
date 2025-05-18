@@ -37,16 +37,10 @@ jobs:
       - name: "Build site"
         run: npm run build:docs
 
-      - name: "Debug build output"
-        run: ls -la ./dist || { echo "Dist directory is missing or empty!"; exit 1; }
-
-      - name: "Verify build output"
-        run: test -d ./dist || { echo "Dist directory not found!"; exit 1; }
-
       - name: "Upload build artifact"
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './build'
 
   deploy:
     runs-on: ubuntu-latest

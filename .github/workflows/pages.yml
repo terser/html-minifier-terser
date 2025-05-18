@@ -39,8 +39,6 @@ jobs:
 
       - name: "Upload build artifact"
         uses: actions/upload-pages-artifact@v3
-        with:
-          path: './build'
 
   deploy:
     runs-on: ubuntu-latest

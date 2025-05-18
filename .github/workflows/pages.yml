@@ -25,14 +25,6 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: "Cache Node.js modules"
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: "Setup GitHub Pages"
         uses: actions/configure-pages@v2
 
@@ -44,6 +36,9 @@ jobs:
 
       - name: "Build site"
         run: npm run build:docs
+
+      - name: "Debug build output"
+        run: ls -la ./build || { echo "Build directory is missing or empty!"; exit 1; }
 
       - name: "Verify build output"
         run: test -d ./build || { echo "Build directory not found!"; exit 1; }

@@ -7,7 +7,7 @@
   "dependencies": {
     "change-case": "^4.1.2",
     "clean-css": "~5.3.2",
-    "commander": "^13.1.0",
+    "commander": "^14.0.0",
     "entities": "^6.0.0",
     "relateurl": "^0.2.7",
     "terser": "^5.15.1"

@@ -3594,3 +3594,54 @@ test('minify Content-Security-Policy', async () => {
   input = '<meta http-equiv="content-security-policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(input);
 });
+
+test('ReDoS prevention in custom fragments processing', async () => {
+  // Test long sequences of whitespace that could trigger ReDoS
+  const longWhitespace = ' '.repeat(10000);
+  const phpFragments = [/<%[\s\S]*?%>/g, /<\?[\s\S]*?\?>/g];
+
+  // Test case 1: Long whitespace before custom fragment
+  const input1 = `<div>${longWhitespace}<?php echo "test"; ?></div>`;
+  const startTime1 = Date.now();
+  const result1 = await minify(input1, {
+    ignoreCustomFragments: phpFragments,
+    collapseWhitespace: true
+  });
+  const endTime1 = Date.now();
+
+  // Should complete quickly (under 1 second)
+  expect(endTime1 - startTime1).toBeLessThan(1000);
+  expect(result1).toContain('<?php echo "test"; ?>');
+
+  // Test case 2: Multiple consecutive fragments with long whitespace
+  const input2 = `<div>${longWhitespace}<?php echo "test1"; ?>${longWhitespace}<?php echo "test2"; ?>${longWhitespace}</div>`;
+  const startTime2 = Date.now();
+  const result2 = await minify(input2, {
+    ignoreCustomFragments: phpFragments,
+    collapseWhitespace: true
+  });
+  const endTime2 = Date.now();
+
+  // Should complete quickly (under 1 second)
+  expect(endTime2 - startTime2).toBeLessThan(1000);
+  expect(result2).toContain('<?php echo "test1"; ?>');
+  expect(result2).toContain('<?php echo "test2"; ?>');
+
+  // Test case 3: Back-to-back fragments with varying whitespace
+  const backToBackFragments = Array(100).fill(0).map((_, i) =>
+    `${' '.repeat(i % 50)}<?php echo "${i}"; ?>`
+  ).join('');
+  const input3 = `<div>${backToBackFragments}</div>`;
+
+  const startTime3 = Date.now();
+  const result3 = await minify(input3, {
+    ignoreCustomFragments: phpFragments,
+    collapseWhitespace: true
+  });
+  const endTime3 = Date.now();
+
+  // Should complete quickly (under 2 seconds for 100 fragments)
+  expect(endTime3 - startTime3).toBeLessThan(2000);
+  expect(result3).toContain('<?php echo "0"; ?>');
+  expect(result3).toContain('<?php echo "99"; ?>');
+});

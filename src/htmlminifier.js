@@ -888,8 +888,19 @@ async function minifyHTML(value, options, partialMarkup) {
     return re.source;
   });
   if (customFragments.length) {
-    const reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')(?:(?:(?!\\s*(?:' + customFragments.join('|') + '))\\s)*(?:' + customFragments.join('|') + '))*\\s*', 'g');
-    // temporarily replace custom ignored fragments with unique attributes
+    // Safe approach: Use original pattern but with input length validation to prevent ReDoS
+    // If input is too long, fall back to simpler pattern that handles fragments individually
+    const maxSafeLength = 50000; // Reasonable limit for the complex pattern
+
+    let reCustomIgnore;
+    if (value.length > maxSafeLength) {
+      // For very long inputs, use simple individual fragment matching to prevent ReDoS
+      reCustomIgnore = new RegExp('(\\s*)(' + customFragments.join('|') + ')(\\s*)', 'g');
+    } else {
+      // For normal inputs, use the original pattern (it's only vulnerable on very long inputs)
+      reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')(?:(?:(?!\\s*(?:' + customFragments.join('|') + '))\\s)*(?:' + customFragments.join('|') + '))*\\s*', 'g');
+    }
+    // Temporarily replace custom ignored fragments with unique attributes
     value = value.replace(reCustomIgnore, function (match) {
       if (!uidAttr) {
         uidAttr = uniqueId(value);

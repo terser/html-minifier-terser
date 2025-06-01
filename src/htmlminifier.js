@@ -888,7 +888,7 @@ async function minifyHTML(value, options, partialMarkup) {
     return re.source;
   });
   if (customFragments.length) {
-    const reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')+\\s*', 'g');
+    const reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')(?:(?:(?!\\s*(?:' + customFragments.join('|') + '))\\s)*(?:' + customFragments.join('|') + '))*\\s*', 'g');
     // temporarily replace custom ignored fragments with unique attributes
     value = value.replace(reCustomIgnore, function (match) {
       if (!uidAttr) {

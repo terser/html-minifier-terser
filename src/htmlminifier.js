@@ -897,8 +897,8 @@ async function minifyHTML(value, options, partialMarkup) {
       // For very long inputs, use simple individual fragment matching to prevent ReDoS
       reCustomIgnore = new RegExp('(\\s*)(' + customFragments.join('|') + ')(\\s*)', 'g');
     } else {
-      // For normal inputs, use the original pattern (it's only vulnerable on very long inputs)
-      reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')(?:(?:(?!\\s*(?:' + customFragments.join('|') + '))\\s)*(?:' + customFragments.join('|') + '))*\\s*', 'g');
+      // For normal inputs, use the original pattern (it’s only vulnerable on very long inputs)
+      reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')+\\s*', 'g');
     }
     // Temporarily replace custom ignored fragments with unique attributes
     value = value.replace(reCustomIgnore, function (match) {

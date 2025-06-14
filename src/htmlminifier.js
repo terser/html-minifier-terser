@@ -844,6 +844,11 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
 }
 
 async function minifyHTML(value, options, partialMarkup) {
+  // Check input length limitation to prevent ReDoS attacks
+  if (options.maxInputLength && value.length > options.maxInputLength) {
+    throw new Error(`Input length (${value.length}) exceeds maximum allowed length (${options.maxInputLength})`);
+  }
+
   if (options.collapseWhitespace) {
     value = collapseWhitespace(value, options, true, true);
   }
@@ -888,18 +893,23 @@ async function minifyHTML(value, options, partialMarkup) {
     return re.source;
   });
   if (customFragments.length) {
-    // Safe approach: Use original pattern but with input length validation to prevent ReDoS
-    // If input is too long, fall back to simpler pattern that handles fragments individually
-    const maxSafeLength = 50000; // Reasonable limit for the complex pattern
-
-    let reCustomIgnore;
-    if (value.length > maxSafeLength) {
-      // For very long inputs, use simple individual fragment matching to prevent ReDoS
-      reCustomIgnore = new RegExp('(\\s*)(' + customFragments.join('|') + ')(\\s*)', 'g');
-    } else {
-      // For normal inputs, use the original pattern (it’s only vulnerable on very long inputs)
-      reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')+\\s*', 'g');
+    // Warn about potential ReDoS if custom fragments use unlimited quantifiers
+    for (let i = 0; i < customFragments.length; i++) {
+      if (/[*+]/.test(customFragments[i])) {
+        options.log('Warning: Custom fragment contains unlimited quantifiers (* or +) which may cause ReDoS vulnerability');
+        break;
+      }
     }
+
+    // Safe approach: Use bounded quantifiers instead of unlimited ones to prevent ReDoS
+    const maxQuantifier = options.customFragmentQuantifierLimit || 1000;
+    const whitespacePattern = `\\s{0,${maxQuantifier}}`;
+
+    // Use bounded quantifiers to prevent ReDoS - this approach prevents exponential backtracking
+    const reCustomIgnore = new RegExp(
+      whitespacePattern + '(?:' + customFragments.join('|') + '){1,' + maxQuantifier + '}' + whitespacePattern,
+      'g'
+    );
     // Temporarily replace custom ignored fragments with unique attributes
     value = value.replace(reCustomIgnore, function (match) {
       if (!uidAttr) {

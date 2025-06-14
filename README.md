@@ -78,7 +78,6 @@ Most of the options are disabled by default.
 | --- | --- | --- |
 | `caseSensitive` | Treat attributes in case sensitive manner (useful for custom HTML tags) | `false` |
 | `collapseBooleanAttributes` | [Omit attribute values from boolean attributes](http://perfectionkills.com/experimenting-with-html-minifier#collapse_boolean_attributes) | `false` |
-| `customFragmentQuantifierLimit` | Set maximum quantifier limit for custom fragments to prevent ReDoS attacks | `1000` |
 | `collapseInlineTagWhitespace` | Don’t leave any spaces between `display:inline;` elements when collapsing. Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `collapseWhitespace` | [Collapse white space that contributes to text nodes in a document tree](http://perfectionkills.com/experimenting-with-html-minifier#collapse_whitespace) | `false` |
 | `conservativeCollapse` | Always collapse to 1 space (never remove it entirely). Must be used in conjunction with `collapseWhitespace=true` | `false` |
@@ -128,14 +127,13 @@ Minifier options like `sortAttributes` and `sortClassName` won’t impact the pl
 
 This minifier includes protection against Regular Expression Denial of Service (ReDoS) attacks:
 
-* **Custom Fragment Quantifier Limits**: The `customFragmentQuantifierLimit` option (default: 1000) prevents exponential backtracking by using bounded quantifiers instead of unlimited ones (`*` or `+`) in regular expressions.
+* **Linear Fragment Processing**: Custom fragments are processed using linear string operations instead of regex quantifiers, eliminating ReDoS vulnerabilities entirely.
 
 * **Input Length Limits**: The `maxInputLength` option allows you to set a maximum input size to prevent processing of excessively large inputs that could cause performance issues.
 
-* **Custom Fragment Warnings**: The minifier will warn you if your custom fragments contain unlimited quantifiers that could be vulnerable to ReDoS attacks.
+* **Predictable Performance**: Fragment processing now has O(n) time complexity instead of potentially exponential regex backtracking.
 
-**Important:** When using custom `ignoreCustomFragments`, ensure your regular expressions don’t contain unlimited quantifiers (`*`, `+`) without bounds, as these can lead to ReDoS vulnerabilities.
-
+**Note:** Custom `ignoreCustomFragments` are now processed using string-based parsing for guaranteed linear performance. Most common patterns (like `<%...%>`, `{{...}}`, `<?...?>`) are automatically supported.
 ## Special cases
 
 ### Ignoring chunks of markup

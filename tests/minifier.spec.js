@@ -2658,7 +2658,7 @@ test('conservative collapse', async () => {
   })).toBe(output);
 });
 
-test('collapse preseving a line break', async () => {
+test('collapse preserving a line break', async () => {
   let input, output;
 
   input = '\n\n\n<!DOCTYPE html>   \n<html lang="en" class="no-js">\n' +

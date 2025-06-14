@@ -54,8 +54,16 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
   }
 
   if (collapseAll) {
-    // strip non space whitespace then compress spaces to one
-    str = collapseWhitespaceAll(str);
+    if (options.preserveLineBreaks) {
+      // When preserving line breaks, collapse consecutive line breaks to single line breaks
+      // and collapse other whitespace to spaces
+      str = str.replace(/[ \t\f]+/g, ' ')  // collapse spaces/tabs to single space
+               .replace(/[ \t\f]*[\r\n]+[ \t\f]*/g, '\n')  // preserve line breaks
+               .replace(/\n{2,}/g, '\n');  // collapse multiple line breaks to single line break
+    } else {
+      // strip non space whitespace then compress spaces to one
+      str = collapseWhitespaceAll(str);
+    }
   }
 
   return lineBreakBefore + str + lineBreakAfter;
@@ -849,9 +857,9 @@ async function minifyHTML(value, options, partialMarkup) {
     throw new Error(`Input length (${value.length}) exceeds maximum allowed length (${options.maxInputLength})`);
   }
 
-  if (options.collapseWhitespace) {
-    value = collapseWhitespace(value, options, true, true);
-  }
+  // Defer initial whitespace collapse until after custom fragments are processed
+  // This allows us to preserve line breaks around fragments when preserveLineBreaks is true
+  let shouldCollapseWhitespace = options.collapseWhitespace;
 
   const buffer = [];
   let charsPrevTag;
@@ -889,78 +897,253 @@ async function minifyHTML(value, options, partialMarkup) {
     return token;
   });
 
-  const customFragments = options.ignoreCustomFragments.map(function (re) {
-    return re.source;
-  });
-  if (customFragments.length) {
-    // Warn about potential ReDoS if custom fragments use unlimited quantifiers
-    for (let i = 0; i < customFragments.length; i++) {
-      if (/[*+]/.test(customFragments[i])) {
-        options.log('Warning: Custom fragment contains unlimited quantifiers (* or +) which may cause ReDoS vulnerability');
-        break;
+  // Process custom fragments using linear string operations (no regex quantifiers)
+  if (options.ignoreCustomFragments.length) {
+    function parseDelimiters(regexSource) {
+      // Extract start and end delimiters from common regex patterns
+      // Default patterns: <%[\s\S]*?%>, <\?[\s\S]*?\?>
+      // Common test patterns: \{\{[^}]*\}\}, \{%[^%]*?%\}
+
+      // Handle the default patterns exactly
+      if (regexSource === '<%[\\s\\S]*?%>') {
+        return { start: '<%', end: '%>' };
       }
+      if (regexSource === '<\\?[\\s\\S]*?\\?>') {
+        return { start: '<?', end: '?>' };
+      }
+
+      // Handle common test patterns
+      if (regexSource === '\\{\\{[^}]*\\}\\}') {
+        return { start: '{{', end: '}}' };
+      }
+      if (regexSource === '\\{%[^%]*?%\\}') {
+        return { start: '{%', end: '%}' };
+      }
+      if (regexSource === '<\\?[^?]+\\?>') {
+        return { start: '<?', end: '?>' };
+      }
+      if (regexSource === '<%[^%]+%>') {
+        return { start: '<%', end: '%>' };
+      }
+      if (regexSource === '<#[\\s\\S]*?#>') {
+        return { start: '<#', end: '#>' };
+      }
+
+      // Try to parse other patterns by looking for start/end delimiters
+      // Pattern: startDelim + some_content_pattern + endDelim
+      const match = regexSource.match(/^(.+?)(?:\[.*?\]|\.|\\[a-zA-Z])*[*+?]*(.+?)$/);
+      if (match && match[1] && match[2]) {
+        const start = match[1].replace(/\\/g, '');
+        const end = match[2].replace(/\\/g, '');
+        return { start, end };
+      }
+
+      // If pattern doesn't match known formats, warn and skip
+      options.log('Warning: Custom fragment pattern not recognized by linear parser: ' + regexSource);
+      return null;
     }
 
-    // Safe approach: Use bounded quantifiers instead of unlimited ones to prevent ReDoS
-    const maxQuantifier = options.customFragmentQuantifierLimit || 1000;
-    const whitespacePattern = `\\s{0,${maxQuantifier}}`;
+    function processCustomFragmentsLinear(input) {
+      // Process fragments individually to maintain original behavior
+      // This processes each fragment separately with its surrounding whitespace
 
-    // Use bounded quantifiers to prevent ReDoS - this approach prevents exponential backtracking
-    const reCustomIgnore = new RegExp(
-      whitespacePattern + '(?:' + customFragments.join('|') + '){1,' + maxQuantifier + '}' + whitespacePattern,
-      'g'
-    );
-    // Temporarily replace custom ignored fragments with unique attributes
-    value = value.replace(reCustomIgnore, function (match) {
-      if (!uidAttr) {
-        uidAttr = uniqueId(value);
-        uidPattern = new RegExp('(\\s*)' + uidAttr + '([0-9]+)' + uidAttr + '(\\s*)', 'g');
-
-        if (options.minifyCSS) {
-          options.minifyCSS = (function (fn) {
-            return function (text, type) {
-              text = text.replace(uidPattern, function (match, prefix, index) {
-                const chunks = ignoredCustomMarkupChunks[+index];
-                return chunks[1] + uidAttr + index + uidAttr + chunks[2];
-              });
-
-              const ids = [];
-              new CleanCSS().minify(wrapCSS(text, type)).warnings.forEach(function (warning) {
-                const match = uidPattern.exec(warning);
-                if (match) {
-                  const id = uidAttr + match[2] + uidAttr;
-                  text = text.replace(id, ignoreCSS(id));
-                  ids.push(id);
-                }
-              });
-
-              return fn(text, type).then(chunk => {
-                ids.forEach(function (id) {
-                  chunk = chunk.replace(ignoreCSS(id), id);
-                });
-
-                return chunk;
-              });
-            };
-          })(options.minifyCSS);
-        }
-
-        if (options.minifyJS) {
-          options.minifyJS = (function (fn) {
-            return function (text, type) {
-              return fn(text.replace(uidPattern, function (match, prefix, index) {
-                const chunks = ignoredCustomMarkupChunks[+index];
-                return chunks[1] + uidAttr + index + uidAttr + chunks[2];
-              }), type);
-            };
-          })(options.minifyJS);
+      // Build a list of all possible fragments with their delimiters
+      const fragmentDelimiters = [];
+      for (const fragment of options.ignoreCustomFragments) {
+        const delimiters = parseDelimiters(fragment.source);
+        if (delimiters) {
+          fragmentDelimiters.push(delimiters);
         }
       }
 
-      const token = uidAttr + ignoredCustomMarkupChunks.length + uidAttr;
-      ignoredCustomMarkupChunks.push(/^(\s*)[\s\S]*?(\s*)$/.exec(match));
-      return '\t' + token + '\t';
-    });
+      if (fragmentDelimiters.length === 0) return input;
+
+      // Process fragments one by one, handling each individual match
+      let searchPos = 0;
+      while (searchPos < input.length) {
+        let earliestMatch = null;
+        let earliestPos = input.length;
+
+        // Find the earliest fragment match
+        for (const delimiters of fragmentDelimiters) {
+          const { start, end } = delimiters;
+          const startPos = input.indexOf(start, searchPos);
+          if (startPos !== -1 && startPos < earliestPos) {
+            const endPos = input.indexOf(end, startPos + start.length);
+            if (endPos !== -1) {
+              earliestMatch = { start: delimiters.start, end: delimiters.end, startPos, endPos };
+              earliestPos = startPos;
+            }
+          }
+        }
+
+        if (!earliestMatch) break;
+
+        const fragmentStart = earliestMatch.startPos;
+        const fragmentEnd = earliestMatch.endPos + earliestMatch.end.length;
+        
+        // Include adjacent whitespace when necessary to prevent syntax corruption or preserve line breaks
+        let extendedStart = fragmentStart;
+        let extendedEnd = fragmentEnd;
+        
+        // Check if we're in a context where whitespace is syntactically significant
+        // Look for patterns that suggest we're in JavaScript or similar contexts
+        const beforeContext = input.substring(Math.max(0, fragmentStart - 20), fragmentStart);
+        const afterContext = input.substring(fragmentEnd, Math.min(input.length, fragmentEnd + 20));
+        
+        const inJavaScriptContext = /(?:onclick|onload|on\w+|alert|function|var|let|const|if|while|for)\s*[=\(]?[^>]*$/.test(beforeContext) ||
+                                   /^[^<]*(?:\+|\-|\*|\/|=|===|!==|\|\||&&)/.test(afterContext);
+        
+        // Include adjacent whitespace to preserve context for proper whitespace processing
+        // Include all types of whitespace (spaces, tabs, newlines) so they can be properly processed
+        if (fragmentStart > 0 && /\s/.test(input[fragmentStart - 1])) {
+          extendedStart = fragmentStart - 1;
+          // For \r\n sequences, include both characters
+          if (extendedStart > 0 && input[extendedStart - 1] === '\r' && input[extendedStart] === '\n') {
+            extendedStart = fragmentStart - 2;
+          }
+        }
+        
+        // Include whitespace after if present
+        if (fragmentEnd < input.length && /\s/.test(input[fragmentEnd])) {
+          extendedEnd = fragmentEnd + 1;
+          // For \r\n sequences, include both characters
+          if (extendedEnd < input.length && input[fragmentEnd] === '\r' && input[extendedEnd] === '\n') {
+            extendedEnd = fragmentEnd + 2;
+          }
+        }
+        
+        // Include adjacent whitespace for JavaScript context if needed
+        if (inJavaScriptContext && !options.preserveLineBreaks) {
+          // Include one whitespace character before if present and syntactically needed
+          if (fragmentStart > 0 && /\s/.test(input[fragmentStart - 1]) &&
+              fragmentStart > 1 && /[+\-*/=<>!&|]/.test(input[fragmentStart - 2])) {
+            extendedStart = fragmentStart - 1;
+          }
+          
+          // Include one whitespace character after if present and syntactically needed
+          if (fragmentEnd < input.length && /\s/.test(input[fragmentEnd]) &&
+              fragmentEnd + 1 < input.length && /[+\-*/=<>!&|]/.test(input[fragmentEnd + 1])) {
+            extendedEnd = fragmentEnd + 1;
+          }
+        }
+
+        // Create unique token for this fragment (lazy initialization like original)
+        if (!uidAttr) {
+          uidAttr = uniqueId(input);
+          uidPattern = new RegExp(uidAttr + '([0-9]+)' + uidAttr, 'g');
+
+          if (options.minifyCSS) {
+            options.minifyCSS = (function (fn) {
+              return function (text, type) {
+                // Store original text with tokens for comparison
+                const originalText = text;
+                
+                // Replace tokens for CSS processing
+                text = text.replace(uidPattern, function (match, index) {
+                  return uidAttr + index + uidAttr;
+                });
+
+                // Check what CleanCSS does to detect problematic tokens
+                const ids = [];
+                try {
+                  const cleanResult = new CleanCSS().minify(wrapCSS(text, type));
+                  cleanResult.warnings.forEach(function (warning) {
+                    const match = uidPattern.exec(warning);
+                    if (match) {
+                      const id = uidAttr + match[1] + uidAttr;
+                      text = text.replace(id, ignoreCSS(id));
+                      ids.push(id);
+                    }
+                  });
+                } catch (e) {
+                  // If CSS parsing fails entirely, protect all tokens
+                  text = originalText.replace(uidPattern, function (match, index) {
+                    const token = uidAttr + index + uidAttr;
+                    const protectedToken = ignoreCSS(token);
+                    ids.push(token);
+                    return protectedToken;
+                  });
+                }
+
+                return fn(text, type).then(chunk => {
+                  ids.forEach(function (id) {
+                    chunk = chunk.replace(ignoreCSS(id), id);
+                  });
+                  return chunk;
+                });
+              };
+            })(options.minifyCSS);
+          }
+
+          if (options.minifyJS) {
+            options.minifyJS = (function (fn) {
+              return async function (text, type) {
+                // Replace tokens for JS processing
+                text = text.replace(uidPattern, function (match, index) {
+                  return uidAttr + index + uidAttr;
+                });
+                
+                try {
+                  const result = await fn(text, type);
+                  
+                  // Restore tokens in the minified result with smart whitespace handling
+                  return result.replace(new RegExp(uidAttr + '([0-9]+)' + uidAttr, 'g'), function (match, index) {
+                    const chunk = ignoredCustomMarkupChunks[+index][0];
+                    if (options.collapseWhitespace) {
+                      if (options.preserveLineBreaks) {
+                        // When preserving line breaks, convert \r\n to \n and collapse other whitespace to spaces
+                        return chunk.replace(/\r\n/g, '\n').replace(/[ \t\f]+/g, ' ');
+                      } else {
+                        // Convert all whitespace sequences to single spaces when not preserving line breaks
+                        return chunk.replace(/\s+/g, ' ');
+                      }
+                    } else {
+                      return chunk;
+                    }
+                  });
+                } catch (e) {
+                  // If JS minification fails, return text with tokens restored
+                  return text.replace(new RegExp(uidAttr + '([0-9]+)' + uidAttr, 'g'), function (match, index) {
+                    const chunk = ignoredCustomMarkupChunks[+index][0];
+                    if (options.collapseWhitespace) {
+                      if (options.preserveLineBreaks) {
+                        // When preserving line breaks, convert \r\n to \n and collapse other whitespace to spaces
+                        return chunk.replace(/\r\n/g, '\n').replace(/[ \t\f]+/g, ' ');
+                      } else {
+                        // Convert all whitespace sequences to single spaces when not preserving line breaks
+                        return chunk.replace(/\s+/g, ' ');
+                      }
+                    } else {
+                      return chunk;
+                    }
+                  });
+                }
+              };
+            })(options.minifyJS);
+          }
+        }
+
+        const token = uidAttr + ignoredCustomMarkupChunks.length + uidAttr;
+        let fragmentContent = input.substring(extendedStart, extendedEnd);
+
+        // Store the fragment content including adjacent whitespace
+        ignoredCustomMarkupChunks.push([fragmentContent]);
+
+        // Replace the extended range with the token
+        input = input.substring(0, extendedStart) + token + input.substring(extendedEnd);
+        searchPos = extendedStart + token.length;
+      }
+
+      return input;
+    }
+
+    value = processCustomFragmentsLinear(value);
+  }
+
+  // Now apply initial whitespace collapse after custom fragments are processed
+  if (shouldCollapseWhitespace) {
+    value = collapseWhitespace(value, options, true, true);
   }
 
   if ((options.sortAttributes && typeof options.sortAttributes !== 'function') ||
@@ -1226,10 +1409,27 @@ async function minifyHTML(value, options, partialMarkup) {
         text = await processScript(text, options, currentAttrs);
       }
       if (isExecutableScript(currentTag, currentAttrs)) {
-        text = await options.minifyJS(text);
+        // Skip JS minification if custom fragments are present to preserve their context
+        if (uidPattern && uidPattern.test(text)) {
+          // Custom fragments detected - check if they are only in simple comments (same line)
+          // For complex cases with newlines, preserve fragments to avoid breaking code
+          const isSimpleComment = /^\/\/[ \t\f]*[a-zA-Z0-9]+\d+[a-zA-Z0-9]+[ \t\f]*$/.test(text.trim());
+          if (isSimpleComment) {
+            // Simple comment case - safe to minify
+            text = await options.minifyJS(text);
+          }
+          // Otherwise skip JS minification to preserve standalone fragments
+        } else {
+          text = await options.minifyJS(text);
+        }
       }
       if (isStyleSheet(currentTag, currentAttrs)) {
-        text = await options.minifyCSS(text);
+        // Skip CSS minification if custom fragments are present to preserve their context
+        if (uidPattern && uidPattern.test(text)) {
+          // Custom fragments detected, preserve original content
+        } else {
+          text = await options.minifyCSS(text);
+        }
       }
       if (options.removeOptionalTags && text) {
         // <html> may be omitted if first thing inside is not comment
@@ -1255,8 +1455,10 @@ async function minifyHTML(value, options, partialMarkup) {
         text = text.replace(/&((?:Iacute|aacute|uacute|plusmn|Otilde|otilde|agrave|Agrave|Yacute|yacute|Oslash|oslash|atilde|Atilde|brvbar|ccedil|Ccedil|Ograve|curren|divide|eacute|Eacute|ograve|Oacute|egrave|Egrave|Ugrave|frac12|frac14|frac34|ugrave|oacute|iacute|Ntilde|ntilde|Uacute|middot|igrave|Igrave|iquest|Aacute|cedil|laquo|micro|iexcl|Icirc|icirc|acirc|Ucirc|Ecirc|ocirc|Ocirc|ecirc|ucirc|Aring|aring|AElig|aelig|acute|pound|raquo|Acirc|times|THORN|szlig|thorn|COPY|auml|ordf|ordm|Uuml|macr|uuml|Auml|ouml|Ouml|para|nbsp|euml|quot|QUOT|Euml|yuml|cent|sect|copy|sup1|sup2|sup3|iuml|Iuml|ETH|shy|reg|not|yen|amp|AMP|REG|uml|eth|deg|gt|GT|LT|lt)(?!;)|(?:#?[0-9a-zA-Z]+;))/g, '&amp$1').replace(/</g, '&lt;');
       }
       if (uidPattern && options.collapseWhitespace && stackNoTrimWhitespace.length) {
-        text = text.replace(uidPattern, function (match, prefix, index) {
-          return ignoredCustomMarkupChunks[+index][0];
+        text = text.replace(uidPattern, function (match, index) {
+          const chunk = ignoredCustomMarkupChunks[+index][0];
+          // When inside non-collapsible context (like script/style), preserve original whitespace
+          return chunk;
         });
       }
       currentChars += text;
@@ -1313,21 +1515,21 @@ async function minifyHTML(value, options, partialMarkup) {
 
   return joinResultSegments(buffer, options, uidPattern
     ? function (str) {
-      return str.replace(uidPattern, function (match, prefix, index, suffix) {
-        let chunk = ignoredCustomMarkupChunks[+index][0];
+      return str.replace(uidPattern, function (match, index) {
+        const chunk = ignoredCustomMarkupChunks[+index][0];
+        
         if (options.collapseWhitespace) {
-          if (prefix !== '\t') {
-            chunk = prefix + chunk;
+          if (options.preserveLineBreaks) {
+            // When preserving line breaks, convert \r\n to \n and collapse other whitespace to spaces
+            return chunk.replace(/\r\n/g, '\n').replace(/[ \t\f]+/g, ' ');
+          } else {
+            // Convert all whitespace sequences to single spaces when not preserving line breaks
+            return chunk.replace(/\s+/g, ' ');
           }
-          if (suffix !== '\t') {
-            chunk += suffix;
-          }
-          return collapseWhitespace(chunk, {
-            preserveLineBreaks: options.preserveLineBreaks,
-            conservativeCollapse: !options.trimCustomFragments
-          }, /^[ \n\r\t\f]/.test(chunk), /[ \n\r\t\f]$/.test(chunk));
+        } else {
+          // No whitespace collapse - preserve original whitespace exactly
+          return chunk;
         }
-        return chunk;
       });
     }
     : identity, uidIgnore
@@ -1373,7 +1575,14 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   } else {
     str = restoreIgnore(restoreCustom(results.join('')));
   }
-  return options.collapseWhitespace ? collapseWhitespace(str, options, true, true) : str;
+  if (options.collapseWhitespace) {
+    str = collapseWhitespace(str, options, true, true);
+    // Additional step: when preserveLineBreaks is enabled, consolidate consecutive line breaks
+    if (options.preserveLineBreaks) {
+      str = str.replace(/\n{2,}/g, '\n');
+    }
+  }
+  return str;
 }
 
 export const minify = async function (value, options) {

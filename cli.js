@@ -101,7 +101,7 @@ function parseString(value) {
 const mainOptions = {
   caseSensitive: 'Treat attributes in case sensitive manner (useful for SVG; e.g. viewBox)',
   collapseBooleanAttributes: 'Omit attribute values from boolean attributes',
-  customFragmentQuantifierLimit: ['Set maximum quantifier limit for custom fragments to prevent ReDoS attacks', parseInt],
+  customFragmentQuantifierLimit: ['Set maximum quantifier limit for custom fragments to prevent ReDoS attacks (default: 200)', parseInt],
   collapseInlineTagWhitespace: 'Collapse white space around inline tag',
   collapseWhitespace: 'Collapse white space that contributes to text nodes in a document tree.',
   conservativeCollapse: 'Always collapse to 1 space (never remove it entirely)',

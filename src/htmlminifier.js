@@ -902,7 +902,7 @@ async function minifyHTML(value, options, partialMarkup) {
     }
 
     // Safe approach: Use bounded quantifiers instead of unlimited ones to prevent ReDoS
-    const maxQuantifier = options.customFragmentQuantifierLimit || 1000;
+    const maxQuantifier = options.customFragmentQuantifierLimit || 200;
     const whitespacePattern = `\\s{0,${maxQuantifier}}`;
 
     // Use bounded quantifiers to prevent ReDoS - this approach prevents exponential backtracking

@@ -1,6 +1,6 @@
 # HTML Minifier Next (HTMLMinifier)
 
-[![NPM version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
+[![npm version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
 <!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
 
 (This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. **This project is currently under test.** If it seems maintainable to me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)
@@ -78,7 +78,7 @@ Most of the options are disabled by default.
 | --- | --- | --- |
 | `caseSensitive` | Treat attributes in case sensitive manner (useful for custom HTML tags) | `false` |
 | `collapseBooleanAttributes` | [Omit attribute values from boolean attributes](http://perfectionkills.com/experimenting-with-html-minifier#collapse_boolean_attributes) | `false` |
-| `customFragmentQuantifierLimit` | Set maximum quantifier limit for custom fragments to prevent ReDoS attacks | `1000` |
+| `customFragmentQuantifierLimit` | Set maximum quantifier limit for custom fragments to prevent ReDoS attacks | `200` |
 | `collapseInlineTagWhitespace` | Don’t leave any spaces between `display:inline;` elements when collapsing. Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `collapseWhitespace` | [Collapse white space that contributes to text nodes in a document tree](http://perfectionkills.com/experimenting-with-html-minifier#collapse_whitespace) | `false` |
 | `conservativeCollapse` | Always collapse to 1 space (never remove it entirely). Must be used in conjunction with `collapseWhitespace=true` | `false` |
@@ -160,17 +160,58 @@ HTMLMinifier can’t know that original markup was only half of the tree; it doe
 
 ### ReDoS protection
 
-This minifier includes protection against Regular Expression Denial of Service (ReDoS) attacks:
+This minifier includes protection against regular expression denial of service (ReDoS) attacks:
 
-* Custom fragment quantifier limits: The `customFragmentQuantifierLimit` option (default: `1000`) prevents exponential backtracking by using bounded quantifiers instead of unlimited ones (`*` or `+`) in regular expressions.
+* Custom fragment quantifier limits: The `customFragmentQuantifierLimit` option (default: 200) prevents exponential backtracking by replacing unlimited quantifiers (`*`, `+`) with bounded ones in regular expressions.
 
 * Input length limits: The `maxInputLength` option allows you to set a maximum input size to prevent processing of excessively large inputs that could cause performance issues.
 
-* Custom fragment warnings: The minifier will warn you if your custom fragments contain unlimited quantifiers that could be vulnerable to ReDoS attacks.
+* Enhanced pattern detection: The minifier detects and warns about various ReDoS-prone patterns including nested quantifiers, alternation with quantifiers, and multiple unlimited quantifiers.
 
 **Important:** When using custom `ignoreCustomFragments`, ensure your regular expressions don’t contain unlimited quantifiers (`*`, `+`) without bounds, as these can lead to ReDoS vulnerabilities.
 
 (Further improvements are needed. Contributions welcome.)
+
+#### Custom fragment examples
+
+**Safe patterns** (recommended):
+
+```javascript
+ignoreCustomFragments: [
+  /<%[\s\S]{0,1000}?%>/,         // JSP/ASP with explicit bounds
+  /<\?php[\s\S]{0,5000}?\?>/,    // PHP with bounds
+  /\{\{[^}]{0,500}\}\}/          // Handlebars without nested braces
+]
+```
+
+**Potentially unsafe patterns** (will trigger warnings):
+
+```javascript
+ignoreCustomFragments: [
+  /<%[\s\S]*?%>/,                // Unlimited quantifiers
+  /<!--[\s\S]*?-->/,             // Could cause issues with very long comments
+  /\{\{.*?\}\}/,                 // Nested unlimited quantifiers
+  /(script|style)[\s\S]*?/       // Multiple unlimited quantifiers
+]
+```
+
+**Template engine configurations:**
+
+```javascript
+// Handlebars/Mustache
+ignoreCustomFragments: [/\{\{[\s\S]{0,1000}?\}\}/]
+
+// Liquid (Jekyll)
+ignoreCustomFragments: [/\{%[\s\S]{0,500}?%\}/, /\{\{[\s\S]{0,500}?\}\}/]
+
+// Angular
+ignoreCustomFragments: [/\{\{[\s\S]{0,500}?\}\}/]
+
+// Vue.js
+ignoreCustomFragments: [/\{\{[\s\S]{0,500}?\}\}/]
+```
+
+**Important:** When using custom `ignoreCustomFragments`, the minifier automatically applies bounded quantifiers to prevent ReDoS attacks, but you can also write safer patterns yourself using explicit bounds.
 
 ## Running benchmarks
 

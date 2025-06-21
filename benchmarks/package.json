@@ -8,7 +8,7 @@
   },
   "name": "html-minifer-terser-benchmarks",
   "overrides": {
-    "ansi-regex": ">=6.0.1",
+    "ansi-regex": "^5.0.1",
     "es5-ext": ">=0.10.63"
   },
   "private": "true",

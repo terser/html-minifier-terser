@@ -33,9 +33,6 @@
     "rollup-plugin-polyfill-node": "^0.13.0",
     "vite": "^6.3.5"
   },
-  "engines": {
-    "node": ">=16.0.0"
-  },
   "exports": {
     ".": {
       "import": "./src/htmlminifier.js",
@@ -90,5 +87,5 @@
     "test:web": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --environment=jsdom"
   },
   "type": "module",
-  "version": "1.1.0"
+  "version": "1.1.1"
 }

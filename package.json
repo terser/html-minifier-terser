@@ -22,7 +22,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "alpinejs": "^3.14.9",
     "commitlint-config-non-conventional": "^1.0.1",
-    "eslint": "^8.57.1",
+    "eslint": "^9.29.0",
     "eslint-config-standard": "^17.1.0",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",

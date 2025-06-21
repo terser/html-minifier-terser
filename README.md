@@ -228,3 +228,7 @@ npm run benchmark
 ```shell
 npm run serve
 ```
+
+## Acknowledgements
+
+With many thanks to all the previous authors of HTML Minifier, especially [Juriy Zaytsev](https://github.com/kangax), and to everyone who helped make this new edition better, like [Daniel Ruf](https://github.com/DanielRuf).

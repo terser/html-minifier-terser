@@ -1,12 +1,16 @@
 {
   "dependencies": {
     "chalk": "^4.1.2",
-    "cli-table3": "^0.6.1",
+    "cli-table3": "^0.6.5",
     "lzma": "^2.3.2",
     "minimize": "^2.2.0",
     "progress": "^2.0.3"
   },
   "name": "html-minifer-terser-benchmarks",
+  "overrides": {
+    "ansi-regex": ">=6.0.1",
+    "es5-ext": ">=0.10.63"
+  },
   "private": "true",
   "scripts": {
     "backtest": "node backtest.cjs",

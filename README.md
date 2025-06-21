@@ -54,19 +54,19 @@ How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Pe
 
 | Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
 | --- | --- | --- | --- | --- |
-| [Amazon](https://www.amazon.com/) | 6 | **4** | 4 | n/a |
-| [BBC](https://www.bbc.co.uk/) | 759 | **699** | 752 | n/a |
-| [ECMAScript](https://tc39.es/ecma262/) | 7195 | **6352** | 6571 | n/a |
+| [Amazon](https://www.amazon.com/) | 695 | **625** | 682 | n/a |
+| [BBC](https://www.bbc.co.uk/) | 655 | **602** | 649 | n/a |
+| [ECMAScript](https://tc39.es/ecma262/) | 7197 | **6353** | 6573 | n/a |
 | [EFF](https://www.eff.org/) | 60 | **51** | 54 | n/a |
 | [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | n/a |
-| [FAZ](https://www.faz.net/aktuell/) | 1738 | **1614** | 1649 | n/a |
-| [Frontend Dogma](https://frontenddogma.com/) | 119 | **115** | 128 | n/a |
-| [Google](https://www.google.com/) | 50 | **46** | 50 | n/a |
-| [HTMLMinifier](https://github.com/kangax/html-minifier) | 363 | **243** | 341 | n/a |
-| [Mastodon](https://mastodon.social/explore) | 22 | **13** | 21 | n/a |
-| [NBC](https://www.nbc.com/) | 1204 | **1099** | 1191 | n/a |
-| [New York Times](https://www.nytimes.com/) | 900 | **760** | 890 | n/a |
-| [United Nations](https://www.un.org/) | 10 | **7** | 8 | n/a |
+| [FAZ](https://www.faz.net/aktuell/) | 1793 | **1667** | 1705 | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 116 | **112** | 125 | n/a |
+| [Google](https://www.google.com/) | 51 | **46** | 51 | n/a |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 366 | **245** | 343 | n/a |
+| [Mastodon](https://mastodon.social/explore) | 37 | **27** | 36 | n/a |
+| [NBC](https://www.nbc.com/) | 1022 | **932** | 1010 | n/a |
+| [New York Times](https://www.nytimes.com/) | 951 | **809** | 939 | n/a |
+| [United Nations](https://www.un.org/) | 9 | **7** | 8 | n/a |
 | [W3C](https://www.w3.org/) | 51 | **36** | 42 | n/a |
 | [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a |
 

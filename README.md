@@ -70,7 +70,7 @@ How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Pe
 | [W3C](https://www.w3.org/) | 51 | **36** | 42 | n/a |
 | [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a |
 
-## Options Quick Reference
+## Options quick reference
 
 Most of the options are disabled by default.
 
@@ -122,20 +122,6 @@ Most of the options are disabled by default.
 
 Minifier options like `sortAttributes` and `sortClassName` won’t impact the plain-text size of the output. However, they form long repetitive chains of characters that should improve compression ratio of gzip used in HTTP compression.
 
-## Security
-
-### ReDoS Protection
-
-This minifier includes protection against Regular Expression Denial of Service (ReDoS) attacks:
-
-* **Custom Fragment Quantifier Limits**: The `customFragmentQuantifierLimit` option (default: 1000) prevents exponential backtracking by using bounded quantifiers instead of unlimited ones (`*` or `+`) in regular expressions.
-
-* **Input Length Limits**: The `maxInputLength` option allows you to set a maximum input size to prevent processing of excessively large inputs that could cause performance issues.
-
-* **Custom Fragment Warnings**: The minifier will warn you if your custom fragments contain unlimited quantifiers that could be vulnerable to ReDoS attacks.
-
-**Important:** When using custom `ignoreCustomFragments`, ensure your regular expressions don’t contain unlimited quantifiers (`*`, `+`) without bounds, as these can lead to ReDoS vulnerabilities.
-
 ## Special cases
 
 ### Ignoring chunks of markup
@@ -169,6 +155,22 @@ Transformation of internal representation (e.g. removal of `id` attribute)
 Output of resulting markup (e.g. `<p>foo</p>`)
 
 HTMLMinifier can’t know that original markup was only half of the tree; it does its best to try to parse it as a full tree and it loses information about tree being malformed or partial in the beginning. As a result, it can’t create a partial/malformed tree at the time of the output.
+
+## Security
+
+### ReDoS protection
+
+This minifier includes protection against Regular Expression Denial of Service (ReDoS) attacks:
+
+* Custom fragment quantifier limits: The `customFragmentQuantifierLimit` option (default: `1000`) prevents exponential backtracking by using bounded quantifiers instead of unlimited ones (`*` or `+`) in regular expressions.
+
+* Input length limits: The `maxInputLength` option allows you to set a maximum input size to prevent processing of excessively large inputs that could cause performance issues.
+
+* Custom fragment warnings: The minifier will warn you if your custom fragments contain unlimited quantifiers that could be vulnerable to ReDoS attacks.
+
+**Important:** When using custom `ignoreCustomFragments`, ensure your regular expressions don’t contain unlimited quantifiers (`*`, `+`) without bounds, as these can lead to ReDoS vulnerabilities.
+
+(Further improvements are needed. Contributions welcome.)
 
 ## Running benchmarks
 

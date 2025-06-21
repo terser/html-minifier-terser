@@ -844,6 +844,11 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
 }
 
 async function minifyHTML(value, options, partialMarkup) {
+  // Check input length limitation to prevent ReDoS attacks
+  if (options.maxInputLength && value.length > options.maxInputLength) {
+    throw new Error(`Input length (${value.length}) exceeds maximum allowed length (${options.maxInputLength})`);
+  }
+
   if (options.collapseWhitespace) {
     value = collapseWhitespace(value, options, true, true);
   }
@@ -888,8 +893,24 @@ async function minifyHTML(value, options, partialMarkup) {
     return re.source;
   });
   if (customFragments.length) {
-    const reCustomIgnore = new RegExp('\\s*(?:' + customFragments.join('|') + ')+\\s*', 'g');
-    // temporarily replace custom ignored fragments with unique attributes
+    // Warn about potential ReDoS if custom fragments use unlimited quantifiers
+    for (let i = 0; i < customFragments.length; i++) {
+      if (/[*+]/.test(customFragments[i])) {
+        options.log('Warning: Custom fragment contains unlimited quantifiers (* or +) which may cause ReDoS vulnerability');
+        break;
+      }
+    }
+
+    // Safe approach: Use bounded quantifiers instead of unlimited ones to prevent ReDoS
+    const maxQuantifier = options.customFragmentQuantifierLimit || 200;
+    const whitespacePattern = `\\s{0,${maxQuantifier}}`;
+
+    // Use bounded quantifiers to prevent ReDoS - this approach prevents exponential backtracking
+    const reCustomIgnore = new RegExp(
+      whitespacePattern + '(?:' + customFragments.join('|') + '){1,' + maxQuantifier + '}' + whitespacePattern,
+      'g'
+    );
+    // Temporarily replace custom ignored fragments with unique attributes
     value = value.replace(reCustomIgnore, function (match) {
       if (!uidAttr) {
         uidAttr = uniqueId(value);

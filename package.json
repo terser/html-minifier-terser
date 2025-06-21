@@ -90,5 +90,5 @@
     "test:web": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --environment=jsdom"
   },
   "type": "module",
-  "version": "1.0.1"
+  "version": "1.1.0"
 }

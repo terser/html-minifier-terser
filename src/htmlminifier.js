@@ -7,9 +7,7 @@ import { HTMLParser, endTag } from './htmlparser.js';
 import TokenChain from './tokenchain.js';
 import { replaceAsync } from './utils.js';
 
-function trimWhitespace(str) {
-  return str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
-}
+const trimWhitespace = str => str && str.replace(/^[ \n\r\t\f]+/, '').replace(/[ \n\r\t\f]+$/, '');
 
 function collapseWhitespaceAll(str) {
   // Non-breaking space is specifically handled inside the replacer function here:

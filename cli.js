@@ -94,9 +94,7 @@ function parseJSONRegExpArray(value) {
   return value && value.map(parseRegExp);
 }
 
-function parseString(value) {
-  return value;
-}
+const parseString = value => value;
 
 const mainOptions = {
   caseSensitive: 'Treat attributes in case sensitive manner (useful for SVG; e.g. viewBox)',

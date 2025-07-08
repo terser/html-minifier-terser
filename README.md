@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
 <!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
 
-(This project is based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn is based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of May 2025, both html-minifier-terser and html-minifier seem unmaintained. **This project is currently under test.** If it seems maintainable to me, [Jens](https://meiert.com/), even without community support, the project will be updated and documented further. The following documentation largely matches the original project.)
+(This project has been based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn had been based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of 2025, both html-minifier-terser and html-minifier have been unmaintained for some time. As the project seems maintainable to me [[Jens](https://meiert.com/)]—even more so with community support—, it will be updated and documented further in this place. For the time being, the following documentation largely matches the original project.)
 
 HTMLMinifier is a highly **configurable, well-tested, JavaScript-based HTML minifier**.
 
@@ -30,7 +30,7 @@ For command line usage please see `html-minifier-next --help` for a list of avai
 **Sample command line:**
 
 ```bash
-html-minifier-next --collapse-whitespace --remove-comments --minify-js true
+html-minifier-next --collapse-whitespace --remove-comments --minify-js true --input-dir=. --output-dir=example
 ```
 
 ### Node.js
@@ -44,13 +44,13 @@ const result = await minify('<p title="blah" id="moo">foo</p>', {
 result; // '<p title=blah id=moo>foo</p>'
 ```
 
-See [the origina blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
+See [the original blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
 
 For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/html-lint).
 
 ## Minification comparison
 
-How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Peavy](http://www.willpeavy.com/minifier/) (1st result in [Google search for “html minifier”](https://www.google.com/#q=html+minifier)) as well as [htmlcompressor.com](http://htmlcompressor.com) and [minimize](https://github.com/Swaagie/minimize)?
+How does HTMLMinifier compare to other solutions—[HTML Minifier from Will Peavy](http://www.willpeavy.com/minifier/) (1st result in [Google search for “html minifier”](https://www.google.com/#q=html+minifier)) as well as [htmlcompressor.com](http://htmlcompressor.com) and [minimize](https://github.com/Swaagie/minimize)?
 
 | Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
 | --- | --- | --- | --- | --- |

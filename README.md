@@ -50,7 +50,7 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 ## Minification comparison
 
-How does HTMLMinifier compare to other solutions—[HTML Minifier from Will Peavy](http://www.willpeavy.com/minifier/) (1st result in [Google search for “html minifier”](https://www.google.com/#q=html+minifier)) as well as [htmlcompressor.com](http://htmlcompressor.com) and [minimize](https://github.com/Swaagie/minimize)?
+How does HTMLMinifier compare to other solutions, like [minimize](https://github.com/Swaagie/minimize) or [htmlcompressor.com](http://htmlcompressor.com/)?
 
 | Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
 | --- | --- | --- | --- | --- |

@@ -2119,7 +2119,7 @@ test('script minification', async () => {
     '    });\n' +
     '  //-->\n' +
     '</script>';
-  output = '<script>Platform.Mobile.Bootstrap.init((function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})}))</script>';
+  output = '<script>Platform.Mobile.Bootstrap.init(function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})})</script>';
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });

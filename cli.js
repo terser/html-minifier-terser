@@ -73,7 +73,7 @@ function parseJSON(value) {
   if (value) {
     try {
       return JSON.parse(value);
-    } catch (e) {
+    } catch {
       if (/^{/.test(value)) {
         fatal('Could not parse JSON value \'' + value + '\'');
       }

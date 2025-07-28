@@ -28,9 +28,9 @@
     "jest": "^30.0.4",
     "jest-environment-jsdom": "^30.0.4",
     "lint-staged": "^16.1.2",
-    "rollup": "^4.44.1",
+    "rollup": "^4.45.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.5"
   },
   "exports": {
     ".": {

@@ -332,9 +332,7 @@ run(fileNames.map(function (fileName) {
               }
             } catch (e) {
               // If JSON parsing fails, treat as direct text response (new API format)
-              // Check if response looks like compressed HTML (not an error page)
-              if (response && response.length > 0 && !response.includes('<!DOCTYPE html>') ||
-                  (response.includes('<') && response.length < data.length)) {
+              if (response && response.length > 0 && response.includes('<') && response.length < data.length) {
                 compressedContent = response;
                 isSuccess = true;
               }
@@ -384,7 +382,8 @@ run(fileNames.map(function (fileName) {
       for (const name in infos) {
         const info = infos[name];
         display.push([greenSize(info.size), greenSize(info.gzSize), greenSize(info.lzSize), greenSize(info.brSize)].join('\n'));
-        report.push(info.size ? toKb(info.size) : 'n/a');
+        const sizeValue = info.size ? toKb(info.size) : 'n/a';
+        report.push(sizeValue === '0' ? 'n/a' : sizeValue);
       }
       display.push(
         [

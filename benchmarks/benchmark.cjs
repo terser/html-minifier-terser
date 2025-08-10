@@ -286,7 +286,6 @@ run(fileNames.map(function (fileName) {
       });
     }
 
-    // @@ Check if tool is still accessible, if not, remove
     function testHTMLCompressor(done) {
       readText(filePath, function (data) {
         const url = new URL('https://htmlcompressor.com/compress');
@@ -321,16 +320,31 @@ run(fileNames.map(function (fileName) {
           res.on('data', function (chunk) {
             response += chunk;
           }).on('end', function () {
+            let compressedContent = '';
+            let isSuccess = false;
+
+            // Try to parse as JSON first (old API format)
             try {
-              response = JSON.parse(response);
+              const jsonResponse = JSON.parse(response);
+              if (jsonResponse.success && jsonResponse.result) {
+                compressedContent = jsonResponse.result;
+                isSuccess = true;
+              }
             } catch (e) {
-              response = {};
+              // If JSON parsing fails, treat as direct text response (new API format)
+              // Check if response looks like compressed HTML (not an error page)
+              if (response && response.length > 0 && !response.includes('<!DOCTYPE html>') ||
+                  (response.includes('<') && response.length < data.length)) {
+                compressedContent = response;
+                isSuccess = true;
+              }
             }
-            if (info && response.success) {
-              writeText(info.filePath, response.result, function () {
+
+            if (info && isSuccess && compressedContent) {
+              writeText(info.filePath, compressedContent, function () {
                 readSizes(info, done);
               });
-            } else { // Site refused to process content
+            } else { // Site refused to process content or returned error
               failed();
             }
           });

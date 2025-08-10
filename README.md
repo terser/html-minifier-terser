@@ -63,7 +63,7 @@ How does HTMLMinifier compare to other solutions, like [minimize](https://github
 | [FAZ](https://www.faz.net/aktuell/) | 1767 | **1641** | 1679 | n/a |
 | [Frontend Dogma](https://frontenddogma.com/) | 119 | **114** | 128 | 118 |
 | [Google](https://www.google.com/) | 51 | **46** | 50 | 50 |
-| [HTML Minifier (Original)](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
 | [Mastodon](https://mastodon.social/explore) | 37 | **28** | 36 | 36 |
 | [NBC](https://www.nbc.com/) | 601 | **549** | 593 | n/a |
 | [New York Times](https://www.nytimes.com/) | 822 | **701** | 811 | n/a |

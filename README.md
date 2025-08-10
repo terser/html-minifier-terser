@@ -54,21 +54,23 @@ How does HTMLMinifier compare to other solutions, like [minimize](https://github
 
 | Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
 | --- | --- | --- | --- | --- |
-| [Amazon](https://www.amazon.com/) | 695 | **625** | 682 | n/a |
-| [BBC](https://www.bbc.co.uk/) | 655 | **602** | 649 | n/a |
-| [ECMAScript](https://tc39.es/ecma262/) | 7197 | **6353** | 6573 | n/a |
-| [EFF](https://www.eff.org/) | 60 | **51** | 54 | n/a |
-| [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | n/a |
-| [FAZ](https://www.faz.net/aktuell/) | 1793 | **1667** | 1705 | n/a |
-| [Frontend Dogma](https://frontenddogma.com/) | 116 | **112** | 125 | n/a |
-| [Google](https://www.google.com/) | 51 | **46** | 51 | n/a |
-| [HTMLMinifier](https://github.com/kangax/html-minifier) | 366 | **245** | 343 | n/a |
-| [Mastodon](https://mastodon.social/explore) | 37 | **27** | 36 | n/a |
-| [NBC](https://www.nbc.com/) | 1022 | **932** | 1010 | n/a |
-| [New York Times](https://www.nytimes.com/) | 951 | **809** | 939 | n/a |
-| [United Nations](https://www.un.org/) | 9 | **7** | 8 | n/a |
-| [W3C](https://www.w3.org/) | 51 | **36** | 42 | n/a |
-| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 114 | **100** | 107 | n/a |
+| [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 |
+| [Amazon](https://www.amazon.com/) | 206 | **195** | 203 | 200 |
+| [BBC](https://www.bbc.co.uk/) | 746 | **683** | 740 | n/a |
+| [CSS-Tricks](https://css-tricks.com/) | 166 | **124** | 152 | 148 |
+| [ECMAScript](https://tc39.es/ecma262/) | 7204 | **6361** | 6581 | n/a |
+| [EFF](https://www.eff.org/) | 58 | **49** | 52 | 52 |
+| [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | 5 |
+| [FAZ](https://www.faz.net/aktuell/) | 1740 | **1616** | 1652 | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 119 | **114** | 128 | 118 |
+| [Google](https://www.google.com/) | 51 | **46** | 50 | 50 |
+| [HTML Minifier (Original)](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
+| [Mastodon](https://mastodon.social/explore) | 37 | **28** | 36 | 36 |
+| [NBC](https://www.nbc.com/) | 593 | **541** | 585 | n/a |
+| [New York Times](https://www.nytimes.com/) | 843 | **719** | 832 | n/a |
+| [United Nations](https://www.un.org/) | 9 | **7** | 8 | 8 |
+| [W3C](https://www.w3.org/) | 51 | **36** | 41 | 40 |
+| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 225 | **204** | 215 | 215 |
 
 ## Options quick reference
 

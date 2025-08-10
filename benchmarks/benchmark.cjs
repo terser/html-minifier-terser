@@ -144,7 +144,10 @@ function generateMarkdownTable() {
     }
 
     const row = rows[fileName].report;
-    row[2] = '**' + row[2] + '**';
+    // Prevent double-bolding when regenerating README table
+    if (!row[2].startsWith('**')) {
+      row[2] = '**' + row[2] + '**';
+    }
   });
 
   const widths = headers.map(function (header, index) {
@@ -286,7 +289,6 @@ run(fileNames.map(function (fileName) {
       });
     }
 
-    // @@ Check if tool is still accessible, if not, remove
     function testHTMLCompressor(done) {
       readText(filePath, function (data) {
         const url = new URL('https://htmlcompressor.com/compress');
@@ -312,7 +314,19 @@ run(fileNames.map(function (fileName) {
           }
         }
 
-        https.request(url, options, function (res) {
+        const request = https.request(url, options, function (res) {
+          // Check HTTP status code
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            console.warn(`htmlcompressor.com returned status ${res.statusCode}`);
+            failed();
+            return;
+          }
+
+          // Validate content type for better response parsing
+          const contentType = res.headers['content-type'] || '';
+          const isJson = contentType.includes('application/json');
+          const isHtml = contentType.includes('text/html') || contentType.includes('text/plain');
+
           if (res.headers['content-encoding'] === 'gzip') {
             res = res.pipe(zlib.createGunzip());
           }
@@ -321,20 +335,51 @@ run(fileNames.map(function (fileName) {
           res.on('data', function (chunk) {
             response += chunk;
           }).on('end', function () {
-            try {
-              response = JSON.parse(response);
-            } catch (e) {
-              response = {};
+            let compressedContent = '';
+            let isSuccess = false;
+
+            // Parse response based on content-type
+            if (isJson) {
+              // Try to parse as JSON first (old API format)
+              try {
+                const jsonResponse = JSON.parse(response);
+                if (jsonResponse.success && jsonResponse.result) {
+                  compressedContent = jsonResponse.result;
+                  isSuccess = true;
+                }
+              } catch (e) {
+                console.warn('Failed to parse JSON response from htmlcompressor.com');
+              }
+            } else {
+              // Treat as direct text response (new API format)
+              // Compare byte lengths instead of string lengths for accuracy
+              const responseBytes = Buffer.byteLength(response, 'utf8');
+              const originalBytes = Buffer.byteLength(data, 'utf8');
+
+              if (response && response.length > 0 && response.includes('<') && responseBytes < originalBytes) {
+                compressedContent = response;
+                isSuccess = true;
+              }
             }
-            if (info && response.success) {
-              writeText(info.filePath, response.result, function () {
+
+            if (info && isSuccess && compressedContent) {
+              writeText(info.filePath, compressedContent, function () {
                 readSizes(info, done);
               });
-            } else { // Site refused to process content
+            } else { // Site refused to process content or returned error
               failed();
             }
           });
-        }).on('error', failed).end(new URLSearchParams({
+        });
+
+        // Set request timeout (15 seconds)
+        request.setTimeout(15000, function() {
+          console.warn('htmlcompressor.com request timed out');
+          request.destroy();
+          failed();
+        });
+
+        request.on('error', failed).end(new URLSearchParams({
           code_type: 'html',
           html_level: 3,
           html_strip_quotes: 1,
@@ -370,7 +415,15 @@ run(fileNames.map(function (fileName) {
       for (const name in infos) {
         const info = infos[name];
         display.push([greenSize(info.size), greenSize(info.gzSize), greenSize(info.lzSize), greenSize(info.brSize)].join('\n'));
-        report.push(info.size ? toKb(info.size) : 'n/a');
+        const sizeValue = info.size ? toKb(info.size) : 'n/a';
+        // Use “<1” for sub-1KB files instead of “n/a” for better clarity
+        if (sizeValue === '0' || !info.size) {
+          report.push('n/a');
+        } else if (parseFloat(sizeValue) < 1) {
+          report.push('<1');
+        } else {
+          report.push(sizeValue);
+        }
       }
       display.push(
         [

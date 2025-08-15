@@ -26,7 +26,6 @@
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "jest": "^30.0.5",
-    "jest-environment-jsdom": "^30.0.5",
     "lint-staged": "^16.1.5",
     "rollup": "^4.45.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
@@ -80,10 +79,8 @@
     "lint": "eslint .",
     "prepare": "husky",
     "serve": "npm run build && vite",
-    "test": "npm run test:node",
-    "test:node": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --runInBand",
-    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest verbose --watch",
-    "test:web": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --environment=jsdom --runInBand"
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --verbose --watch"
   },
   "type": "module",
   "version": "1.1.7"

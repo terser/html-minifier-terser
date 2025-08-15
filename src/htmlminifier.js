@@ -60,13 +60,13 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
 }
 
 // non-empty tags that will maintain whitespace around them
-const inlineTags = new Set(['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var']);
+const inlineHtmlTags = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var'];
 // non-empty tags that will maintain whitespace within them
 const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // self-closing tags that will maintain whitespace around them
 const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
 
-function collapseWhitespaceSmart(str, prevTag, nextTag, options) {
+function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags) {
   let trimLeft = prevTag && !selfClosingInlineTags.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
     trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextTags.has(prevTag);
@@ -866,6 +866,7 @@ async function minifyHTML(value, options, partialMarkup) {
   let uidIgnore;
   let uidAttr;
   let uidPattern;
+  let inlineTags = new Set([...inlineHtmlTags, ...(options.inlineCustomTags ?? [])]);
 
   // temporarily replace ignored chunks with comments,
   // so that we don't have to worry what's there.
@@ -997,7 +998,7 @@ async function minifyHTML(value, options, partialMarkup) {
       const match = str.match(/^<\/([\w:-]+)>$/);
       if (match) {
         endTag = match[1];
-      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options))) {
+      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options, inlineTags))) {
         break;
       }
     }
@@ -1208,7 +1209,7 @@ async function minifyHTML(value, options, partialMarkup) {
             }
           }
           if (prevTag || nextTag) {
-            text = collapseWhitespaceSmart(text, prevTag, nextTag, options);
+            text = collapseWhitespaceSmart(text, prevTag, nextTag, options, inlineTags);
           } else {
             text = collapseWhitespace(text, options, true, true);
           }

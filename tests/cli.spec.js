@@ -159,4 +159,30 @@ describe('cli', () => {
     const minifedHTML = await minify(input, minfiyOptions);
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
+
+  // parsing array inputs
+  test('should handle inline-custom-elements correctly', async () => {
+    const input = await readFixture('inline-custom-elements.html');
+
+    const minifyOptions = {
+      collapseWhitespace: true,
+      inlineCustomElements: ['custom-element', 'custom-inline']
+    };
+
+    const cliArguments = [
+      'inline-custom-elements.html',
+      '--collapse-whitespace',
+      '--inline-custom-elements=["custom-element","custom-inline"]'
+    ];
+
+    const cliMinifiedHTML = execCli(cliArguments);
+    const minifiedHTML = await minify(input, minifyOptions);
+    expect(cliMinifiedHTML).toBe(minifiedHTML);
+
+    // Verify spacing is preserved for specified custom elements
+    expect(cliMinifiedHTML).toContain('<custom-element>A</custom-element> <custom-element>B</custom-element>');
+    expect(cliMinifiedHTML).toContain('<span>Standard</span> <custom-inline>Custom</custom-inline>');
+    // But not for unspecified custom elements
+    expect(cliMinifiedHTML).toContain('<web-component>X</web-component><web-component>Y</web-component>');
+  });
 });

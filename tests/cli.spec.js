@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { minify } from '../src/htmlminifier';
+import { minify } from '../src/htmlminifier.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

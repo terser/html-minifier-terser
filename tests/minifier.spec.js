@@ -1,5 +1,5 @@
 import { test, expect } from '@jest/globals';
-import { minify } from '../src/htmlminifier';
+import { minify } from '../src/htmlminifier.js';
 
 test('`minifiy` exists', () => {
   expect(minify).toBeDefined();

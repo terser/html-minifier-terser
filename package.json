@@ -46,6 +46,16 @@
     "src/"
   ],
   "homepage": "https://j9t.github.io/html-minifier-next/",
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testEnvironmentOptions": {
+      "customExportConditions": [
+        "node",
+        "node-addons"
+      ]
+    }
+  },
   "keywords": [
     "cli",
     "compress",

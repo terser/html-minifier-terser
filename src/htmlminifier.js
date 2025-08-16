@@ -59,11 +59,11 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
   return lineBreakBefore + str + lineBreakAfter;
 }
 
-// non-empty tags that will maintain whitespace around them
-const inlineHtmlTags = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var'];
-// non-empty tags that will maintain whitespace within them
+// non-empty elements that will maintain whitespace around them
+const inlineHtmlElements = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'mark', 'math', 'meter', 'nobr', 'object', 'output', 'progress', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var', 'wbr'];
+// non-empty elements that will maintain whitespace within them
 const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
-// self-closing tags that will maintain whitespace around them
+// self-closing elements that will maintain whitespace around them
 const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
 
 function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags) {
@@ -866,7 +866,10 @@ async function minifyHTML(value, options, partialMarkup) {
   let uidIgnore;
   let uidAttr;
   let uidPattern;
-  let inlineTags = new Set([...inlineHtmlTags, ...(options.inlineCustomTags ?? [])]);
+  // Create inline tags set with backward compatibility for inlineCustomTags
+  const customElements = options.inlineCustomElements ?? options.inlineCustomTags ?? [];
+  const normalizedCustomElements = customElements.map(name => options.name(name));
+  let inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
 
   // temporarily replace ignored chunks with comments,
   // so that we don't have to worry what's there.

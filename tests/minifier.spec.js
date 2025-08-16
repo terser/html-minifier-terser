@@ -1,5 +1,5 @@
 import { test, expect } from '@jest/globals';
-import { minify } from '../src/htmlminifier';
+import { minify } from '../src/htmlminifier.js';
 
 test('`minifiy` exists', () => {
   expect(minify).toBeDefined();
@@ -3644,4 +3644,60 @@ test('ReDoS prevention in custom fragments processing', async () => {
   expect(endTime3 - startTime3).toBeLessThan(2000);
   expect(result3).toContain('<?php echo "0"; ?>');
   expect(result3).toContain('<?php echo "99"; ?>');
+});
+
+test('inlineCustomElements option', async () => {
+  let input, output;
+
+  // Test custom elements maintain spacing when specified in inlineCustomElements
+  input = '<custom-element>A</custom-element> <custom-element>B</custom-element>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    inlineCustomElements: ['custom-element']
+  })).toBe(input);
+
+  // Test without inlineCustomElements - spacing should collapse for custom elements
+  output = '<custom-element>A</custom-element><custom-element>B</custom-element>';
+  expect(await minify(input, {
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // Test multiple custom elements
+  input = '<tag-a>X</tag-a> <tag-b>Y</tag-b>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    inlineCustomElements: ['tag-a', 'tag-b']
+  })).toBe(input);
+
+  // Test mixed custom and standard inline elements
+  input = '<span>Standard</span> <custom-inline>Custom</custom-inline> <em>More</em>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    inlineCustomElements: ['custom-inline']
+  })).toBe(input);
+
+  // Test custom elements not in inlineCustomElements still collapse
+  input = '<included-tag>A</included-tag> <excluded-tag>B</excluded-tag> <included-tag>C</included-tag>';
+  output = '<included-tag>A</included-tag><excluded-tag>B</excluded-tag><included-tag>C</included-tag>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    inlineCustomElements: ['included-tag']
+  })).toBe(output);
+
+  // Test empty inlineCustomElements array (default behavior)
+  input = '<web-component>A</web-component> <web-component>B</web-component>';
+  output = '<web-component>A</web-component><web-component>B</web-component>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    inlineCustomElements: []
+  })).toBe(output);
+
+  // Test with collapseInlineTagWhitespace option
+  input = '<custom-tag>A</custom-tag> <custom-tag>B</custom-tag>';
+  output = '<custom-tag>A</custom-tag><custom-tag>B</custom-tag>';
+  expect(await minify(input, {
+    collapseWhitespace: true,
+    collapseInlineTagWhitespace: true,
+    inlineCustomElements: ['custom-tag']
+  })).toBe(output);
 });

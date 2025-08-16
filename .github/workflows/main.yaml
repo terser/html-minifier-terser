@@ -3,11 +3,13 @@ name: "CI"
 on: [push, pull_request]
 
 jobs:
-  test-node:
+  test:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: ['lts/*', 'current']
+        # Temporarily pinned due to Node.js 24.6.0 Jest ES modules issue
+        # @@ Switch back to “current” when possible
+        node: ['lts/*', '24.5.0']
     name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
     runs-on: ${{ matrix.platform }}
     steps:
@@ -16,33 +18,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-      - name: "Install compatible npm version"
-        run: |
-          corepack enable
-          corepack prepare npm@latest --activate # Use the latest npm compatible with the Node.js version
       - name: "Install dependencies"
         run: npm ci
       - name: "Run tests"
-        run: npm run test:node
-
-  test-web:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-        node: ['lts/*', 'current']
-    name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-      - name: "Install compatible npm version"
-        run: |
-          corepack enable
-          corepack prepare npm@latest --activate # Use the latest npm compatible with the Node.js version
-      - name: "Install dependencies"
-        run: npm ci
-      - name: "Run tests"
-        run: npm run test:web
+        run: npm test

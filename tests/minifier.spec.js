@@ -44,7 +44,7 @@ test('parsing non-trivial markup', async () => {
     '<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>'
   );
 
-  // will cause test to time-out if fail
+  // Will cause test to time out if fail
   input = '<p>For more information, read <a href=https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685>this Stack Overflow answer</a>.</p>';
   output = '<p>For more information, read <a href="https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685">this Stack Overflow answer</a>.</p>';
   expect(await minify(input)).toBe(output);
@@ -123,7 +123,7 @@ test('parsing non-trivial markup', async () => {
     continueOnParseError: true
   })).toBe(input);
 
-  // // https://github.com/kangax/html-minifier/issues/974
+  // https://github.com/kangax/html-minifier/issues/974
   input = '<!–– Failing New York Times Comment -->';
   expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
 
@@ -219,7 +219,7 @@ test('space normalization around text', async () => {
     expect(await minify('<div>foo <' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz </' + el + '>bar</div>');
     expect(await minify('<div>foo<' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '> baz </' + el + '>bar</div>');
   }));
-  // Don't trim whitespace around element, but do trim within
+  // Don’t trim whitespace around element, but do trim within
   await Promise.all([
     'bdi', 'bdo', 'button', 'cite', 'code', 'dfn', 'math', 'q', 'rt', 'rtc', 'ruby', 'svg'
   ].map(async function (el) {
@@ -894,12 +894,12 @@ test('empty attributes', async () => {
   input = '<img src="" alt="">';
   expect(await minify(input, { removeEmptyAttributes: true })).toBe('<img src="" alt="">');
 
-  // preserve unrecognized attribute
+  // Preserve unrecognized attribute,
   // remove recognized attrs with unspecified values
   input = '<div data-foo class id style title lang dir onfocus onblur onchange onclick ondblclick onmousedown onmouseup onmouseover onmousemove onmouseout onkeypress onkeydown onkeyup></div>';
   expect(await minify(input, { removeEmptyAttributes: true })).toBe('<div data-foo></div>');
 
-  // additional remove attributes
+  // Remove additional attributes
   input = '<img src="" alt="">';
   expect(await minify(input, { removeEmptyAttributes: function (attrName, tag) { return tag === 'img' && attrName === 'src'; } })).toBe('<img alt="">');
 });
@@ -1682,7 +1682,7 @@ test('removing optional tags in options', async () => {
   output = '<select> <option>foo</option> <option>bar</option> </select>';
   expect(await minify(input, { removeOptionalTags: true, collapseWhitespace: true, conservativeCollapse: true })).toBe(output);
 
-  // example from htmldog.com
+  // Example from htmldog.com
   input = '<select name="catsndogs">' +
     '<optgroup label="Cats">' +
     '<option>Tiger</option><option>Leopard</option><option>Lynx</option>' +
@@ -1900,15 +1900,15 @@ test('Ignore custom fragments', async () => {
       /\{%[^%]*?%\}/g
     ]
   })).toBe(input);
-  // trimCustomFragments withOUT collapseWhitespace, does
-  // not break the "{% foo %} {% bar %}" test
+  // `trimCustomFragments` withOUT `collapseWhitespace`,
+  // does not break the “{% foo %} {% bar %}” test
   expect(await minify(input, {
     ignoreCustomFragments: [
       /\{%[^%]*?%\}/g
     ],
     trimCustomFragments: true
   })).toBe(input);
-  // trimCustomFragments WITH collapseWhitespace, changes output
+  // `trimCustomFragments` WITH `collapseWhitespace`, changes output
   output = '<img class="{% foo %}{% bar %}">';
   expect(await minify(input, {
     ignoreCustomFragments: [
@@ -2814,7 +2814,7 @@ test('ignore custom comments', async () => {
   input = '<!-- ko if: someExpressionGoesHere --><li>test</li><!-- /ko -->';
   expect(await minify(input, {
     removeComments: true,
-    // ignore knockout comments
+    // Ignore knockout comments
     ignoreCustomComments: [
       /^\s+ko/,
       /\/ko\s+$/
@@ -3446,7 +3446,7 @@ test('decode entity characters', async () => {
 
 test('tests from PHPTAL', async () => {
   await Promise.all([
-    // trailing </p> removed by minifier, but not by PHPTAL
+    // Trailing `</p>` removed by minifier, but not by PHPTAL
     ['<p>foo bar baz', '<p>foo     \t bar\n\n\n baz</p>'],
     ['<p>foo bar<pre>  \tfoo\t   \nbar   </pre>', '<p>foo   \t\n bar</p><pre>  \tfoo\t   \nbar   </pre>'],
     ['<p>foo <a href="">bar </a>baz', '<p>foo <a href=""> bar </a> baz  </p>'],
@@ -3454,13 +3454,13 @@ test('tests from PHPTAL', async () => {
     ['<p>foo<a href=""> bar </a>baz', ' <p> foo<a href=""> bar </a>baz </p>  '],
     ['<p>foo <a href="">bar</a> baz', ' <p> foo <a href="">bar</a> baz</p>'],
     ['<p>foo<br>', '<p>foo <br/></p>'],
-    // PHPTAL remove whitespace after 'foo' - problematic if <span> is used as icon font
+    // PHPTAL remove whitespace after “foo”—problematic if `<span>` is used as icon font
     ['<p>foo <span></span>', '<p>foo <span></span></p>'],
     ['<p>foo <span></span>', '<p>foo <span></span> </p>'],
-    // comments removed by minifier, but not by PHPTAL
+    // Comments removed by minifier, but not by PHPTAL
     ['<p>foo', '<p>foo <!-- --> </p>'],
     ['<div>a<div>b</div>c<div>d</div>e</div>', '<div>a <div>b</div> c <div> d </div> e </div>'],
-    // unary slashes removed by minifier, but not by PHPTAL
+    // Unary slashes removed by minifier, but not by PHPTAL
     ['<div><img></div>', '<div> <img/> </div>'],
     ['<div>x <img></div>', '<div> x <img/> </div>'],
     ['<div>x <img> y</div>', '<div> x <img/> y </div>'],
@@ -3474,8 +3474,8 @@ test('tests from PHPTAL', async () => {
     ['<div>x <button>Z</button> y</div>', '<div> x <button> Z </button> y </div>'],
     ['<div><button>Z</button> y</div>', '<div><button> Z </button> y </div>'],
     ['<script>//foo\nbar()</script>', '<script>//foo\nbar()</script>'],
-    // optional tags removed by minifier, but not by PHPTAL
-    // parser cannot handle <script/>
+    // Optional tags removed by minifier, but not by PHPTAL
+    // Parser cannot handle `<script/>`
     [
       '<title></title><link><script>" ";</script><script></script><meta><style></style>',
       '<html >\n' +
@@ -3490,16 +3490,16 @@ test('tests from PHPTAL', async () => {
     ['<div><ul><li><a>a </a></li><li>b </li><li>c</li></ul></div>', '<div> <ul> <li> <a> a </a> </li> <li> b </li> <li> c </li> </ul> </div>'], */
     ['<table>x<tr>x<td>foo</td>x</tr>x</table>', '<table> x <tr> x <td> foo </td> x </tr> x </table>'],
     ['<select>x<option></option>x<optgroup>x<option></option>x</optgroup>x</select>', '<select> x <option> </option> x <optgroup> x <option> </option> x </optgroup> x </select> '],
-    // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
-    // attribute ordering differences between minifier and PHPTAL
+    // Closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
+    // Attribute ordering differences between minifier and PHPTAL
     ['<img alt=x height=5 src=foo width=10>', '<img width="10" height="5" src="foo" alt="x" />'],
     ['<img alpha=1 beta=2 gamma=3>', '<img gamma="3" alpha="1" beta="2" />'],
     ['<pre>\n\n\ntest</pre>', '<pre>\n\n\ntest</pre>'],
     /* single line-break preceding <pre> is redundant, assuming <pre> is block element
     ['<pre>test</pre>', '<pre>\ntest</pre>'], */
-    // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
-    // attribute ordering differences between minifier and PHPTAL
-    // redundant inter-attribute spacing removed by minifier, but not by PHPTAL
+    // Closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
+    // Attribute ordering differences between minifier and PHPTAL
+    // Redundant inter-attribute spacing removed by minifier, but not by PHPTAL
     ['<meta content="text/plain;charset=UTF-8"http-equiv=Content-Type>', '<meta http-equiv=\'Content-Type\' content=\'text/plain;charset=UTF-8\'/>'],
     /* minifier does not optimise <meta/> in HTML5 mode
     ['<meta charset=utf-8>', '<meta http-equiv=\'Content-Type\' content=\'text/plain;charset=UTF-8\'/>'], */
@@ -3509,7 +3509,7 @@ test('tests from PHPTAL', async () => {
       '<script type=\'text/javascript ;charset=utf-8\'\n' +
       'language=\'javascript\'></script><style type=\'text/css\'></style>'
     ], */
-    // minifier removes more javascript type attributes than PHPTAL
+    // Minifier removes more javascript type attributes than PHPTAL
     ['<script></script><script type=text/hack></script>', '<script type="text/javascript;e4x=1"></script><script type="text/hack"></script>']
     /* trim "title" attribute value in <a>
     [
@@ -3557,8 +3557,8 @@ test('canCollapseWhitespace and canTrimWhitespace hooks', async () => {
     canCollapseWhitespace: canCollapseAndTrimWhitespace
   })).toBe(output);
 
-  // Regression test: Previously the first </div> would clear the internal
-  // stackNo{Collapse,Trim}Whitespace, so that ' foo  bar' turned into ' foo bar'
+  // Regression test: Previously the first `</div>` would clear the internal
+  // stackNo{Collapse,Trim}Whitespace, so that “ foo  bar” turned into “ foo bar”
   input = '<div class="leaveAlone"><div></div><span> </span> foo  bar</div>';
   output = '<div class="leaveAlone"><div></div><span> </span> foo  bar</div>';
 
@@ -3676,7 +3676,7 @@ test('inlineCustomElements option', async () => {
     inlineCustomElements: ['custom-inline']
   })).toBe(input);
 
-  // Test custom elements not in inlineCustomElements still collapse
+  // Test custom elements not in `inlineCustomElements` still collapse
   input = '<included-tag>A</included-tag> <excluded-tag>B</excluded-tag> <included-tag>C</included-tag>';
   output = '<included-tag>A</included-tag><excluded-tag>B</excluded-tag><included-tag>C</included-tag>';
   expect(await minify(input, {
@@ -3684,7 +3684,7 @@ test('inlineCustomElements option', async () => {
     inlineCustomElements: ['included-tag']
   })).toBe(output);
 
-  // Test empty inlineCustomElements array (default behavior)
+  // Test empty `inlineCustomElements` array (default behavior)
   input = '<web-component>A</web-component> <web-component>B</web-component>';
   output = '<web-component>A</web-component><web-component>B</web-component>';
   expect(await minify(input, {
@@ -3692,7 +3692,7 @@ test('inlineCustomElements option', async () => {
     inlineCustomElements: []
   })).toBe(output);
 
-  // Test with collapseInlineTagWhitespace option
+  // Test with `collapseInlineTagWhitespace` option
   input = '<custom-tag>A</custom-tag> <custom-tag>B</custom-tag>';
   output = '<custom-tag>A</custom-tag><custom-tag>B</custom-tag>';
   expect(await minify(input, {

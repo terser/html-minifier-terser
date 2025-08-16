@@ -118,7 +118,7 @@ describe('cli', () => {
     expect(existsFixutre('tmp/nested/default.html')).toBe(true);
   });
 
-  // parsing json
+  // Parsing json
   test('should minify urls correctly', async () => {
     const input = await readFixture('url.html');
 
@@ -140,7 +140,7 @@ describe('cli', () => {
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
 
-  // parsing string inputs
+  // Parsing string inputs
   test('should set quote char correctly', async () => {
     const input = await readFixture('quote-char.html');
 
@@ -160,7 +160,7 @@ describe('cli', () => {
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
 
-  // parsing array inputs
+  // Parsing array inputs
   test('should handle inline-custom-elements correctly', async () => {
     const input = await readFixture('inline-custom-elements.html');
 
@@ -182,7 +182,7 @@ describe('cli', () => {
     // Verify spacing is preserved for specified custom elements
     expect(cliMinifiedHTML).toContain('<custom-element>A</custom-element> <custom-element>B</custom-element>');
     expect(cliMinifiedHTML).toContain('<span>Standard</span> <custom-inline>Custom</custom-inline>');
-    // But not for unspecified custom elements
+    // but not for unspecified custom elements
     expect(cliMinifiedHTML).toContain('<web-component>X</web-component><web-component>Y</web-component>');
   });
 });

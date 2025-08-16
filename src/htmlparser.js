@@ -131,7 +131,7 @@ export class HTMLParser {
     let last, prevTag, nextTag;
     while (html) {
       last = html;
-      // Make sure we're not in a script or style element
+      // Make sure we’re not in a `script` or `style` element
       if (!lastTag || !special.has(lastTag)) {
         let textEnd = html.indexOf('<');
         if (textEnd === 0) {
@@ -207,7 +207,7 @@ export class HTMLParser {
           html = '';
         }
 
-        // next tag
+        // Next tag
         let nextTagMatch = parseStartTag(html);
         if (nextTagMatch) {
           nextTag = nextTagMatch.tagName;
@@ -320,9 +320,9 @@ export class HTMLParser {
 
       const attrs = match.attrs.map(function (args) {
         let name, value, customOpen, customClose, customAssign, quote;
-        const ncp = 7; // number of captured parts, scalar
+        const ncp = 7; // Number of captured parts, scalar
 
-        // hackish work around FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
+        // Hackish workaround for FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
         if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
           if (args[3] === '') { delete args[3]; }
           if (args[4] === '') { delete args[4]; }
@@ -512,13 +512,13 @@ export const HTMLtoDOM = (html, doc) => {
     }
   }
 
-  // If we're working with a document, inject contents into
-  // the body element
+  // If we’re working with a document, inject contents into
+  // the `body` element
   let curParentNode = one.body;
 
   const parser = new HTMLParser(html, {
     start: function (tagName, attrs, unary) {
-      // If it's a pre-built element, then we can ignore
+      // If it’s a pre-built element, then we can ignore
       // its construction
       if (one[tagName]) {
         curParentNode = one[tagName];
@@ -552,7 +552,7 @@ export const HTMLtoDOM = (html, doc) => {
       curParentNode.appendChild(doc.createTextNode(text));
     },
     comment: function (/* text */) {
-      // create comment node
+      // Create comment node
     },
     ignore: function (/* text */) {
       // What to do here?

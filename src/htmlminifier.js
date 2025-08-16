@@ -66,14 +66,14 @@ const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em',
 // Self-closing elements that will maintain whitespace around them
 const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
 
-function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags) {
+function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags, inlineTextSet) {
   let trimLeft = prevTag && !selfClosingInlineTags.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
-    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextTags.has(prevTag);
+    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextSet.has(prevTag);
   }
   let trimRight = nextTag && !selfClosingInlineTags.has(nextTag);
   if (trimRight && !options.collapseInlineTagWhitespace) {
-    trimRight = nextTag.charAt(0) === '/' ? !inlineTextTags.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
+    trimRight = nextTag.charAt(0) === '/' ? !inlineTextSet.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
   }
   return collapseWhitespace(str, options, trimLeft, trimRight, prevTag && nextTag);
 }
@@ -866,10 +866,12 @@ async function minifyHTML(value, options, partialMarkup) {
   let uidIgnore;
   let uidAttr;
   let uidPattern;
-  // Create inline tags set with backward compatibility for inlineCustomTags
-  const customElements = options.inlineCustomElements ?? options.inlineCustomTags ?? [];
-  const normalizedCustomElements = customElements.map(name => options.name(name));
-  let inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
+  // Create inline tags/text sets with custom elements
+  const customElementsInput = options.inlineCustomElements ?? [];
+  const customElementsArr = Array.isArray(customElementsInput) ? customElementsInput : Array.from(customElementsInput);
+  const normalizedCustomElements = customElementsArr.map(name => options.name(name));
+  const inlineTextSet = new Set([...inlineTextTags, ...normalizedCustomElements]);
+  const inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
 
   // Temporarily replace ignored chunks with comments,
   // so that we don’t have to worry what’s there.
@@ -1001,7 +1003,7 @@ async function minifyHTML(value, options, partialMarkup) {
       const match = str.match(/^<\/([\w:-]+)>$/);
       if (match) {
         endTag = match[1];
-      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options, inlineTags))) {
+      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options, inlineTags, inlineTextSet))) {
         break;
       }
     }
@@ -1038,7 +1040,7 @@ async function minifyHTML(value, options, partialMarkup) {
       tag = options.name(tag);
       currentTag = tag;
       charsPrevTag = tag;
-      if (!inlineTextTags.has(tag)) {
+      if (!inlineTextSet.has(tag)) {
         currentChars = '';
       }
       hasChars = false;
@@ -1207,12 +1209,12 @@ async function minifyHTML(value, options, partialMarkup) {
                 }
                 trimTrailingWhitespace(tagIndex - 1, 'br');
               }
-            } else if (inlineTextTags.has(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
+            } else if (inlineTextSet.has(prevTag.charAt(0) === '/' ? prevTag.slice(1) : prevTag)) {
               text = collapseWhitespace(text, options, /(?:^|\s)$/.test(currentChars));
             }
           }
           if (prevTag || nextTag) {
-            text = collapseWhitespaceSmart(text, prevTag, nextTag, options, inlineTags);
+            text = collapseWhitespaceSmart(text, prevTag, nextTag, options, inlineTags, inlineTextSet);
           } else {
             text = collapseWhitespace(text, options, true, true);
           }

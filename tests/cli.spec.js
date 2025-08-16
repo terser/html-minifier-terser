@@ -22,13 +22,7 @@ const existsFixutre = (filePath) => {
 
 const removeFixture = async (p) => {
   const pathToDelete = path.resolve(fixturesDir, p);
-  // TODO: Temp fix for CI running on node 12,
-  // because fs.rm is available only in node 14 and newer
-  if (fs.rm) {
-    await fs.promises.rm(pathToDelete, { recursive: true, force: true });
-  } else if (fs.existsSync(pathToDelete)) {
-    await fs.promises.rmdir(pathToDelete, { recursive: true });
-  }
+  await fs.promises.rm(pathToDelete, { recursive: true, force: true });
 };
 
 const execCli = (args = []) => {

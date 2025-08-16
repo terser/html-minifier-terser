@@ -7,7 +7,8 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: ['lts/*', '24.4.0']
+        # @@ Switch back to “current” when possible
+        node: ['lts/*', '24.5.0']
     name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
     runs-on: ${{ matrix.platform }}
     steps:

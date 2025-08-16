@@ -60,20 +60,20 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
 }
 
 // Non-empty elements that will maintain whitespace around them
-const inlineHtmlElements = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'mark', 'math', 'meter', 'nobr', 'object', 'output', 'progress', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var', 'wbr'];
+const inlineElementsToKeepWhitespaceAround = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'mark', 'math', 'meter', 'nobr', 'object', 'output', 'progress', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var', 'wbr'];
 // Non-empty elements that will maintain whitespace within them
-const inlineTextElements = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
+const inlineElementsToKeepWhitespaceWithin = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // Self-closing elements that will maintain whitespace around them
-const selfClosingInlineElements = new Set(['comment', 'img', 'input', 'wbr']);
+const inlineElementsToKeepWhitespace = new Set(['comment', 'img', 'input', 'wbr']);
 
-function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags, inlineTextSet) {
-  let trimLeft = prevTag && !selfClosingInlineElements.has(prevTag);
+function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineElements, inlineTextSet) {
+  let trimLeft = prevTag && !inlineElementsToKeepWhitespace.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
-    trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextSet.has(prevTag);
+    trimLeft = prevTag.charAt(0) === '/' ? !inlineElements.has(prevTag.slice(1)) : !inlineTextSet.has(prevTag);
   }
-  let trimRight = nextTag && !selfClosingInlineElements.has(nextTag);
+  let trimRight = nextTag && !inlineElementsToKeepWhitespace.has(nextTag);
   if (trimRight && !options.collapseInlineTagWhitespace) {
-    trimRight = nextTag.charAt(0) === '/' ? !inlineTextSet.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
+    trimRight = nextTag.charAt(0) === '/' ? !inlineTextSet.has(nextTag.slice(1)) : !inlineElements.has(nextTag);
   }
   return collapseWhitespace(str, options, trimLeft, trimRight, prevTag && nextTag);
 }
@@ -870,8 +870,8 @@ async function minifyHTML(value, options, partialMarkup) {
   const customElementsInput = options.inlineCustomElements ?? [];
   const customElementsArr = Array.isArray(customElementsInput) ? customElementsInput : Array.from(customElementsInput);
   const normalizedCustomElements = customElementsArr.map(name => options.name(name));
-  const inlineTextSet = new Set([...inlineTextElements, ...normalizedCustomElements]);
-  const inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
+  const inlineTextSet = new Set([...inlineElementsToKeepWhitespaceWithin, ...normalizedCustomElements]);
+  const inlineElements = new Set([...inlineElementsToKeepWhitespaceAround, ...normalizedCustomElements]);
 
   // Temporarily replace ignored chunks with comments,
   // so that we don’t have to worry what’s there.
@@ -1003,7 +1003,7 @@ async function minifyHTML(value, options, partialMarkup) {
       const match = str.match(/^<\/([\w:-]+)>$/);
       if (match) {
         endTag = match[1];
-      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options, inlineTags, inlineTextSet))) {
+      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options, inlineElements, inlineTextSet))) {
         break;
       }
     }
@@ -1170,7 +1170,7 @@ async function minifyHTML(value, options, partialMarkup) {
           buffer.push('</' + tag + '>');
         }
         charsPrevTag = '/' + tag;
-        if (!inlineTags.has(tag)) {
+        if (!inlineElements.has(tag)) {
           currentChars = '';
         } else if (isElementEmpty) {
           currentChars += '|';
@@ -1214,7 +1214,7 @@ async function minifyHTML(value, options, partialMarkup) {
             }
           }
           if (prevTag || nextTag) {
-            text = collapseWhitespaceSmart(text, prevTag, nextTag, options, inlineTags, inlineTextSet);
+            text = collapseWhitespaceSmart(text, prevTag, nextTag, options, inlineElements, inlineTextSet);
           } else {
             text = collapseWhitespace(text, options, true, true);
           }

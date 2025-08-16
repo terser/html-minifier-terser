@@ -62,16 +62,16 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
 // Non-empty elements that will maintain whitespace around them
 const inlineHtmlElements = ['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'img', 'input', 'ins', 'kbd', 'label', 'mark', 'math', 'meter', 'nobr', 'object', 'output', 'progress', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var', 'wbr'];
 // Non-empty elements that will maintain whitespace within them
-const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
+const inlineTextElements = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // Self-closing elements that will maintain whitespace around them
-const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
+const selfClosingInlineElements = new Set(['comment', 'img', 'input', 'wbr']);
 
 function collapseWhitespaceSmart(str, prevTag, nextTag, options, inlineTags, inlineTextSet) {
-  let trimLeft = prevTag && !selfClosingInlineTags.has(prevTag);
+  let trimLeft = prevTag && !selfClosingInlineElements.has(prevTag);
   if (trimLeft && !options.collapseInlineTagWhitespace) {
     trimLeft = prevTag.charAt(0) === '/' ? !inlineTags.has(prevTag.slice(1)) : !inlineTextSet.has(prevTag);
   }
-  let trimRight = nextTag && !selfClosingInlineTags.has(nextTag);
+  let trimRight = nextTag && !selfClosingInlineElements.has(nextTag);
   if (trimRight && !options.collapseInlineTagWhitespace) {
     trimRight = nextTag.charAt(0) === '/' ? !inlineTextSet.has(nextTag.slice(1)) : !inlineTags.has(nextTag);
   }
@@ -870,7 +870,7 @@ async function minifyHTML(value, options, partialMarkup) {
   const customElementsInput = options.inlineCustomElements ?? [];
   const customElementsArr = Array.isArray(customElementsInput) ? customElementsInput : Array.from(customElementsInput);
   const normalizedCustomElements = customElementsArr.map(name => options.name(name));
-  const inlineTextSet = new Set([...inlineTextTags, ...normalizedCustomElements]);
+  const inlineTextSet = new Set([...inlineTextElements, ...normalizedCustomElements]);
   const inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
 
   // Temporarily replace ignored chunks with comments,

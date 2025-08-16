@@ -71,6 +71,11 @@
   "main": "./dist/htmlminifier.cjs",
   "module": "./src/htmlminifier.js",
   "name": "html-minifier-next",
+  "overrides": {
+    "glob": "^10.0.0",
+    "inflight": "npm:@nodelib/fs.stat@^3.0.0"
+  },
+  "overrides_comment": "@@ Remove when Jest fixes deprecated glob@7.2.3 and inflight dependencies",
   "repository": "https://github.com/j9t/html-minifier-next.git",
   "scripts": {
     "build": "rollup -c",

@@ -7,6 +7,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
+        # Temporarily pinned due to Node.js 24.6.0 Jest ES modules issue
         # @@ Switch back to “current” when possible
         node: ['lts/*', '24.5.0']
     name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"

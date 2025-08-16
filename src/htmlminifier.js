@@ -866,7 +866,10 @@ async function minifyHTML(value, options, partialMarkup) {
   let uidIgnore;
   let uidAttr;
   let uidPattern;
-  let inlineTags = new Set([...inlineHtmlElements, ...(options.inlineCustomElements ?? [])]);
+  // Create inline tags set with backward compatibility for inlineCustomTags
+  const customElements = options.inlineCustomElements ?? options.inlineCustomTags ?? [];
+  const normalizedCustomElements = customElements.map(name => options.name(name));
+  let inlineTags = new Set([...inlineHtmlElements, ...normalizedCustomElements]);
 
   // temporarily replace ignored chunks with comments,
   // so that we don't have to worry what's there.

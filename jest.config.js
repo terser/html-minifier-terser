@@ -1,4 +1,8 @@
 export default {
   testEnvironment: 'node',
-  resetModules: true
+  transform: {},
+  resetModules: true,
+  clearMocks: true,
+  restoreMocks: true,
+  maxWorkers: 1
 };

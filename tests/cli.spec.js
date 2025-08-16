@@ -22,13 +22,7 @@ const existsFixutre = (filePath) => {
 
 const removeFixture = async (p) => {
   const pathToDelete = path.resolve(fixturesDir, p);
-  // TODO: Temp fix for CI running on node 12,
-  // because fs.rm is available only in node 14 and newer
-  if (fs.rm) {
-    await fs.promises.rm(pathToDelete, { recursive: true, force: true });
-  } else if (fs.existsSync(pathToDelete)) {
-    await fs.promises.rmdir(pathToDelete, { recursive: true });
-  }
+  await fs.promises.rm(pathToDelete, { recursive: true, force: true });
 };
 
 const execCli = (args = []) => {
@@ -118,7 +112,7 @@ describe('cli', () => {
     expect(existsFixutre('tmp/nested/default.html')).toBe(true);
   });
 
-  // parsing json
+  // Parsing json
   test('should minify urls correctly', async () => {
     const input = await readFixture('url.html');
 
@@ -140,7 +134,7 @@ describe('cli', () => {
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
 
-  // parsing string inputs
+  // Parsing string inputs
   test('should set quote char correctly', async () => {
     const input = await readFixture('quote-char.html');
 
@@ -160,7 +154,7 @@ describe('cli', () => {
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
 
-  // parsing array inputs
+  // Parsing array inputs
   test('should handle inline-custom-elements correctly', async () => {
     const input = await readFixture('inline-custom-elements.html');
 
@@ -182,7 +176,7 @@ describe('cli', () => {
     // Verify spacing is preserved for specified custom elements
     expect(cliMinifiedHTML).toContain('<custom-element>A</custom-element> <custom-element>B</custom-element>');
     expect(cliMinifiedHTML).toContain('<span>Standard</span> <custom-inline>Custom</custom-inline>');
-    // But not for unspecified custom elements
+    // but not for unspecified custom elements
     expect(cliMinifiedHTML).toContain('<web-component>X</web-component><web-component>Y</web-component>');
   });
 });

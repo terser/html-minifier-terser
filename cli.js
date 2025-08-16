@@ -141,7 +141,7 @@ const mainOptions = {
   useShortDoctype: 'Replaces the doctype with the short (HTML5) doctype'
 };
 
-// configure commandline flags
+// Configure command line flags
 const mainOptionKeys = Object.keys(mainOptions);
 mainOptionKeys.forEach(function (key) {
   const option = mainOptions[key];

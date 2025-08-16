@@ -11,6 +11,7 @@
     "ansi-regex": "^5.0.1",
     "es5-ext": ">=0.10.63"
   },
+  "overrides_comment": "@@ Remove",
   "private": "true",
   "scripts": {
     "backtest": "node backtest.cjs",

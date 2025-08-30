@@ -250,14 +250,12 @@ function processFile(inputFile, outputFile) {
 }
 
 function parseFileExtensions(fileExt) {
-  if (!fileExt) {
-    return [];
-  }
-  return fileExt
+  if (!fileExt) return [];
+  const list = fileExt
     .split(',')
     .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
-    .filter(ext => ext.length > 0)
-    .filter((ext, i, arr) => arr.indexOf(ext) === i);
+    .filter(ext => ext.length > 0);
+  return [...new Set(list)];
 }
 
 function shouldProcessFile(filename, fileExtensions) {

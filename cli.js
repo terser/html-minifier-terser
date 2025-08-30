@@ -186,10 +186,18 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
       }
     }
   });
+
+  // Handle fileExt in config file
+  if ('fileExt' in config) {
+    // Support both string (`html,htm`) and array (`["html", "htm"]`) formats
+    if (Array.isArray(config.fileExt)) {
+      config.fileExt = config.fileExt.join(',');
+    }
+  }
 });
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
-program.option('--file-ext <text>', 'Specify an extension to be read, ex: html');
+program.option('--file-ext <text>', 'Specify file extension(s) to be read, e.g. “html” or “html,htm”');
 
 let content;
 program.arguments('[files...]').action(function (files) {
@@ -241,7 +249,28 @@ function processFile(inputFile, outputFile) {
   });
 }
 
+function parseFileExtensions(fileExt) {
+  if (!fileExt) {
+    return [];
+  }
+  return fileExt
+    .split(',')
+    .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
+    .filter(ext => ext.length > 0);
+}
+
+function shouldProcessFile(filename, fileExtensions) {
+  if (fileExtensions.length === 0) {
+    return true; // No extensions specified, process all files
+  }
+
+  const fileExt = path.extname(filename).replace(/^\.+/, '').toLowerCase();
+  return fileExtensions.includes(fileExt);
+}
+
 function processDirectory(inputDir, outputDir, fileExt) {
+  const extensions = parseFileExtensions(fileExt);
+
   fs.readdir(inputDir, function (err, files) {
     if (err) {
       fatal('Cannot read directory ' + inputDir + '\n' + err.message);
@@ -256,7 +285,7 @@ function processDirectory(inputDir, outputDir, fileExt) {
           fatal('Cannot read ' + inputFile + '\n' + err.message);
         } else if (stat.isDirectory()) {
           processDirectory(inputFile, outputFile, fileExt);
-        } else if (!fileExt || path.extname(file) === '.' + fileExt) {
+        } else if (shouldProcessFile(file, extensions)) {
           mkdir(outputDir, function () {
             processFile(inputFile, outputFile);
           });
@@ -290,13 +319,16 @@ const writeMinify = async () => {
 
 const { inputDir, outputDir, fileExt } = programOptions;
 
+// Resolve file extensions: CLI argument takes priority over config file
+const resolvedFileExt = fileExt || config.fileExt;
+
 if (inputDir || outputDir) {
   if (!inputDir) {
     fatal('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o.');
   } else if (!outputDir) {
     fatal('You need to specify where to write the output files with the option --output-dir');
   }
-  processDirectory(inputDir, outputDir, fileExt);
+  processDirectory(inputDir, outputDir, resolvedFileExt);
 } else if (content) { // Minifying one or more files specified on the CMD line
   writeMinify();
 } else { // Minifying input coming from STDIN

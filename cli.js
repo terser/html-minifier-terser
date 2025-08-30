@@ -186,6 +186,14 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
       }
     }
   });
+
+  // Handle fileExt in config file
+  if ('fileExt' in config) {
+    // Support both string (`html,htm`) and array (`["html", "htm"]`) formats
+    if (Array.isArray(config.fileExt)) {
+      config.fileExt = config.fileExt.join(',');
+    }
+  }
 });
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
@@ -311,13 +319,16 @@ const writeMinify = async () => {
 
 const { inputDir, outputDir, fileExt } = programOptions;
 
+// Resolve file extensions: CLI argument takes priority over config file
+const resolvedFileExt = fileExt || config.fileExt;
+
 if (inputDir || outputDir) {
   if (!inputDir) {
     fatal('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o.');
   } else if (!outputDir) {
     fatal('You need to specify where to write the output files with the option --output-dir');
   }
-  processDirectory(inputDir, outputDir, fileExt);
+  processDirectory(inputDir, outputDir, resolvedFileExt);
 } else if (content) { // Minifying one or more files specified on the CMD line
   writeMinify();
 } else { // Minifying input coming from STDIN

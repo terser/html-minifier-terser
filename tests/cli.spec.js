@@ -296,4 +296,92 @@ describe('cli', () => {
     expect(existsFixutre('tmp/empty-ext/extension.php')).toBe(true);
     expect(existsFixutre('tmp/empty-ext/extension.txt')).toBe(true);
   });
+
+  test('should process files with extensions from config file (string format)', () => {
+    // Ensure tmp directory exists and create a test config file
+    fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
+    const configContent = JSON.stringify({
+      fileExt: 'html,htm',
+      collapseWhitespace: true
+    });
+    fs.writeFileSync(path.resolve(fixturesDir, 'tmp/test-config.json'), configContent);
+
+    const cliArguments = [
+      '--config-file=./tmp/test-config.json',
+      '--input-dir=./',
+      '--output-dir=./tmp/config-string'
+    ];
+
+    execCli(cliArguments);
+
+    // Should process extensions specified in config
+    expect(existsFixutre('tmp/config-string/extension.html')).toBe(true);
+    expect(existsFixutre('tmp/config-string/extension.htm')).toBe(true);
+
+    // Should not process unspecified extensions
+    expect(existsFixutre('tmp/config-string/extension.php')).toBe(false);
+    expect(existsFixutre('tmp/config-string/extension.txt')).toBe(false);
+
+    // Clean up
+    fs.unlinkSync(path.resolve(fixturesDir, 'tmp/test-config.json'));
+  });
+
+  test('should process files with extensions from config file (array format)', () => {
+    // Ensure tmp directory exists and create a test config file with array format
+    fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
+    const configContent = JSON.stringify({
+      fileExt: ['html'],
+      collapseWhitespace: true
+    });
+    fs.writeFileSync(path.resolve(fixturesDir, 'tmp/test-config-array.json'), configContent);
+
+    const cliArguments = [
+      '--config-file=./tmp/test-config-array.json',
+      '--input-dir=./',
+      '--output-dir=./tmp/config-array'
+    ];
+
+    execCli(cliArguments);
+
+    // Should process extensions specified in config array
+    expect(existsFixutre('tmp/config-array/extension.html')).toBe(true);
+
+    // Should not process other extensions
+    expect(existsFixutre('tmp/config-array/extension.htm')).toBe(false);
+    expect(existsFixutre('tmp/config-array/extension.php')).toBe(false);
+    expect(existsFixutre('tmp/config-array/extension.txt')).toBe(false);
+
+    // Clean up
+    fs.unlinkSync(path.resolve(fixturesDir, 'tmp/test-config-array.json'));
+  });
+
+  test('should override config file extensions with CLI argument', () => {
+    // Ensure tmp directory exists and create a test config file
+    fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
+    const configContent = JSON.stringify({
+      fileExt: 'html',  // Config specifies html
+      collapseWhitespace: true
+    });
+    fs.writeFileSync(path.resolve(fixturesDir, 'tmp/test-config-override.json'), configContent);
+
+    const cliArguments = [
+      '--config-file=./tmp/test-config-override.json',
+      '--input-dir=./',
+      '--output-dir=./tmp/config-override',
+      '--file-ext=htm'  // CLI overrides to htm
+    ];
+
+    execCli(cliArguments);
+
+    // Should process CLI-specified extensions, not config extensions
+    expect(existsFixutre('tmp/config-override/extension.htm')).toBe(true);
+
+    // Should not process config-specified extensions
+    expect(existsFixutre('tmp/config-override/extension.html')).toBe(false);
+    expect(existsFixutre('tmp/config-override/extension.php')).toBe(false);
+    expect(existsFixutre('tmp/config-override/extension.txt')).toBe(false);
+
+    // Clean up
+    fs.unlinkSync(path.resolve(fixturesDir, 'tmp/test-config-override.json'));
+  });
 });

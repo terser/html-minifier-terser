@@ -45,6 +45,8 @@ html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir
 
 # Process all files (default behavior)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
+# Note: When processing all files, non-HTML files will also be read as UTF‑8 and passed to the minifier.
+# Consider restricting with “--file-ext” to avoid touching binaries (e.g., images, archives).
 ```
 
 ### CLI options

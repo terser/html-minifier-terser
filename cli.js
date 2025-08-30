@@ -189,7 +189,7 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
 });
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
-program.option('--file-ext <text>', 'Specify an extension to be read, ex: html');
+program.option('--file-ext <text>', 'Specify file extension(s) to be read, e.g. “html” or “html,htm”');
 
 let content;
 program.arguments('[files...]').action(function (files) {
@@ -241,7 +241,25 @@ function processFile(inputFile, outputFile) {
   });
 }
 
+function parseFileExtensions(fileExt) {
+  if (!fileExt) {
+    return [];
+  }
+  return fileExt.split(',').map(ext => ext.trim()).filter(ext => ext.length > 0);
+}
+
+function shouldProcessFile(filename, fileExtensions) {
+  if (fileExtensions.length === 0) {
+    return true; // No extensions specified, process all files
+  }
+
+  const fileExt = path.extname(filename).slice(1); // Remove the leading dot
+  return fileExtensions.includes(fileExt);
+}
+
 function processDirectory(inputDir, outputDir, fileExt) {
+  const extensions = parseFileExtensions(fileExt);
+
   fs.readdir(inputDir, function (err, files) {
     if (err) {
       fatal('Cannot read directory ' + inputDir + '\n' + err.message);
@@ -256,7 +274,7 @@ function processDirectory(inputDir, outputDir, fileExt) {
           fatal('Cannot read ' + inputFile + '\n' + err.message);
         } else if (stat.isDirectory()) {
           processDirectory(inputFile, outputFile, fileExt);
-        } else if (!fileExt || path.extname(file) === '.' + fileExt) {
+        } else if (shouldProcessFile(file, extensions)) {
           mkdir(outputDir, function () {
             processFile(inputFile, outputFile);
           });

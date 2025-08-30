@@ -33,6 +33,38 @@ For command line usage please see `html-minifier-next --help` for a list of avai
 html-minifier-next --collapse-whitespace --remove-comments --minify-js true --input-dir=. --output-dir=example
 ```
 
+**Process specific file extensions:**
+
+```bash
+# Process only HTML files
+html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html
+
+# Process multiple file extensions
+html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html,htm,php
+
+# Process all files (default behavior)
+html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
+```
+
+### CLI Options
+
+When using the command line interface, several additional options are available:
+
+| Option | Description | Example |
+| --- | --- | --- |
+| `--input-dir <dir>` | Specify an input directory | `--input-dir=src` |
+| `--output-dir <dir>` | Specify an output directory | `--output-dir=dist` |
+| `--file-ext <extensions>` | Specify file extension(s) to process | `--file-ext=html` or `--file-ext=html,htm,php` |
+| `-o --output <file>` | Specify output file (single file mode) | `-o minified.html` |
+| `-c --config-file <file>` | Use a configuration file | `--config-file=.htmlminifierrc` |
+
+**File extension filtering:**
+
+* Process single extension: `--file-ext=html`  
+* Process multiple extensions: `--file-ext=html,htm,php`
+* Spaces around commas are handled: `--file-ext="html, htm, php"`
+* No `--file-ext` processes all files (default behavior)
+
 ### Node.js
 
 ```js

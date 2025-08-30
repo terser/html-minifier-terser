@@ -136,7 +136,7 @@ describe('cli', () => {
 
   // Parsing string inputs
   test('should set quote char correctly', async () => {
-    const input = await readFixture('quote-char.html');
+    const input = await readFixture('fragment-quote-char.html');
 
     const minfiyOptions = {
       collapseWhitespace: true,
@@ -144,7 +144,7 @@ describe('cli', () => {
     };
 
     const cliArguments = [
-      'quote-char.html',
+      'fragment-quote-char.html',
       '--collapse-whitespace',
       '--quote-character=\''
     ];
@@ -156,7 +156,7 @@ describe('cli', () => {
 
   // Parsing array inputs
   test('should handle inline-custom-elements correctly', async () => {
-    const input = await readFixture('inline-custom-elements.html');
+    const input = await readFixture('fragment-inline-custom-elements.html');
 
     const minifyOptions = {
       collapseWhitespace: true,
@@ -164,7 +164,7 @@ describe('cli', () => {
     };
 
     const cliArguments = [
-      'inline-custom-elements.html',
+      'fragment-inline-custom-elements.html',
       '--collapse-whitespace',
       '--inline-custom-elements=["custom-element","custom-inline"]'
     ];

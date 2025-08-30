@@ -1,11 +1,11 @@
-# HTML Minifier Next (HTMLMinifier)
+# HTML Minifier Next
 
 [![npm version](https://img.shields.io/npm/v/html-minifier-next.svg)](https://www.npmjs.com/package/html-minifier-next)
-<!-- [![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI) -->
+[![Build Status](https://github.com/j9t/html-minifier-next/workflows/CI/badge.svg)](https://github.com/j9t/html-minifier-next/actions?workflow=CI)
 
-(This project has been based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn had been based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of 2025, both html-minifier-terser and html-minifier have been unmaintained for some time. As the project seems maintainable to me [[Jens](https://meiert.com/)]—even more so with community support—, it will be updated and documented further in this place. For the time being, the following documentation largely matches the original project.)
+HTML Minifier is a highly **configurable, well-tested, JavaScript-based HTML minifier**.
 
-HTMLMinifier is a highly **configurable, well-tested, JavaScript-based HTML minifier**.
+The project has been based on [Terser’s html-minifier-terser](https://github.com/terser/html-minifier-terser), which in turn had been based on [Juriy Zaytsev’s html-minifier](https://github.com/kangax/html-minifier). It was set up because as of 2025, both html-minifier-terser and html-minifier have been unmaintained for some time. As the project seems maintainable [to me, [Jens](https://meiert.com/)]—even more so with community support—, it will be updated and documented further in this place.
 
 ## Installation
 
@@ -25,8 +25,6 @@ npm i html-minifier-next
 
 **Note** that almost all options are disabled by default. Experiment and find what works best for you and your project.
 
-For command line usage please see `html-minifier-next --help` for a list of available options.
-
 **Sample command line:**
 
 ```bash
@@ -36,11 +34,14 @@ html-minifier-next --collapse-whitespace --remove-comments --minify-js true --in
 **Process specific file extensions:**
 
 ```bash
-# Process only HTML files
+# Process only HTML files (CLI method)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html
 
-# Process multiple file extensions
+# Process multiple file extensions (CLI method)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html,htm,php
+
+# Using configuration file with fileExt setting
+html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir=dist
 
 # Process all files (default behavior)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
@@ -48,22 +49,39 @@ html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
 
 ### CLI Options
 
-When using the command line interface, several additional options are available:
+Use `html-minifier-next --help` to check all available options:
 
 | Option | Description | Example |
 | --- | --- | --- |
 | `--input-dir <dir>` | Specify an input directory | `--input-dir=src` |
 | `--output-dir <dir>` | Specify an output directory | `--output-dir=dist` |
-| `--file-ext <extensions>` | Specify file extension(s) to process | `--file-ext=html` or `--file-ext=html,htm,php` |
+| `--file-ext <extensions>` | Specify file extension(s) to process (overrides config file setting) | `--file-ext=html` or `--file-ext=html,htm,php` |
 | `-o --output <file>` | Specify output file (single file mode) | `-o minified.html` |
-| `-c --config-file <file>` | Use a configuration file | `--config-file=.htmlminifierrc` |
+| `-c --config-file <file>` | Use a configuration file | `--config-file=html-minifier.json` |
 
-**File extension filtering:**
+### Configuration Files
 
-* Process single extension: `--file-ext=html`  
-* Process multiple extensions: `--file-ext=html,htm,php`
-* Spaces around commas are handled: `--file-ext="html, htm, php"`
-* No `--file-ext` processes all files (default behavior)
+You can also use a configuration file to specify options:
+
+**JSON configuration example:**
+
+```json
+{
+  "collapseWhitespace": true,
+  "removeComments": true,
+  "fileExt": "html,htm"
+}
+```
+
+**Using a configuration file:**
+
+```bash
+# Specify config file
+html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir=dist
+
+# CLI arguments override config file settings
+html-minifier-next --config-file=html-minifier.json --file-ext=xml --input-dir=src --output-dir=dist
+```
 
 ### Node.js
 
@@ -82,10 +100,10 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 ## Minification comparison
 
-How does HTMLMinifier compare to other solutions, like [minimize](https://github.com/Swaagie/minimize) or [htmlcompressor.com](http://htmlcompressor.com/)?
+How does HTML Minifier compare to other solutions, like [minimize](https://github.com/Swaagie/minimize) or [htmlcompressor.com](http://htmlcompressor.com/)?
 
-| Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
-| --- | --- | --- | --- | --- |
+| Site | Original size (KB) | HTML Minifier | minimize | htmlcompressor.com |
+| --- | --- |---------------| --- | --- |
 | [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 |
 | [Amazon](https://www.amazon.com/) | 206 | **195** | 203 | 200 |
 | [BBC](https://www.bbc.co.uk/) | 767 | **703** | 761 | n/a |
@@ -95,7 +113,7 @@ How does HTMLMinifier compare to other solutions, like [minimize](https://github
 | [FAZ](https://www.faz.net/aktuell/) | 1767 | **1641** | 1679 | n/a |
 | [Frontend Dogma](https://frontenddogma.com/) | 119 | **114** | 128 | 118 |
 | [Google](https://www.google.com/) | 51 | **46** | 50 | 50 |
-| [HTMLMinifier](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
+| [HTML Minifier](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
 | [Mastodon](https://mastodon.social/explore) | 37 | **28** | 36 | 36 |
 | [NBC](https://www.nbc.com/) | 601 | **549** | 593 | n/a |
 | [New York Times](https://www.nytimes.com/) | 822 | **701** | 811 | n/a |
@@ -109,18 +127,19 @@ Most of the options are disabled by default.
 
 | Option | Description | Default |
 | --- | --- | --- |
-| `caseSensitive` | Treat attributes in case sensitive manner (useful for custom HTML elements) | `false` |
+| `caseSensitive` | Treat attributes in case-sensitive manner (useful for custom HTML elements) | `false` |
 | `collapseBooleanAttributes` | [Omit attribute values from boolean attributes](http://perfectionkills.com/experimenting-with-html-minifier#collapse_boolean_attributes) | `false` |
 | `customFragmentQuantifierLimit` | Set maximum quantifier limit for custom fragments to prevent ReDoS attacks | `200` |
 | `collapseInlineTagWhitespace` | Don’t leave any spaces between `display:inline;` elements when collapsing. Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `collapseWhitespace` | [Collapse white space that contributes to text nodes in a document tree](http://perfectionkills.com/experimenting-with-html-minifier#collapse_whitespace) | `false` |
 | `conservativeCollapse` | Always collapse to 1 space (never remove it entirely). Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `continueOnParseError` | [Handle parse errors](https://html.spec.whatwg.org/multipage/parsing.html#parse-errors) instead of aborting. | `false` |
-| `customAttrAssign` | Arrays of regex’es that allow to support custom attribute assign expressions (e.g. `'<div flex?="{{mode != cover}}"></div>'`) | `[ ]` |
+| `customAttrAssign` | Arrays of regex’es that allow to support custom attribute assign expressions (e.g. `'<div flex?="{{mode != cover}}"></div>'`) | `[]` |
 | `customAttrCollapse` | Regex that specifies custom attribute to strip newlines from (e.g. `/ng-class/`) | |
-| `customAttrSurround` | Arrays of regexes that allow to support custom attribute surround expressions (e.g. `<input {{#if value}}checked="checked"{{/if}}>`) | `[ ]` |
+| `customAttrSurround` | Arrays of regexes that allow to support custom attribute surround expressions (e.g. `<input {{#if value}}checked="checked"{{/if}}>`) | `[]` |
 | `customEventAttributes` | Arrays of regexes that allow to support custom event attributes for `minifyJS` (e.g. `ng-click`) | `[ /^on[a-z]{3,}$/ ]` |
 | `decodeEntities` | Use direct Unicode characters whenever possible | `false` |
+| `fileExt` | File extensions to process | `[]` (process all files) |
 | `html5` | Parse input according to HTML5 specifications | `true` |
 | `ignoreCustomComments` | Array of regexes that allow to ignore certain comments, when matched | `[ /^!/, /^\s*#/ ]` |
 | `ignoreCustomFragments` | Array of regexes that allow to ignore certain fragments, when matched (e.g. `<?php ... ?>`, `{{ ... }}`, etc.) | `[ /<%[\s\S]*?%>/, /<\?[\s\S]*?\?>/ ]` |
@@ -136,7 +155,7 @@ Most of the options are disabled by default.
 | `preserveLineBreaks` | Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break. Must be used in conjunction with `collapseWhitespace=true` | `false` |
 | `preventAttributesEscaping` | Prevents the escaping of the values of attributes | `false` |
 | `processConditionalComments` | Process contents of conditional comments through minifier | `false` |
-| `processScripts` | Array of strings corresponding to types of script elements to process through minifier (e.g. `text/ng-template`, `text/x-handlebars-template`, etc.) | `[ ]` |
+| `processScripts` | Array of strings corresponding to types of script elements to process through minifier (e.g. `text/ng-template`, `text/x-handlebars-template`, etc.) | `[]` |
 | `quoteCharacter` | Type of quote to use for attribute values (“'” or “"”) | |
 | `removeAttributeQuotes` | [Remove quotes around attributes when possible](http://perfectionkills.com/experimenting-with-html-minifier#remove_attribute_quotes) | `false` |
 | `removeComments` | [Strip HTML comments](http://perfectionkills.com/experimenting-with-html-minifier#remove_comments) | `false` |
@@ -172,23 +191,11 @@ SVG elements are automatically recognized, and when they are minified, both case
 
 ### Working with invalid markup
 
-HTMLMinifier **can’t work with invalid or partial chunks of markup**. This is because it parses markup into a tree structure, then modifies it (removing anything that was specified for removal, ignoring anything that was specified to be ignored, etc.), then it creates a markup out of that tree and returns it.
+HTML Minifier **can’t work with invalid or partial chunks of markup**. This is because it parses markup into a tree structure, then modifies it (removing anything that was specified for removal, ignoring anything that was specified to be ignored, etc.), then it creates a markup out of that tree and returns it.
 
-Input markup (e.g. `<p id="">foo`)
+Input markup (e.g. `<p id="">foo`) → Internal representation of markup in a form of tree (e.g. `{ tag: "p", attr: "id", children: ["foo"] }`) → Transformation of internal representation (e.g. removal of `id` attribute) → Output of resulting markup (e.g. `<p>foo</p>`)
 
-↓
-
-Internal representation of markup in a form of tree (e.g. `{ tag: "p", attr: "id", children: ["foo"] }`)
-
-↓
-
-Transformation of internal representation (e.g. removal of `id` attribute)
-
-↓
-
-Output of resulting markup (e.g. `<p>foo</p>`)
-
-HTMLMinifier can’t know that original markup was only half of the tree; it does its best to try to parse it as a full tree and it loses information about tree being malformed or partial in the beginning. As a result, it can’t create a partial/malformed tree at the time of the output.
+HTML Minifier can’t know that original markup was only half of the tree; it does its best to try to parse it as a full tree and it loses information about tree being malformed or partial in the beginning. As a result, it can’t create a partial/malformed tree at the time of the output.
 
 ## Security
 

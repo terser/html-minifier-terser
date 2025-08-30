@@ -197,7 +197,7 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
 });
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
-program.option('--file-ext <text>', 'Specify file extension(s) to process (comma-separated), e.g., “html” or “html,htm,php”');
+program.option('--file-ext <extensions>', 'Specify file extension(s) to process (comma-separated), e.g., “html” or “html,htm,php”');
 
 let content;
 program.arguments('[files...]').action(function (files) {
@@ -324,7 +324,7 @@ const writeMinify = async () => {
 const { inputDir, outputDir, fileExt } = programOptions;
 
 // Resolve file extensions: CLI argument takes priority over config file, even if empty string
-const hasCliFileExt = Object.prototype.hasOwnProperty.call(programOptions, 'fileExt');
+const hasCliFileExt = program.getOptionValueSource('fileExt') === 'cli';
 const resolvedFileExt = hasCliFileExt ? fileExt : config.fileExt;
 
 if (inputDir || outputDir) {

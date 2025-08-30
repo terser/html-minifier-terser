@@ -7,7 +7,7 @@ bower_components
 .bower-registry
 .bower-tmp
 
-### grunt ###
+### Grunt ###
 # Grunt usually compiles files inside this directory
 dist/
 
@@ -37,7 +37,6 @@ dist/
 
 # Icon must end with two \r
 Icon
-
 
 # Thumbnails
 ._*
@@ -219,7 +218,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-### yarn ###
+### Yarn ###
 # https://yarnpkg.com/advanced/qa#which-files-should-be-gitignored
 
 .yarn/*
@@ -228,14 +227,14 @@ $RECYCLE.BIN/
 !.yarn/sdks
 !.yarn/versions
 
-# if you are NOT using Zero-installs, then:
+# If you are NOT using zero-installs, then:
 # comment the following lines
 !.yarn/cache
 
 # and uncomment the following lines
 # .pnp.*
 
-### Project
+### Project ###
 build/
 temp/
 tmp/

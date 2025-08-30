@@ -245,7 +245,10 @@ function parseFileExtensions(fileExt) {
   if (!fileExt) {
     return [];
   }
-  return fileExt.split(',').map(ext => ext.trim()).filter(ext => ext.length > 0);
+  return fileExt
+    .split(',')
+    .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
+    .filter(ext => ext.length > 0);
 }
 
 function shouldProcessFile(filename, fileExtensions) {
@@ -253,7 +256,7 @@ function shouldProcessFile(filename, fileExtensions) {
     return true; // No extensions specified, process all files
   }
 
-  const fileExt = path.extname(filename).slice(1); // Remove the leading dot
+  const fileExt = path.extname(filename).replace(/^\.+/, '').toLowerCase();
   return fileExtensions.includes(fileExt);
 }
 

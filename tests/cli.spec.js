@@ -314,7 +314,6 @@ describe('cli', () => {
   });
 
   test('should process files with extensions from config file (string format)', () => {
-    // Ensure tmp directory exists and create a test config file
     fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
     const configContent = JSON.stringify({
       fileExt: 'html,htm',
@@ -343,7 +342,6 @@ describe('cli', () => {
   });
 
   test('should process files with extensions from config file (array format)', () => {
-    // Ensure tmp directory exists and create a test config file with array format
     fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
     const configContent = JSON.stringify({
       fileExt: ['html'],
@@ -372,7 +370,6 @@ describe('cli', () => {
   });
 
   test('should override config file extensions with CLI argument', () => {
-    // Ensure tmp directory exists and create a test config file
     fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
     const configContent = JSON.stringify({
       fileExt: 'html',  // Config specifies html
@@ -399,5 +396,32 @@ describe('cli', () => {
 
     // Clean up
     fs.unlinkSync(path.resolve(fixturesDir, 'tmp/test-config-override.json'));
+  });
+
+  test('should override config file extensions with empty CLI argument', () => {
+    fs.mkdirSync(path.resolve(fixturesDir, 'tmp'), { recursive: true });
+    const configContent = JSON.stringify({
+      fileExt: 'html',  // Config restricts to HTML only
+      collapseWhitespace: true
+    }, null, 2);
+    fs.writeFileSync(path.resolve(fixturesDir, 'tmp/test-config-empty-override.json'), configContent);
+
+    const cliArguments = [
+      '--config-file=./tmp/test-config-empty-override.json',
+      '--input-dir=./',
+      '--output-dir=./tmp/config-empty-override',
+      '--file-ext='  // Empty CLI argument should override config and process ALL files
+    ];
+
+    execCli(cliArguments);
+
+    // Should process ALL files when CLI provides empty string (overriding config restriction)
+    expect(existsFixture('tmp/config-empty-override/extension.html')).toBe(true);
+    expect(existsFixture('tmp/config-empty-override/extension.htm')).toBe(true);
+    expect(existsFixture('tmp/config-empty-override/extension.php')).toBe(true);
+    expect(existsFixture('tmp/config-empty-override/extension.txt')).toBe(true);
+
+    // Clean up
+    fs.unlinkSync(path.resolve(fixturesDir, 'tmp/test-config-empty-override.json'));
   });
 });

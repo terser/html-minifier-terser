@@ -323,8 +323,9 @@ const writeMinify = async () => {
 
 const { inputDir, outputDir, fileExt } = programOptions;
 
-// Resolve file extensions: CLI argument takes priority over config file
-const resolvedFileExt = fileExt || config.fileExt;
+// Resolve file extensions: CLI argument takes priority over config file, even if empty string
+const hasCliFileExt = Object.prototype.hasOwnProperty.call(programOptions, 'fileExt');
+const resolvedFileExt = hasCliFileExt ? fileExt : config.fileExt;
 
 if (inputDir || outputDir) {
   if (!inputDir) {

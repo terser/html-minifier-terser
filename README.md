@@ -86,12 +86,12 @@ html-minifier-next --config-file=html-minifier.json --file-ext=xml --input-dir=s
 ### Node.js
 
 ```js
-const { minify } = require('html-minifier-next');
+import { minify } from 'html-minifier-next';
 
 const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true,
 });
-result; // “<p title=blah id=moo>foo</p>”
+console.log(result); // “<p title=blah id=moo>foo</p>”
 ```
 
 See [the original blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).

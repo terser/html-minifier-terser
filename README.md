@@ -40,14 +40,14 @@ html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --fil
 # Process multiple file extensions (CLI method)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html,htm,php
 
-# Using configuration file with fileExt setting
+# Using configuration file with assumed `fileExt` setting (e.g., `"fileExt": "html,htm"`)
 html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir=dist
 
 # Process all files (default behavior)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
 ```
 
-### CLI Options
+### CLI options
 
 Use `html-minifier-next --help` to check all available options:
 
@@ -59,7 +59,7 @@ Use `html-minifier-next --help` to check all available options:
 | `-o --output <file>` | Specify output file (single file mode) | `-o minified.html` |
 | `-c --config-file <file>` | Use a configuration file | `--config-file=html-minifier.json` |
 
-### Configuration Files
+### Configuration files
 
 You can also use a configuration file to specify options:
 
@@ -139,7 +139,6 @@ Most of the options are disabled by default.
 | `customAttrSurround` | Arrays of regexes that allow to support custom attribute surround expressions (e.g. `<input {{#if value}}checked="checked"{{/if}}>`) | `[]` |
 | `customEventAttributes` | Arrays of regexes that allow to support custom event attributes for `minifyJS` (e.g. `ng-click`) | `[ /^on[a-z]{3,}$/ ]` |
 | `decodeEntities` | Use direct Unicode characters whenever possible | `false` |
-| `fileExt` | File extensions to process | `[]` (process all files) |
 | `html5` | Parse input according to HTML5 specifications | `true` |
 | `ignoreCustomComments` | Array of regexes that allow to ignore certain comments, when matched | `[ /^!/, /^\s*#/ ]` |
 | `ignoreCustomFragments` | Array of regexes that allow to ignore certain fragments, when matched (e.g. `<?php ... ?>`, `{{ ... }}`, etc.) | `[ /<%[\s\S]*?%>/, /<\?[\s\S]*?\?>/ ]` |

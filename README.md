@@ -40,7 +40,7 @@ html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --fil
 # Process multiple file extensions (CLI method)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html,htm,php
 
-# Using configuration file with assumed `fileExt` setting (e.g., `"fileExt": "html,htm"`)
+# Using configuration file that sets `fileExt` (e.g., `"fileExt": "html,htm"`)
 html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir=dist
 
 # Process all files (default behavior)
@@ -61,9 +61,9 @@ Use `html-minifier-next --help` to check all available options:
 | `-o --output <file>` | Specify output file (single file mode) | `-o minified.html` |
 | `-c --config-file <file>` | Use a configuration file | `--config-file=html-minifier.json` |
 
-### Configuration files
+### Configuration file
 
-You can also use a configuration file to specify options:
+You can also use a configuration file to specify options. The file can be either JSON format or a JavaScript module that exports the configuration object:
 
 **JSON configuration example:**
 
@@ -73,6 +73,16 @@ You can also use a configuration file to specify options:
   "removeComments": true,
   "fileExt": "html,htm"
 }
+```
+
+**JavaScript module configuration example:**
+
+```js
+module.exports = {
+  collapseWhitespace: true,
+  removeComments: true,
+  fileExt: "html,htm"
+};
 ```
 
 **Using a configuration file:**
@@ -87,6 +97,8 @@ html-minifier-next --config-file=html-minifier.json --file-ext=xml --input-dir=s
 
 ### Node.js
 
+ESM with Node.js ≥16.14:
+
 ```js
 import { minify } from 'html-minifier-next';
 
@@ -94,6 +106,19 @@ const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true,
 });
 console.log(result); // “<p title=blah id=moo>foo</p>”
+```
+
+CommonJS:
+
+```js
+const { minify } = require('html-minifier-next');
+
+(async () => {
+  const result = await minify('<p title="blah" id="moo">foo</p>', {
+    removeAttributeQuotes: true,
+  });
+  console.log(result);
+})();
 ```
 
 See [the original blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).

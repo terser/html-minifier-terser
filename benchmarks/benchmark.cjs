@@ -272,7 +272,7 @@ run(fileNames.map(function (fileName) {
     function testHTMLMinifier(done) {
       const info = infos.minifier;
       info.startTime = Date.now();
-      const args = [filePath, '-c', 'sample-cli-config-file.conf', '--minify-urls', site, '-o', info.filePath];
+      const args = [filePath, '-c', 'html-minifier-benchmarks.json', '--minify-urls', site, '-o', info.filePath];
       fork('../cli', args).on('exit', function () {
         readSizes(info, done);
       });

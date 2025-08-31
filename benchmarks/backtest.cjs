@@ -170,9 +170,9 @@ if (process.argv.length > 2) {
   }
 } else {
   process.on('message', function (hash) {
-    const paths = ['src', 'benchmark.conf', 'sample-cli-config-file.conf'];
+    const paths = ['src', 'benchmark.conf', 'html-minifier-benchmarks.json'];
     git('reset', 'HEAD', '--', paths, function () {
-      let conf = 'sample-cli-config-file.conf';
+      let conf = 'html-minifier-benchmarks.json';
 
       function checkout() {
         const path = paths.shift();

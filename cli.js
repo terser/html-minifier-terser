@@ -197,7 +197,7 @@ program.option('-c --config-file <file>', 'Use config file', function (configPat
 });
 program.option('--input-dir <dir>', 'Specify an input directory');
 program.option('--output-dir <dir>', 'Specify an output directory');
-program.option('--file-ext <text>', 'Specify file extension(s) to be read, e.g. “html” or “html,htm”');
+program.option('--file-ext <extensions>', 'Specify file extension(s) to process (comma-separated), e.g., “html” or “html,htm,php”');
 
 let content;
 program.arguments('[files...]').action(function (files) {
@@ -250,17 +250,16 @@ function processFile(inputFile, outputFile) {
 }
 
 function parseFileExtensions(fileExt) {
-  if (!fileExt) {
-    return [];
-  }
-  return fileExt
+  if (!fileExt) return [];
+  const list = fileExt
     .split(',')
     .map(ext => ext.trim().replace(/^\.+/, '').toLowerCase())
     .filter(ext => ext.length > 0);
+  return [...new Set(list)];
 }
 
 function shouldProcessFile(filename, fileExtensions) {
-  if (fileExtensions.length === 0) {
+  if (!fileExtensions || fileExtensions.length === 0) {
     return true; // No extensions specified, process all files
   }
 
@@ -268,8 +267,11 @@ function shouldProcessFile(filename, fileExtensions) {
   return fileExtensions.includes(fileExt);
 }
 
-function processDirectory(inputDir, outputDir, fileExt) {
-  const extensions = parseFileExtensions(fileExt);
+function processDirectory(inputDir, outputDir, extensions) {
+  // If first call provided a string, normalize once; otherwise assume pre-parsed array
+  if (typeof extensions === 'string') {
+    extensions = parseFileExtensions(extensions);
+  }
 
   fs.readdir(inputDir, function (err, files) {
     if (err) {
@@ -284,7 +286,7 @@ function processDirectory(inputDir, outputDir, fileExt) {
         if (err) {
           fatal('Cannot read ' + inputFile + '\n' + err.message);
         } else if (stat.isDirectory()) {
-          processDirectory(inputFile, outputFile, fileExt);
+          processDirectory(inputFile, outputFile, extensions);
         } else if (shouldProcessFile(file, extensions)) {
           mkdir(outputDir, function () {
             processFile(inputFile, outputFile);
@@ -319,8 +321,9 @@ const writeMinify = async () => {
 
 const { inputDir, outputDir, fileExt } = programOptions;
 
-// Resolve file extensions: CLI argument takes priority over config file
-const resolvedFileExt = fileExt || config.fileExt;
+// Resolve file extensions: CLI argument takes priority over config file, even if empty string
+const hasCliFileExt = program.getOptionValueSource('fileExt') === 'cli';
+const resolvedFileExt = hasCliFileExt ? fileExt : config.fileExt;
 
 if (inputDir || outputDir) {
   if (!inputDir) {

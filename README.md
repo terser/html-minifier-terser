@@ -40,14 +40,16 @@ html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --fil
 # Process multiple file extensions (CLI method)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist --file-ext=html,htm,php
 
-# Using configuration file with fileExt setting
+# Using configuration file that sets `fileExt` (e.g., `"fileExt": "html,htm"`)
 html-minifier-next --config-file=html-minifier.json --input-dir=src --output-dir=dist
 
 # Process all files (default behavior)
 html-minifier-next --collapse-whitespace --input-dir=src --output-dir=dist
+# Note: When processing all files, non-HTML files will also be read as UTF‑8 and passed to the minifier.
+# Consider restricting with “--file-ext” to avoid touching binaries (e.g., images, archives).
 ```
 
-### CLI Options
+### CLI options
 
 Use `html-minifier-next --help` to check all available options:
 
@@ -59,9 +61,9 @@ Use `html-minifier-next --help` to check all available options:
 | `-o --output <file>` | Specify output file (single file mode) | `-o minified.html` |
 | `-c --config-file <file>` | Use a configuration file | `--config-file=html-minifier.json` |
 
-### Configuration Files
+### Configuration file
 
-You can also use a configuration file to specify options:
+You can also use a configuration file to specify options. The file can be either JSON format or a JavaScript module that exports the configuration object:
 
 **JSON configuration example:**
 
@@ -71,6 +73,16 @@ You can also use a configuration file to specify options:
   "removeComments": true,
   "fileExt": "html,htm"
 }
+```
+
+**JavaScript module configuration example:**
+
+```js
+module.exports = {
+  collapseWhitespace: true,
+  removeComments: true,
+  fileExt: "html,htm"
+};
 ```
 
 **Using a configuration file:**
@@ -85,13 +97,28 @@ html-minifier-next --config-file=html-minifier.json --file-ext=xml --input-dir=s
 
 ### Node.js
 
+ESM with Node.js ≥16.14:
+
 ```js
-const { minify } = require('html-minifier-next');
+import { minify } from 'html-minifier-next';
 
 const result = await minify('<p title="blah" id="moo">foo</p>', {
   removeAttributeQuotes: true,
 });
-result; // “<p title=blah id=moo>foo</p>”
+console.log(result); // “<p title=blah id=moo>foo</p>”
+```
+
+CommonJS:
+
+```js
+const { minify } = require('html-minifier-next');
+
+(async () => {
+  const result = await minify('<p title="blah" id="moo">foo</p>', {
+    removeAttributeQuotes: true,
+  });
+  console.log(result);
+})();
 ```
 
 See [the original blog post](http://perfectionkills.com/experimenting-with-html-minifier) for details of [how it works](http://perfectionkills.com/experimenting-with-html-minifier#how_it_works), [description of each option](http://perfectionkills.com/experimenting-with-html-minifier#options), [testing results](http://perfectionkills.com/experimenting-with-html-minifier#field_testing), and [conclusions](http://perfectionkills.com/experimenting-with-html-minifier#cost_and_benefits).
@@ -102,24 +129,24 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 How does HTML Minifier compare to other solutions, like [minimize](https://github.com/Swaagie/minimize) or [htmlcompressor.com](http://htmlcompressor.com/)?
 
-| Site | Original size (KB) | HTML Minifier | minimize | htmlcompressor.com |
-| --- | --- |---------------| --- | --- |
+| Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
+| --- | --- | --- | --- | --- |
 | [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 |
-| [Amazon](https://www.amazon.com/) | 206 | **195** | 203 | 200 |
-| [BBC](https://www.bbc.co.uk/) | 767 | **703** | 761 | n/a |
-| [CSS-Tricks](https://css-tricks.com/) | 166 | **124** | 152 | 148 |
-| [ECMAScript](https://tc39.es/ecma262/) | 7204 | **6361** | 6581 | n/a |
-| [EFF](https://www.eff.org/) | 57 | **48** | 52 | 52 |
-| [FAZ](https://www.faz.net/aktuell/) | 1767 | **1641** | 1679 | n/a |
-| [Frontend Dogma](https://frontenddogma.com/) | 119 | **114** | 128 | 118 |
-| [Google](https://www.google.com/) | 51 | **46** | 50 | 50 |
-| [HTML Minifier](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
-| [Mastodon](https://mastodon.social/explore) | 37 | **28** | 36 | 36 |
-| [NBC](https://www.nbc.com/) | 601 | **549** | 593 | n/a |
-| [New York Times](https://www.nytimes.com/) | 822 | **701** | 811 | n/a |
+| [Amazon](https://www.amazon.com/) | 707 | **635** | 693 | n/a |
+| [BBC](https://www.bbc.co.uk/) | 700 | **642** | 694 | n/a |
+| [CSS-Tricks](https://css-tricks.com/) | 167 | **124** | 153 | 149 |
+| [ECMAScript](https://tc39.es/ecma262/) | 7205 | **6365** | 6585 | n/a |
+| [EFF](https://www.eff.org/) | 58 | **49** | 52 | 52 |
+| [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | 5 |
+| [FAZ](https://www.faz.net/aktuell/) | 1848 | **1727** | 1763 | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 118 | **113** | 127 | 117 |
+| [Google](https://www.google.com/) | 50 | **46** | 50 | 50 |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 371 | **249** | 347 | n/a |
+| [Mastodon](https://mastodon.social/explore) | 35 | **26** | 34 | 34 |
+| [NBC](https://www.nbc.com/) | 579 | **528** | 572 | n/a |
+| [New York Times](https://www.nytimes.com/) | 733 | **625** | 722 | n/a |
 | [United Nations](https://www.un.org/) | 9 | **7** | 8 | 8 |
-| [W3C](https://www.w3.org/) | 50 | **36** | 41 | 39 |
-| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 225 | **204** | 215 | 215 |
+| [W3C](https://www.w3.org/) | 51 | **36** | 42 | 40 |
 
 ## Options quick reference
 
@@ -139,7 +166,6 @@ Most of the options are disabled by default.
 | `customAttrSurround` | Arrays of regexes that allow to support custom attribute surround expressions (e.g. `<input {{#if value}}checked="checked"{{/if}}>`) | `[]` |
 | `customEventAttributes` | Arrays of regexes that allow to support custom event attributes for `minifyJS` (e.g. `ng-click`) | `[ /^on[a-z]{3,}$/ ]` |
 | `decodeEntities` | Use direct Unicode characters whenever possible | `false` |
-| `fileExt` | File extensions to process | `[]` (process all files) |
 | `html5` | Parse input according to HTML5 specifications | `true` |
 | `ignoreCustomComments` | Array of regexes that allow to ignore certain comments, when matched | `[ /^!/, /^\s*#/ ]` |
 | `ignoreCustomFragments` | Array of regexes that allow to ignore certain fragments, when matched (e.g. `<?php ... ?>`, `{{ ... }}`, etc.) | `[ /<%[\s\S]*?%>/, /<\?[\s\S]*?\?>/ ]` |

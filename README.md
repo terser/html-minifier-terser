@@ -129,24 +129,24 @@ For lint-like capabilities take a look at [HTMLLint](https://github.com/kangax/h
 
 How does HTML Minifier compare to other solutions, like [minimize](https://github.com/Swaagie/minimize) or [htmlcompressor.com](http://htmlcompressor.com/)?
 
-| Site | Original size (KB) | HTML Minifier | minimize | htmlcompressor.com |
-| --- | --- |---------------| --- | --- |
+| Site | Original size (KB) | HTMLMinifier | minimize | htmlcompressor.com |
+| --- | --- | --- | --- | --- |
 | [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 |
-| [Amazon](https://www.amazon.com/) | 206 | **195** | 203 | 200 |
-| [BBC](https://www.bbc.co.uk/) | 767 | **703** | 761 | n/a |
-| [CSS-Tricks](https://css-tricks.com/) | 166 | **124** | 152 | 148 |
-| [ECMAScript](https://tc39.es/ecma262/) | 7204 | **6361** | 6581 | n/a |
-| [EFF](https://www.eff.org/) | 57 | **48** | 52 | 52 |
-| [FAZ](https://www.faz.net/aktuell/) | 1767 | **1641** | 1679 | n/a |
-| [Frontend Dogma](https://frontenddogma.com/) | 119 | **114** | 128 | 118 |
-| [Google](https://www.google.com/) | 51 | **46** | 50 | 50 |
-| [HTML Minifier](https://github.com/kangax/html-minifier) | 373 | **250** | 349 | n/a |
-| [Mastodon](https://mastodon.social/explore) | 37 | **28** | 36 | 36 |
-| [NBC](https://www.nbc.com/) | 601 | **549** | 593 | n/a |
-| [New York Times](https://www.nytimes.com/) | 822 | **701** | 811 | n/a |
+| [Amazon](https://www.amazon.com/) | 707 | **635** | 693 | n/a |
+| [BBC](https://www.bbc.co.uk/) | 700 | **642** | 694 | n/a |
+| [CSS-Tricks](https://css-tricks.com/) | 167 | **124** | 153 | 149 |
+| [ECMAScript](https://tc39.es/ecma262/) | 7205 | **6365** | 6585 | n/a |
+| [EFF](https://www.eff.org/) | 58 | **49** | 52 | 52 |
+| [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | 5 |
+| [FAZ](https://www.faz.net/aktuell/) | 1848 | **1727** | 1763 | n/a |
+| [Frontend Dogma](https://frontenddogma.com/) | 118 | **113** | 127 | 117 |
+| [Google](https://www.google.com/) | 50 | **46** | 50 | 50 |
+| [HTMLMinifier](https://github.com/kangax/html-minifier) | 371 | **249** | 347 | n/a |
+| [Mastodon](https://mastodon.social/explore) | 35 | **26** | 34 | 34 |
+| [NBC](https://www.nbc.com/) | 579 | **528** | 572 | n/a |
+| [New York Times](https://www.nytimes.com/) | 733 | **625** | 722 | n/a |
 | [United Nations](https://www.un.org/) | 9 | **7** | 8 | 8 |
-| [W3C](https://www.w3.org/) | 50 | **36** | 41 | 39 |
-| [Wikipedia](https://en.wikipedia.org/wiki/Main_Page) | 225 | **204** | 215 | 215 |
+| [W3C](https://www.w3.org/) | 51 | **36** | 42 | 40 |
 
 ## Options quick reference
 

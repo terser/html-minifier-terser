@@ -77,7 +77,7 @@ test('parsing non-trivial markup', async () => {
   expect(await minify('<a href="test.html"><div>hey</div></a>')).toBe('<a href="test.html"><div>hey</div></a>');
 
   // https://github.com/kangax/html-minifier/issues/17
-  expect(await minify(':) <a href="http://example.com">link</a>')).toBe(':) <a href="http://example.com">link</a>');
+  expect(await minify(':) <a href="https://example.com">link</a>')).toBe(':) <a href="https://example.com">link</a>');
 
   // https://github.com/kangax/html-minifier/issues/169
   expect(await minify('<a href>ok</a>')).toBe('<a href>ok</a>');
@@ -859,14 +859,14 @@ test('custom processors', async () => {
     return 'URL';
   }
 
-  input = '<a href="http://site.com/foo">bar</a>';
+  input = '<a href="https://example.com/foo">bar</a>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { minifyURLs: null })).toBe(input);
   expect(await minify(input, { minifyURLs: false })).toBe(input);
   output = '<a href="URL">bar</a>';
   expect(await minify(input, { minifyURLs: url })).toBe(output);
 
-  input = '<style>\n.foo { background: url("http://site.com/foo") } </style>';
+  input = '<style>\n.foo { background: url("https://example.com/foo") } </style>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { minifyURLs: null })).toBe(input);
   expect(await minify(input, { minifyURLs: false })).toBe(input);
@@ -934,36 +934,36 @@ test('cleaning class/style attributes', async () => {
 test('cleaning URI-based attributes', async () => {
   let input, output;
 
-  input = '<a href="   http://example.com  ">x</a>';
-  output = '<a href="http://example.com">x</a>';
+  input = '<a href="   https://example.com  ">x</a>';
+  output = '<a href="https://example.com">x</a>';
   expect(await minify(input)).toBe(output);
 
   input = '<a href="  \t\t  \n \t  ">x</a>';
   output = '<a href="">x</a>';
   expect(await minify(input)).toBe(output);
 
-  input = '<img src="   http://example.com  " title="bleh   " longdesc="  http://example.com/longdesc \n\n   \t ">';
-  output = '<img src="http://example.com" title="bleh   " longdesc="http://example.com/longdesc">';
+  input = '<img src="   https://example.com  " title="bleh   " longdesc="  https://example.com/longdesc \n\n   \t ">';
+  output = '<img src="https://example.com" title="bleh   " longdesc="https://example.com/longdesc">';
   expect(await minify(input)).toBe(output);
 
-  input = '<img src="" usemap="   http://example.com  ">';
-  output = '<img src="" usemap="http://example.com">';
+  input = '<img src="" usemap="   https://example.com  ">';
+  output = '<img src="" usemap="https://example.com">';
   expect(await minify(input)).toBe(output);
 
   input = '<form action="  somePath/someSubPath/someAction?foo=bar&baz=qux     "></form>';
   output = '<form action="somePath/someSubPath/someAction?foo=bar&baz=qux"></form>';
   expect(await minify(input)).toBe(output);
 
-  input = '<BLOCKQUOTE cite=" \n\n\n http://www.mycom.com/tolkien/twotowers.html     "><P>foobar</P></BLOCKQUOTE>';
-  output = '<blockquote cite="http://www.mycom.com/tolkien/twotowers.html"><p>foobar</p></blockquote>';
+  input = '<BLOCKQUOTE cite=" \n\n\n https://example.com/tolkien/twotowers.html     "><P>foobar</P></BLOCKQUOTE>';
+  output = '<blockquote cite="https://example.com/tolkien/twotowers.html"><p>foobar</p></blockquote>';
   expect(await minify(input)).toBe(output);
 
   input = '<head profile="       http://gmpg.org/xfn/11    "></head>';
   output = '<head profile="http://gmpg.org/xfn/11"></head>';
   expect(await minify(input)).toBe(output);
 
-  input = '<object codebase="   http://example.com  "></object>';
-  output = '<object codebase="http://example.com"></object>';
+  input = '<object codebase="   https://example.com  "></object>';
+  output = '<object codebase="https://example.com"></object>';
   expect(await minify(input)).toBe(output);
 
   input = '<span profile="   1, 2, 3  ">foo</span>';
@@ -1059,7 +1059,7 @@ test('removing redundant attributes (&lt;script src="..." charset="...">)', asyn
   output = '<script type="text/javascript">alert(222);</script>';
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(output);
 
-  input = '<script type="text/javascript" src="http://example.com" charset="UTF-8">alert(222);</script>';
+  input = '<script type="text/javascript" src="https://example.com" charset="UTF-8">alert(222);</script>';
   expect(await minify(input, { removeRedundantAttributes: true })).toBe(input);
 
   input = '<script CHARSET=" ... ">alert(222);</script>';
@@ -1162,13 +1162,13 @@ test('removing type="text/css" attributes', async () => {
   input = '<style type="text/plain">.foo { background: green }</style>';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(input);
 
-  input = '<link rel="stylesheet" type="text/css" href="http://example.com">';
-  output = '<link rel="stylesheet" href="http://example.com">';
+  input = '<link rel="stylesheet" type="text/css" href="https://example.com">';
+  output = '<link rel="stylesheet" href="https://example.com">';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 
   // https://github.com/terser/html-minifier-terser/issues/132
-  input = '<link rel="stylesheet" type href="http://example.com">';
-  output = '<link rel="stylesheet" href="http://example.com">';
+  input = '<link rel="stylesheet" type href="https://example.com">';
+  output = '<link rel="stylesheet" href="https://example.com">';
   expect(await minify(input, { removeStyleLinkTypeAttributes: true })).toBe(output);
 
   input = '<link rel="alternate" type="application/atom+xml" href="data.xml">';
@@ -1190,14 +1190,14 @@ test('removing attribute quotes', async () => {
   input = '<a href="#" title="foo#bar">x</a>';
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a href=# title=foo#bar>x</a>');
 
-  input = '<a href="http://example.com/" title="blah">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a href=http://example.com/ title=blah>\nfoo\n\n</a>');
+  input = '<a href="https://example.com/" title="blah">\nfoo\n\n</a>';
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a href=https://example.com/ title=blah>\nfoo\n\n</a>');
 
-  input = '<a title="blah" href="http://example.com/">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a title=blah href=http://example.com/ >\nfoo\n\n</a>');
+  input = '<a title="blah" href="https://example.com/">\nfoo\n\n</a>';
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a title=blah href=https://example.com/ >\nfoo\n\n</a>');
 
-  input = '<a href="http://example.com/" title="">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true, removeEmptyAttributes: true })).toBe('<a href=http://example.com/ >\nfoo\n\n</a>');
+  input = '<a href="https://example.com/" title="">\nfoo\n\n</a>';
+  expect(await minify(input, { removeAttributeQuotes: true, removeEmptyAttributes: true })).toBe('<a href=https://example.com/ >\nfoo\n\n</a>');
 
   input = '<p class=foo|bar:baz></p>';
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<p class=foo|bar:baz></p>');
@@ -2464,73 +2464,73 @@ test('minification of style with custom fragments', async () => {
 test('url attribute minification', async () => {
   let input, output;
 
-  input = '<link rel="stylesheet" href="http://example.com/style.css"><form action="http://example.com/folder/folder2/index.html"><a href="http://example.com/folder/file.html">link</a></form>';
+  input = '<link rel="stylesheet" href="https://example.com/style.css"><form action="https://example.com/folder/folder2/index.html"><a href="https://example.com/folder/file.html">link</a></form>';
   output = '<link rel="stylesheet" href="/style.css"><form action="folder2/"><a href="file.html">link</a></form>';
-  expect(await minify(input, { minifyURLs: 'http://example.com/folder/' })).toBe(output);
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/folder/' } })).toBe(output);
+  expect(await minify(input, { minifyURLs: 'https://example.com/folder/' })).toBe(output);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/folder/' } })).toBe(output);
 
-  input = '<link rel="canonical" href="http://example.com/">';
-  expect(await minify(input, { minifyURLs: 'http://example.com/' })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
+  input = '<link rel="canonical" href="https://example.com/">';
+  expect(await minify(input, { minifyURLs: 'https://example.com/' })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/' } })).toBe(input);
 
-  input = '<style>body { background: url(\'http://example.com/bg.png\') }</style>';
-  expect(await minify(input, { minifyURLs: 'http://example.com/' })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
-  output = '<style>body{background:url(\'http://example.com/bg.png\')}</style>';
+  input = '<style>body { background: url(\'https://example.com/bg.png\') }</style>';
+  expect(await minify(input, { minifyURLs: 'https://example.com/' })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/' } })).toBe(input);
+  output = '<style>body{background:url(\'https://example.com/bg.png\')}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style>body{background:url(\'bg.png\')}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: 'http://example.com/'
+    minifyURLs: 'https://example.com/'
   })).toBe(output);
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://example.com/' }
+    minifyURLs: { site: 'https://example.com/' }
   })).toBe(output);
 
-  input = '<style>body { background: url("http://example.com/foo bar/bg.png") }</style>';
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo bar/' } })).toBe(input);
-  output = '<style>body{background:url("http://example.com/foo bar/bg.png")}</style>';
+  input = '<style>body { background: url("https://example.com/foo bar/bg.png") }</style>';
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/foo bar/' } })).toBe(input);
+  output = '<style>body{background:url("https://example.com/foo bar/bg.png")}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://example.com/foo bar/' }
+    minifyURLs: { site: 'https://example.com/foo bar/' }
   })).toBe(output);
 
-  input = '<style>body { background: url("http://example.com/foo bar/(baz)/bg.png") }</style>';
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo%20bar/' } })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo%20bar/(baz)/' } })).toBe(input);
+  input = '<style>body { background: url("https://example.com/foo bar/(baz)/bg.png") }</style>';
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/' } })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/foo%20bar/' } })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/foo%20bar/(baz)/' } })).toBe(input);
   output = '<style>body{background:url("foo%20bar/(baz)/bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://example.com/' }
+    minifyURLs: { site: 'https://example.com/' }
   })).toBe(output);
   output = '<style>body{background:url("(baz)/bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://example.com/foo%20bar/' }
+    minifyURLs: { site: 'https://example.com/foo%20bar/' }
   })).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://example.com/foo%20bar/(baz)/' }
+    minifyURLs: { site: 'https://example.com/foo%20bar/(baz)/' }
   })).toBe(output);
 
-  input = '<img src="http://cdn.site.com/foo.png">';
-  output = '<img src="//cdn.site.com/foo.png">';
-  expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
+  input = '<img src="http://cdn.example.com/foo.png">';
+  output = '<img src="//cdn.example.com/foo.png">';
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(output);
 });
 
 test('srcset attribute minification', async () => {
   let output;
-  const input = '<source srcset="http://site.com/foo.gif ,http://site.com/bar.jpg 1x, baz moo 42w,' +
-    '\n\n\n\n\n\t    http://site.com/zo om.png 1.00x">';
-  output = '<source srcset="http://site.com/foo.gif, http://site.com/bar.jpg, baz moo 42w, http://site.com/zo om.png">';
+  const input = '<source srcset="https://example.com/foo.gif ,https://example.com/bar.jpg 1x, baz moo 42w,' +
+    '\n\n\n\n\n\t    https://example.com/zo om.png 1.00x">';
+  output = '<source srcset="https://example.com/foo.gif, https://example.com/bar.jpg, baz moo 42w, https://example.com/zo om.png">';
   expect(await minify(input)).toBe(output);
   output = '<source srcset="foo.gif, bar.jpg, baz%20moo 42w, zo%20om.png">';
-  expect(await minify(input, { minifyURLs: { site: 'http://site.com/' } })).toBe(output);
+  expect(await minify(input, { minifyURLs: { site: 'https://example.com/' } })).toBe(output);
 });
 
 test('valueless attributes', async () => {
@@ -3005,9 +3005,9 @@ test('max line length', async () => {
 
   expect(await minify('[\']["]', options)).toBe('[\']["]');
   expect(await minify('<a href="/test.html"><div>hey</div></a>', options)).toBe('<a href="/test.html">\n<div>hey</div></a>');
-  expect(await minify(':) <a href="http://example.com">link</a>', options)).toBe(':) <a \nhref="http://example.com">\nlink</a>');
-  expect(await minify(':) <a href="http://example.com">\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\nlink</a>');
-  expect(await minify(':) <a href="http://example.com">\n\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\n\nlink</a>');
+  expect(await minify(':) <a href="https://example.com">link</a>', options)).toBe(':) <a \nhref="https://example.com">\nlink</a>');
+  expect(await minify(':) <a href="https://example.com">\nlink</a>', options)).toBe(':) <a \nhref="https://example.com">\nlink</a>');
+  expect(await minify(':) <a href="https://example.com">\n\nlink</a>', options)).toBe(':) <a \nhref="https://example.com">\n\nlink</a>');
 
   expect(await minify('<a href>ok</a>', options)).toBe('<a href>ok</a>');
 

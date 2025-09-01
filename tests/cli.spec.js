@@ -119,14 +119,14 @@ describe('cli', () => {
     const minifyOptions = {
       collapseWhitespace: true,
       minifyURLs: {
-        site: 'http://example.com/folder/'
+        site: 'https://example.com/folder/'
       }
     };
 
     const cliArguments = [
       'url.html',
       '--collapse-whitespace',
-      '--minify-urls={"site":"http://example.com/folder/"}'
+      '--minify-urls={"site":"https://example.com/folder/"}'
     ];
 
     const cliMinifiedHTML = execCli(cliArguments);

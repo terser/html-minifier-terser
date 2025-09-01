@@ -2464,58 +2464,58 @@ test('minification of style with custom fragments', async () => {
 test('url attribute minification', async () => {
   let input, output;
 
-  input = '<link rel="stylesheet" href="http://website.com/style.css"><form action="http://website.com/folder/folder2/index.html"><a href="http://website.com/folder/file.html">link</a></form>';
+  input = '<link rel="stylesheet" href="http://example.com/style.css"><form action="http://example.com/folder/folder2/index.html"><a href="http://example.com/folder/file.html">link</a></form>';
   output = '<link rel="stylesheet" href="/style.css"><form action="folder2/"><a href="file.html">link</a></form>';
-  expect(await minify(input, { minifyURLs: 'http://website.com/folder/' })).toBe(output);
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/folder/' } })).toBe(output);
+  expect(await minify(input, { minifyURLs: 'http://example.com/folder/' })).toBe(output);
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/folder/' } })).toBe(output);
 
-  input = '<link rel="canonical" href="http://website.com/">';
-  expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
+  input = '<link rel="canonical" href="http://example.com/">';
+  expect(await minify(input, { minifyURLs: 'http://example.com/' })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
 
-  input = '<style>body { background: url(\'http://website.com/bg.png\') }</style>';
-  expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
-  output = '<style>body{background:url(\'http://website.com/bg.png\')}</style>';
+  input = '<style>body { background: url(\'http://example.com/bg.png\') }</style>';
+  expect(await minify(input, { minifyURLs: 'http://example.com/' })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
+  output = '<style>body{background:url(\'http://example.com/bg.png\')}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style>body{background:url(\'bg.png\')}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: 'http://website.com/'
+    minifyURLs: 'http://example.com/'
   })).toBe(output);
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/' }
+    minifyURLs: { site: 'http://example.com/' }
   })).toBe(output);
 
-  input = '<style>body { background: url("http://website.com/foo bar/bg.png") }</style>';
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo bar/' } })).toBe(input);
-  output = '<style>body{background:url("http://website.com/foo bar/bg.png")}</style>';
+  input = '<style>body { background: url("http://example.com/foo bar/bg.png") }</style>';
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo bar/' } })).toBe(input);
+  output = '<style>body{background:url("http://example.com/foo bar/bg.png")}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo bar/' }
+    minifyURLs: { site: 'http://example.com/foo bar/' }
   })).toBe(output);
 
-  input = '<style>body { background: url("http://website.com/foo bar/(baz)/bg.png") }</style>';
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo%20bar/' } })).toBe(input);
-  expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' } })).toBe(input);
+  input = '<style>body { background: url("http://example.com/foo bar/(baz)/bg.png") }</style>';
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/' } })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo%20bar/' } })).toBe(input);
+  expect(await minify(input, { minifyURLs: { site: 'http://example.com/foo%20bar/(baz)/' } })).toBe(input);
   output = '<style>body{background:url("foo%20bar/(baz)/bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/' }
+    minifyURLs: { site: 'http://example.com/' }
   })).toBe(output);
   output = '<style>body{background:url("(baz)/bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo%20bar/' }
+    minifyURLs: { site: 'http://example.com/foo%20bar/' }
   })).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
   expect(await minify(input, {
     minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' }
+    minifyURLs: { site: 'http://example.com/foo%20bar/(baz)/' }
   })).toBe(output);
 
   input = '<img src="http://cdn.site.com/foo.png">';
@@ -3792,9 +3792,9 @@ test('srcdoc attribute minification', async () => {
   expect(await minify(input, { removeAttributeQuotes: true })).toBe(input);
 
   // minifyURLs should apply inside srcdoc content
-  input = '<iframe srcdoc="<a href=\'http://website.com/foo\'>x</a>"></iframe>';
+  input = '<iframe srcdoc="<a href=\'https://example.com/foo\'>x</a>"></iframe>';
   output = '<iframe srcdoc=\'<a href="foo">x</a>\'></iframe>';
-  expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(output);
+  expect(await minify(input, { minifyURLs: 'https://example.com/' })).toBe(output);
 
   // After collapsing whitespace to empty, iframe with empty srcdoc is preserved
   input = '<iframe srcdoc="   \n\t   "></iframe>';

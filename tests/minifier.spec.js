@@ -616,7 +616,7 @@ test('collapsing space in conditional comments', async () => {
   })).toBe(output);
 });
 
-test('remove comments from scripts', async () => {
+test('removing comments from scripts', async () => {
   let input, output;
 
   input = '<script><!--\nalert(1);\n--></script>';
@@ -666,7 +666,7 @@ test('remove comments from scripts', async () => {
   expect(await minify(input, { minifyJS: true })).toBe(input);
 });
 
-test('remove comments from styles', async () => {
+test('removing comments from styles', async () => {
   let input, output;
 
   input = '<style><!--\np.a{background:red}\n--></style>';
@@ -714,7 +714,7 @@ test('remove comments from styles', async () => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('remove CDATA sections from scripts/styles', async () => {
+test('removing CDATA sections from scripts/styles', async () => {
   let input, output;
 
   input = '<script><![CDATA[\nalert(1)\n]]></script>';
@@ -1780,7 +1780,7 @@ test('phrasing content with Web Components', async () => {
 });
 
 // https://github.com/kangax/html-minifier/issues/10
-test('Ignore custom fragments', async () => {
+test('ignoring custom fragments', async () => {
   let input, output;
   const reFragments = [/<\?[^?]+\?>/, /<%[^%]+%>/, /\{\{[^}]*\}\}/];
 
@@ -2033,7 +2033,7 @@ test('caseSensitive', async () => {
   expect(await minify(input, { caseSensitive: true })).toBe(caseSensitiveOutput);
 });
 
-test('source & track', async () => {
+test('source and track', async () => {
   const input = '<audio controls="controls">' +
     '<source src="foo.wav">' +
     '<source src="far.wav">' +
@@ -2781,7 +2781,7 @@ test('collapse inline tag whitespace', async () => {
   })).toBe(output);
 });
 
-test('ignore custom comments', async () => {
+test('ignoring custom comments', async () => {
   let input;
 
   input = '<!--! test -->';
@@ -3092,7 +3092,7 @@ test('quoteCharacter is not single quote or double quote', async () => {
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
 });
 
-test('remove space between attributes', async () => {
+test('removing space between attributes', async () => {
   let input, output;
   const options = {
     collapseBooleanAttributes: true,
@@ -3699,5 +3699,76 @@ test('inlineCustomElements option', async () => {
     collapseWhitespace: true,
     collapseInlineTagWhitespace: true,
     inlineCustomElements: ['custom-tag']
+  })).toBe(output);
+});
+
+test('srcdoc attribute minification', async () => {
+  let input, output;
+
+  // Basic srcdoc minification (from GitHub issue #762)
+  input = '<iframe srcdoc="<p>hello<!-- comment -->         </p>"></iframe>';
+  output = '<iframe srcdoc="<p>hello</p>"></iframe>';
+  expect(await minify(input, {
+    removeComments: true,
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // Complex HTML document in srcdoc
+  input = '<iframe srcdoc="<!DOCTYPE html><html><head><style>  body { margin: 0; }  </style></head><body><h1>  Title  </h1><!-- Test comment --><script>  console.log(\'test\');  </script></body></html>"></iframe>';
+  output = '<iframe srcdoc=\'<!DOCTYPE html><html><head><style>body{margin:0}</style></head><body><h1>Title</h1><script>console.log("test")</script></body></html>\'></iframe>';
+  expect(await minify(input, {
+    removeComments: true,
+    collapseWhitespace: true,
+    minifyCSS: true,
+    minifyJS: true
+  })).toBe(output);
+
+  // srcdoc with nested quotes and escaping
+  input = '<iframe srcdoc="<p title=\'quoted text\'>Content<!-- comment --></p>"></iframe>';
+  output = '<iframe srcdoc=\'<p title="quoted text">Content</p>\'></iframe>';
+  expect(await minify(input, {
+    removeComments: true,
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // srcdoc with both src and srcdoc attributes (srcdoc takes precedence)
+  input = '<iframe src="page.html" srcdoc="<p>  Content with spaces  <!-- comment --></p>"></iframe>';
+  output = '<iframe src="page.html" srcdoc="<p>Content with spaces</p>"></iframe>';
+  expect(await minify(input, {
+    removeComments: true,
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // Empty srcdoc should remain empty
+  input = '<iframe srcdoc=""></iframe>';
+  output = '<iframe srcdoc=""></iframe>';
+  expect(await minify(input)).toBe(output);
+
+  // srcdoc with only whitespace
+  input = '<iframe srcdoc="   \n\t   "></iframe>';
+  output = '<iframe srcdoc=""></iframe>';
+  expect(await minify(input, {
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // srcdoc should not be removed even with removeEmptyElements
+  input = '<iframe srcdoc="<h1>Foo</h1>"></iframe>';
+  expect(await minify(input, { removeEmptyElements: true })).toBe(input);
+
+  // Multiple iframes with srcdoc
+  input = '<iframe srcdoc="<h1>  First  </h1>"></iframe><iframe srcdoc="<h2><!-- comment -->Second</h2>"></iframe>';
+  output = '<iframe srcdoc="<h1>First</h1>"></iframe><iframe srcdoc="<h2>Second</h2>"></iframe>';
+  expect(await minify(input, {
+    removeComments: true,
+    collapseWhitespace: true
+  })).toBe(output);
+
+  // srcdoc with inline styles and scripts
+  input = '<iframe srcdoc="<div style=\'  color: red;  \' onclick=\'  alert(&quot;Hello&quot;);  \'>Test</div>"></iframe>';
+  output = '<iframe srcdoc=\'<div style="color:red" onclick="alert(&quot;Hello&quot;);">Test</div>\'></iframe>';
+  expect(await minify(input, {
+    minifyCSS: true,
+    minifyJS: true,
+    collapseWhitespace: true
   })).toBe(output);
 });

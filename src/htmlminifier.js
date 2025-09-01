@@ -260,7 +260,7 @@ function isSrcset(attrName, tag) {
   return attrName === 'srcset' && srcsetTags.has(tag);
 }
 
-async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
+async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, minifyHTMLSelf) {
   if (isEventAttribute(attrName, options)) {
     attrValue = trimWhitespace(attrValue).replace(/^javascript:\s*/i, '');
     return options.minifyJS(attrValue, true);
@@ -318,6 +318,9 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
   } else if (isMediaQuery(tag, attrs, attrName)) {
     attrValue = trimWhitespace(attrValue);
     return options.minifyCSS(attrValue, 'media');
+  } else if (tag === 'iframe' && attrName === 'srcdoc') {
+    // Recursively minify HTML content within srcdoc attribute
+    return minifyHTMLSelf(attrValue, options, true);
   }
   return attrValue;
 }
@@ -557,7 +560,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   }
 
   if (attrValue) {
-    attrValue = await cleanAttributeValue(tag, attrName, attrValue, options, attrs);
+    attrValue = await cleanAttributeValue(tag, attrName, attrValue, options, attrs, minifyHTML);
   }
 
   if (options.removeEmptyAttributes &&

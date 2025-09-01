@@ -3786,4 +3786,17 @@ test('srcdoc attribute minification', async () => {
   input = '<iframe srcdoc="<p>hello<!-- comment -->         </p>"></iframe>';
   output = '<iframe srcdoc="<p>hello<!-- comment -->         </p>"></iframe>';
   expect(await minify(input, {})).toBe(output);
+
+  // Quotes around srcdoc must be preserved even when allowing quote removal
+  input = '<iframe srcdoc="<p>hello world</p>"></iframe>';
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe(input);
+
+  // minifyURLs should apply inside srcdoc content
+  input = '<iframe srcdoc="<a href=\'http://website.com/foo\'>x</a>"></iframe>';
+  output = '<iframe srcdoc=\'<a href="foo">x</a>\'></iframe>';
+  expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(output);
+
+  // After collapsing whitespace to empty, iframe with empty srcdoc is preserved
+  input = '<iframe srcdoc="   \n\t   "></iframe>';
+  expect(await minify(input, { collapseWhitespace: true, removeEmptyElements: true })).toBe('<iframe srcdoc=""></iframe>');
 });

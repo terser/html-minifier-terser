@@ -320,6 +320,10 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     return options.minifyCSS(attrValue, 'media');
   } else if (tag === 'iframe' && attrName === 'srcdoc') {
     // Recursively minify HTML content within srcdoc attribute
+    // Fast-path: skip if nothing would change
+    if (!shouldMinifyInnerHTML(options)) {
+      return attrValue;
+    }
     return minifyHTMLSelf(attrValue, options, true);
   }
   return attrValue;
@@ -633,6 +637,17 @@ function identity(value) {
 
 function identityAsync(value) {
   return Promise.resolve(value);
+}
+
+function shouldMinifyInnerHTML(options) {
+  return Boolean(
+    options.collapseWhitespace ||
+    options.removeComments ||
+    options.removeOptionalTags ||
+    options.minifyJS !== identity ||
+    options.minifyCSS !== identityAsync ||
+    options.minifyURLs !== identity
+  );
 }
 
 const processOptions = (inputOptions) => {

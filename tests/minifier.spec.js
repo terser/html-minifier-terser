@@ -3771,4 +3771,19 @@ test('srcdoc attribute minification', async () => {
     minifyJS: true,
     collapseWhitespace: true
   })).toBe(output);
+
+  // Nested iframe srcdoc should recurse
+  input = '<iframe srcdoc="<iframe srcdoc=\'<p>  Hi  </p>\'></iframe>"></iframe>';
+  output = '<iframe srcdoc=\'<iframe srcdoc="<p>Hi</p>"></iframe>\'></iframe>';
+  expect(await minify(input, { collapseWhitespace: true })).toBe(output);
+
+  // decodeEntities true should decode inner markup
+  input = '<iframe srcdoc="&lt;p&gt;a&amp;b&lt;/p&gt;"></iframe>';
+  output = '<iframe srcdoc="<p>a&b</p>"></iframe>';
+  expect(await minify(input, { collapseWhitespace: true, decodeEntities: true })).toBe(output);
+
+  // Fast-path: no minification options should leave srcdoc unchanged
+  input = '<iframe srcdoc="<p>hello<!-- comment -->         </p>"></iframe>';
+  output = '<iframe srcdoc="<p>hello<!-- comment -->         </p>"></iframe>';
+  expect(await minify(input, {})).toBe(output);
 });

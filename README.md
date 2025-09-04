@@ -192,8 +192,8 @@ Most of the options are disabled by default.
 | `removeScriptTypeAttributes` | Remove `type="text/javascript"` from `script` elements; other `type` attribute values are left intact | `false` |
 | `removeStyleLinkTypeAttributes`| Remove `type="text/css"` from `style` and `link` elements; other `type` attribute values are left intact | `false` |
 | `removeTagWhitespace` | Remove space between attributes whenever possible; **note that this will result in invalid HTML** | `false` |
-| `sortAttributes` | [Sort attributes by frequency](#sorting-attributes--style-classes) | `false` |
-| `sortClassName` | [Sort style classes by frequency](#sorting-attributes--style-classes) | `false` |
+| `sortAttributes` | [Sort attributes by frequency](#sorting-attributes-and-style-classes) | `false` |
+| `sortClassName` | [Sort style classes by frequency](#sorting-attributes-and-style-classes) | `false` |
 | `trimCustomFragments` | Trim whitespace around `ignoreCustomFragments` | `false` |
 | `useShortDoctype` | [Replaces the doctype with the short (HTML) doctype](http://perfectionkills.com/experimenting-with-html-minifier#use_short_doctype) | `false` |
 

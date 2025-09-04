@@ -121,7 +121,7 @@ const mainOptions = {
   minifyJS: ['Minify Javascript in “script” elements and event attributes (uses Terser)', parseJSON],
   minifyURLs: ['Minify URLs in various attributes (uses relateurl)', parseJSON],
   noNewlinesBeforeTagClose: 'Never add a newline before a tag that closes an element',
-  preserveLineBreaks: 'Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break',
+  preserveLineBreaks: 'Always collapse to 1 line break (never remove it entirely) when whitespace between tags includes a line break',
   preventAttributesEscaping: 'Prevents the escaping of the values of attributes',
   processConditionalComments: 'Process contents of conditional comments through minifier',
   processScripts: ['Array of strings corresponding to types of “script” elements to process through minifier (e.g., “text/ng-template”, “text/x-handlebars-template”, etc.)', parseJSONArray],

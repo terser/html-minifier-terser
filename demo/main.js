@@ -98,7 +98,7 @@ const defaultOptions = [
     id: 'preserveLineBreaks',
     type: 'checkbox',
     label: 'Preserve line-breaks',
-    helpText: `Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break—must be used in conjunction with <code>collapseWhitespace=true</code>`
+    helpText: `Always collapse to 1 line break (never remove it entirely) when whitespace between tags includes a line break—must be used in conjunction with <code>collapseWhitespace=true</code>`
   },
   {
     id: 'preventAttributesEscaping',

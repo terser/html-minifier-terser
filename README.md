@@ -157,9 +157,9 @@ Most of the options are disabled by default.
 | `caseSensitive` | Treat attributes in case-sensitive manner (useful for custom HTML elements) | `false` |
 | `collapseBooleanAttributes` | [Omit attribute values from boolean attributes](http://perfectionkills.com/experimenting-with-html-minifier#collapse_boolean_attributes) | `false` |
 | `customFragmentQuantifierLimit` | Set maximum quantifier limit for custom fragments to prevent ReDoS attacks | `200` |
-| `collapseInlineTagWhitespace` | Don’t leave any spaces between `display: inline;` elements when collapsing—must be used in conjunction with `collapseWhitespace=true` | `false` |
+| `collapseInlineTagWhitespace` | Don’t leave any spaces between `display: inline;` elements when collapsing—use with `collapseWhitespace=true` | `false` |
 | `collapseWhitespace` | [Collapse whitespace that contributes to text nodes in a document tree](http://perfectionkills.com/experimenting-with-html-minifier#collapse_whitespace) | `false` |
-| `conservativeCollapse` | Always collapse to 1 space (never remove it entirely)—must be used in conjunction with `collapseWhitespace=true` | `false` |
+| `conservativeCollapse` | Always collapse to 1 space (never remove it entirely)—use with `collapseWhitespace=true` | `false` |
 | `continueOnParseError` | [Handle parse errors](https://html.spec.whatwg.org/multipage/parsing.html#parse-errors) instead of aborting | `false` |
 | `customAttrAssign` | Arrays of regexes that allow to support custom attribute assign expressions (e.g., `'<div flex?="{{mode != cover}}"></div>'`) | `[]` |
 | `customAttrCollapse` | Regex that specifies custom attribute to strip newlines from (e.g., `/ng-class/`) | |
@@ -178,7 +178,7 @@ Most of the options are disabled by default.
 | `minifyJS` | Minify JavaScript in `script` elements and event attributes (uses [Terser](https://github.com/terser/terser)) | `false` (could be `true`, `Object`, `Function(text, inline)`) |
 | `minifyURLs` | Minify URLs in various attributes (uses [relateurl](https://github.com/stevenvachon/relateurl)) | `false` (could be `String`, `Object`, `Function(text)`) |
 | `noNewlinesBeforeTagClose` | Never add a newline before a tag that closes an element | `false` |
-| `preserveLineBreaks` | Always collapse to 1 line break (never remove it entirely) when whitespace between tags includes a line break—must be used in conjunction with `collapseWhitespace=true` | `false` |
+| `preserveLineBreaks` | Always collapse to 1 line break (never remove it entirely) when whitespace between tags includes a line break—use with `collapseWhitespace=true` | `false` |
 | `preventAttributesEscaping` | Prevents the escaping of the values of attributes | `false` |
 | `processConditionalComments` | Process contents of conditional comments through minifier | `false` |
 | `processScripts` | Array of strings corresponding to types of `script` elements to process through minifier (e.g., `text/ng-template`, `text/x-handlebars-template`, etc.) | `[]` |
@@ -199,7 +199,7 @@ Most of the options are disabled by default.
 
 ### Sorting attributes and style classes
 
-Minifier options like `sortAttributes` and `sortClassName` won’t impact the plain-text size of the output. However, they form long repetitive chains of characters that should improve compression ratio of gzip used in HTTP compression.
+Minifier options like `sortAttributes` and `sortClassName` won’t impact the plain‑text size of the output. However, they form long, repetitive character chains that should improve the compression ratio of gzip used for HTTP.
 
 ## Special cases
 
@@ -209,7 +209,7 @@ If you have chunks of markup you would like preserved, you can wrap them with `<
 
 ### Minifying JSON-LD
 
-You can minify `script` elements with JSON-LD by setting the option `{ processScripts: ['application/ld+json'] }`. Note that this minification is very rudimentary, it is mainly useful for removing newlines and excessive whitespace. 
+You can minify `script` elements with JSON-LD by setting `{ processScripts: ['application/ld+json'] }`. Note that this minification is rudimentary; it’s mainly useful for removing newlines and excessive whitespace. 
 
 ### Preserving SVG elements
 
@@ -221,7 +221,7 @@ HTML Minifier **can’t work with invalid or partial chunks of markup**. This is
 
 Input markup (e.g., `<p id="">foo`) → Internal representation of markup in a form of tree (e.g., `{ tag: "p", attr: "id", children: ["foo"] }`) → Transformation of internal representation (e.g., removal of `id` attribute) → Output of resulting markup (e.g., `<p>foo</p>`)
 
-HTML Minifier can’t know that original markup was only half of the tree; it does its best to try to parse it as a full tree, and it loses information about tree being malformed or partial in the beginning. As a result, it can’t create a partial/malformed tree at the time of the output.
+HTML Minifier can’t know that the original markup represented only part of the tree. It parses a complete tree and, in doing so, loses information about the input being malformed or partial. As a result, it can’t emit a partial or malformed tree.
 
 To validate HTML markup, use [the W3C validator](https://validator.w3.org/) or one of [several validator packages](https://meiert.com/blog/html-validator-packages/).
 

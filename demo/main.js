@@ -7,7 +7,7 @@ const defaultOptions = [
     id: 'caseSensitive',
     type: 'checkbox',
     label: 'Case-sensitive',
-    helpText: 'Treat attributes in case sensitive manner (useful for custom HTML tags)'
+    helpText: 'Treat attributes in case-sensitive manner (useful for custom HTML elements)'
   },
   {
     id: 'collapseBooleanAttributes',
@@ -20,8 +20,7 @@ const defaultOptions = [
     id: 'collapseInlineTagWhitespace',
     type: 'checkbox',
     label: 'Collapse inline tag whitespace',
-    helpText: `Don't leave any spaces between <code/>display:inline;</code> elements when collapsing.
-    Must be used in conjunction with <code>collapseWhitespace=true</code>`,
+    helpText: `Don’t leave any spaces between <code/>display: inline;</code> elements when collapsing—must be used in conjunction with <code>collapseWhitespace=true</code>`,
     unsafe: true
   },
   {
@@ -35,8 +34,7 @@ const defaultOptions = [
     id: 'conservativeCollapse',
     type: 'checkbox',
     label: 'Conservative collapse',
-    helpText: `Always collapse to 1 space (never remove it entirely).
-    Must be used in conjunction with <code>collapseWhitespace=true</code>`
+    helpText: `Always collapse to 1 space (never remove it entirely)—must be used in conjunction with <code>collapseWhitespace=true</code>`
   },
   {
     id: 'decodeEntities',
@@ -48,8 +46,8 @@ const defaultOptions = [
   {
     id: 'html5',
     type: 'checkbox',
-    label: 'HTML5',
-    helpText: 'Parse input according to HTML5 specifications',
+    label: 'HTML',
+    helpText: 'Parse input according to the HTML specification',
     checked: true
   },
   {
@@ -62,12 +60,12 @@ const defaultOptions = [
     id: 'keepClosingSlash',
     type: 'checkbox',
     label: 'Keep closing slash',
-    helpText: 'Keep the trailing slash on singleton elements'
+    helpText: 'Keep the trailing slash on void elements'
   },
   {
     id: 'maxLineLength',
     type: 'number',
-    label: 'Max. line length',
+    label: 'Max line length',
     helpText: 'Specify a maximum line length. Compressed output will be split by newlines at valid HTML split-points'
   },
   {
@@ -100,8 +98,7 @@ const defaultOptions = [
     id: 'preserveLineBreaks',
     type: 'checkbox',
     label: 'Preserve line-breaks',
-    helpText: `Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break.
-    Must be used in conjunction with <code>collapseWhitespace=true</code>`
+    helpText: `Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break—must be used in conjunction with <code>collapseWhitespace=true</code>`
   },
   {
     id: 'preventAttributesEscaping',
@@ -121,7 +118,7 @@ const defaultOptions = [
     id: 'processScripts',
     type: 'text',
     label: 'Process scripts',
-    helpText: 'Comma-delimited string corresponding to types of script elements to process through minifier (e.g. <code>text/ng-template, text/x-handlebars-template</code>)',
+    helpText: 'Comma-delimited string corresponding to types of script elements to process through minifier (e.g., <code>text/ng-template, text/x-handlebars-template</code>)',
     value: 'text/html'
   },
   {
@@ -223,7 +220,7 @@ const defaultOptions = [
     id: 'useShortDoctype',
     type: 'checkbox',
     label: 'Use short doctype',
-    helpText: 'Replaces the <code>doctype</code> with the short (HTML5) <code>doctype</code>',
+    helpText: 'Replaces the <code>doctype</code> with the short (HTML) <code>doctype</code>',
     checked: true
   }
 ];

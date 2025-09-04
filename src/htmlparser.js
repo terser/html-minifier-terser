@@ -36,7 +36,7 @@ class CaseInsensitiveSet extends Set {
   }
 }
 
-// Regular Expressions for parsing tags and attributes
+// Regular expressions for parsing tags and attributes
 const singleAttrIdentifier = /([^\s"'<>/=]+)/;
 const singleAttrAssigns = [/=/];
 const singleAttrValues = [
@@ -67,10 +67,10 @@ let IS_REGEX_CAPTURING_BROKEN = false;
   IS_REGEX_CAPTURING_BROKEN = g === '';
 });
 
-// Empty Elements
+// Empty elements
 const empty = new CaseInsensitiveSet(['area', 'base', 'basefont', 'br', 'col', 'embed', 'frame', 'hr', 'img', 'input', 'isindex', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
 
-// Inline Elements
+// Inline elements
 const inline = new CaseInsensitiveSet(['a', 'abbr', 'acronym', 'applet', 'b', 'basefont', 'bdo', 'big', 'br', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'map', 'noscript', 'object', 'q', 's', 'samp', 'script', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'tt', 'u', 'var']);
 
 // Elements that you can, intentionally, leave open
@@ -80,10 +80,10 @@ const closeSelf = new CaseInsensitiveSet(['colgroup', 'dd', 'dt', 'li', 'option'
 // Attributes that have their values filled in disabled='disabled'
 const fillAttrs = new CaseInsensitiveSet(['checked', 'compact', 'declare', 'defer', 'disabled', 'ismap', 'multiple', 'nohref', 'noresize', 'noshade', 'nowrap', 'readonly', 'selected']);
 
-// Special Elements (can contain anything)
+// Special elements (can contain anything)
 const special = new CaseInsensitiveSet(['script', 'style']);
 
-// HTML5 tags https://html.spec.whatwg.org/multipage/indices.html#elements-3
+// HTML5 elements https://html.spec.whatwg.org/multipage/indices.html#elements-3
 // Phrasing Content https://html.spec.whatwg.org/multipage/dom.html#phrasing-content
 const nonPhrasing = new CaseInsensitiveSet(['address', 'article', 'aside', 'base', 'blockquote', 'body', 'caption', 'col', 'colgroup', 'dd', 'details', 'dialog', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'legend', 'li', 'menuitem', 'meta', 'ol', 'optgroup', 'option', 'param', 'rp', 'rt', 'source', 'style', 'summary', 'tbody', 'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul']);
 

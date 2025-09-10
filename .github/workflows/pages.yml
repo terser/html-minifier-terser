@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: "Setup GitHub Pages"
+      - name: "Set up GitHub Pages"
         uses: actions/configure-pages@v5
 
       - name: "Install dependencies"

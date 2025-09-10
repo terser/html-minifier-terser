@@ -288,7 +288,7 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     return attrValue;
   } else if (isSrcset(attrName, tag)) {
     // https://html.spec.whatwg.org/multipage/embedded-content.html#attr-img-srcset
-    attrValue = trimWhitespace(attrValue).split(/\s+,\s*|\s*,\s+/).map(function (candidate) {
+    attrValue = (await Promise.all(trimWhitespace(attrValue).split(/\s+,\s*|\s*,\s+/).map(async function (candidate) {
       let url = candidate;
       let descriptor = '';
       const match = candidate.match(/\s+([1-9][0-9]*w|[0-9]+(?:\.[0-9]+)?x)$/);
@@ -300,8 +300,8 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
           descriptor = ' ' + num + suffix;
         }
       }
-      return options.minifyURLs(url) + descriptor;
-    }).join(', ');
+      return (await options.minifyURLs(url)) + descriptor;
+    }))).join(', ');
   } else if (isMetaViewport(tag, attrs) && attrName === 'content') {
     attrValue = attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
       // "0.90000" -> "0.9"
@@ -692,8 +692,8 @@ const processOptions = (inputOptions) => {
       const cleanCssOptions = typeof option === 'object' ? option : {};
 
       options.minifyCSS = async function (text, type) {
-        text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, function (match, prefix, quote, url, suffix) {
-          return prefix + quote + options.minifyURLs(url) + quote + suffix;
+        text = await replaceAsync(text, /(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, async function (match, prefix, quote, url, suffix) {
+          return prefix + quote + await options.minifyURLs(url) + quote + suffix;
         });
 
         const inputCSS = wrapCSS(text, type);

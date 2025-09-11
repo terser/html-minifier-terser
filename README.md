@@ -176,7 +176,7 @@ Most of the options are disabled by default.
 | `maxLineLength` | Specify a maximum line length; compressed output will be split by newlines at valid HTML split-points | |
 | `minifyCSS` | Minify CSS in `style` elements and `style` attributes (uses [clean-css](https://github.com/jakubpawlowicz/clean-css)) | `false` (could be `true`, `Object`, `Function(text, type)`) |
 | `minifyJS` | Minify JavaScript in `script` elements and event attributes (uses [Terser](https://github.com/terser/terser)) | `false` (could be `true`, `Object`, `Function(text, inline)`) |
-| `minifyURLs` | Minify URLs in various attributes (uses [relateurl](https://github.com/stevenvachon/relateurl)) | `false` (could be `String`, `Object`, `Function(text)`) |
+| `minifyURLs` | Minify URLs in various attributes (uses [relateurl](https://github.com/stevenvachon/relateurl)) | `false` (could be `String`, `Object`, `Function(text)`, `async Function(text)`) |
 | `noNewlinesBeforeTagClose` | Never add a newline before a tag that closes an element | `false` |
 | `preserveLineBreaks` | Always collapse to 1 line break (never remove it entirely) when whitespace between tags includes a line break—use with `collapseWhitespace=true` | `false` |
 | `preventAttributesEscaping` | Prevents the escaping of the values of attributes | `false` |

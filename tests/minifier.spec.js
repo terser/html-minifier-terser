@@ -2538,7 +2538,7 @@ test('async minifyURLs support', async () => {
 
   // Test async function for href attributes
   const asyncUrlMinifier = async (url) => {
-    await new Promise(resolve => resolve()); // Simulate async work
+    await Promise.resolve(); // Simulate async boundary
     return url.replace('https://example.com/', '');
   };
 

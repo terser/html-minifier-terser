@@ -125,7 +125,7 @@ const mainOptions = {
   preventAttributesEscaping: 'Prevents the escaping of the values of attributes',
   processConditionalComments: 'Process contents of conditional comments through minifier',
   processScripts: ['Array of strings corresponding to types of “script” elements to process through minifier (e.g., “text/ng-template”, “text/x-handlebars-template”, etc.)', parseJSONArray],
-  quoteCharacter: ['Type of quote to use for attribute values (“\'” or “\"”)', parseString],
+  quoteCharacter: ['Type of quote to use for attribute values (“\'” or “"”)', parseString],
   removeAttributeQuotes: 'Remove quotes around attributes when possible',
   removeComments: 'Strip HTML comments',
   removeEmptyAttributes: 'Remove all attributes with whitespace-only values',

@@ -109,7 +109,7 @@ test('parsing non-trivial markup', async () => {
   expect(await minify(input)).toBe(input);
 
   input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
-    ' <!--FIXME hardcoded placeholder - dates may not be used for service required fields yet. -->' +
+    ' <!--FIXME hardcoded placeholder—dates may not be used for service required fields yet. -->' +
     ' placeholder="YYYY-MM-DD"' +
     ' date-range-picker' +
     ' data-ng-model="vm.value"' +
@@ -2563,7 +2563,7 @@ test('async minifyURLs support', async () => {
   output = '<a href="HTTPS://EXAMPLE.COM/TEST">link</a>';
   expect(await minify(input, { minifyURLs: promiseUrlMinifier })).toBe(output);
 
-  // Test backwards compatibility - sync function should still work
+  // Test backwards compatibility—sync function should still work
   const syncUrlMinifier = (url) => url.replace('example.com', 'test.com');
 
   input = '<a href="https://example.com/page">link</a>';
@@ -2574,7 +2574,7 @@ test('async minifyURLs support', async () => {
 test('async minifyURLs error handling', async () => {
   let input, output;
 
-  // Test error handling - should fallback to original URL when async function throws
+  // Test error handling—should fall back to original URL when async function throws
   const faultyAsyncMinifier = async (url) => {
     if (url.includes('error')) {
       throw new Error('Minification failed');
@@ -3732,7 +3732,7 @@ test('inlineCustomElements option', async () => {
     inlineCustomElements: ['custom-element']
   })).toBe(input);
 
-  // Test without inlineCustomElements - spacing should collapse for custom elements
+  // Test without inlineCustomElements—spacing should collapse for custom elements
   output = '<custom-element>A</custom-element><custom-element>B</custom-element>';
   expect(await minify(input, {
     collapseWhitespace: true

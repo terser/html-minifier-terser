@@ -82,11 +82,12 @@
     "build:docs": "vite build --base /html-minifier-next/ --outDir build",
     "deploy": "npm run build && npm run build:docs",
     "lint": "eslint .",
+    "prepack": "npm run build",
     "prepare": "husky",
     "serve": "npm run build && vite",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch"
   },
   "type": "module",
-  "version": "1.4.1"
+  "version": "1.4.2"
 }

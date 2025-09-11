@@ -274,7 +274,14 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     return attrValue;
   } else if (isUriTypeAttribute(attrName, tag)) {
     attrValue = trimWhitespace(attrValue);
-    return isLinkType(tag, attrs, 'canonical') ? attrValue : options.minifyURLs(attrValue);
+    if (isLinkType(tag, attrs, 'canonical')) {
+      return attrValue;
+    }
+    try {
+      return await options.minifyURLs(attrValue);
+    } catch {
+      return attrValue;
+    }
   } else if (isNumberTypeAttribute(attrName, tag)) {
     return trimWhitespace(attrValue);
   } else if (attrName === 'style') {
@@ -300,7 +307,11 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
           descriptor = ' ' + num + suffix;
         }
       }
-      return (await options.minifyURLs(url)) + descriptor;
+      try {
+        return (await options.minifyURLs(url)) + descriptor;
+      } catch {
+        return url + descriptor;
+      }
     }))).join(', ');
   } else if (isMetaViewport(tag, attrs) && attrName === 'content') {
     attrValue = attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
@@ -693,7 +704,11 @@ const processOptions = (inputOptions) => {
 
       options.minifyCSS = async function (text, type) {
         text = await replaceAsync(text, /(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, async function (match, prefix, quote, url, suffix) {
-          return prefix + quote + await options.minifyURLs(url) + quote + suffix;
+          try {
+            return prefix + quote + await options.minifyURLs(url) + quote + suffix;
+          } catch {
+            return match;
+          }
         });
 
         const inputCSS = wrapCSS(text, type);

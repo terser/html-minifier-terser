@@ -240,14 +240,15 @@ function isNumberTypeAttribute(attrName, tag) {
 }
 
 function isLinkType(tag, attrs, value) {
-  if (tag !== 'link') {
-    return false;
-  }
-  for (let i = 0, len = attrs.length; i < len; i++) {
-    if (attrs[i].name === 'rel' && attrs[i].value === value) {
-      return true;
+  if (tag !== 'link') return false;
+  const needle = String(value).toLowerCase();
+  for (let i = 0; i < attrs.length; i++) {
+    if (attrs[i].name.toLowerCase() === 'rel') {
+      const tokens = String(attrs[i].value).toLowerCase().split(/\s+/);
+      if (tokens.includes(needle)) return true;
     }
   }
+  return false;
 }
 
 function isMediaQuery(tag, attrs, attrName) {
@@ -274,7 +275,16 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     return attrValue;
   } else if (isUriTypeAttribute(attrName, tag)) {
     attrValue = trimWhitespace(attrValue);
-    return isLinkType(tag, attrs, 'canonical') ? attrValue : options.minifyURLs(attrValue);
+    if (isLinkType(tag, attrs, 'canonical')) {
+      return attrValue;
+    }
+    try {
+      const out = await options.minifyURLs(attrValue);
+      return typeof out === 'string' ? out : attrValue;
+    } catch (err) {
+      options.log && options.log(err);
+      return attrValue;
+    }
   } else if (isNumberTypeAttribute(attrName, tag)) {
     return trimWhitespace(attrValue);
   } else if (attrName === 'style') {
@@ -288,7 +298,7 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     return attrValue;
   } else if (isSrcset(attrName, tag)) {
     // https://html.spec.whatwg.org/multipage/embedded-content.html#attr-img-srcset
-    attrValue = trimWhitespace(attrValue).split(/\s+,\s*|\s*,\s+/).map(function (candidate) {
+    attrValue = (await Promise.all(trimWhitespace(attrValue).split(/\s+,\s*|\s*,\s+/).map(async function (candidate) {
       let url = candidate;
       let descriptor = '';
       const match = candidate.match(/\s+([1-9][0-9]*w|[0-9]+(?:\.[0-9]+)?x)$/);
@@ -300,8 +310,14 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
           descriptor = ' ' + num + suffix;
         }
       }
-      return options.minifyURLs(url) + descriptor;
-    }).join(', ');
+      try {
+        const out = await options.minifyURLs(url);
+        return (typeof out === 'string' ? out : url) + descriptor;
+      } catch (err) {
+        options.log && options.log(err);
+        return url + descriptor;
+      }
+    }))).join(', ');
   } else if (isMetaViewport(tag, attrs) && attrName === 'content') {
     attrValue = attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
       // "0.90000" -> "0.9"
@@ -692,9 +708,21 @@ const processOptions = (inputOptions) => {
       const cleanCssOptions = typeof option === 'object' ? option : {};
 
       options.minifyCSS = async function (text, type) {
-        text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, function (match, prefix, quote, url, suffix) {
-          return prefix + quote + options.minifyURLs(url) + quote + suffix;
-        });
+        text = await replaceAsync(
+          text,
+          /(url\s*\(\s*)(?:"([^"]*)"|'([^']*)'|([^\s)]+))(\s*\))/ig,
+          async function (match, prefix, dq, sq, unq, suffix) {
+            const quote = dq != null ? '"' : (sq != null ? "'" : '');
+            const url = dq ?? sq ?? unq ?? '';
+            try {
+              const out = await options.minifyURLs(url);
+              return prefix + quote + (typeof out === 'string' ? out : url) + quote + suffix;
+            } catch (err) {
+              options.log && options.log(err);
+              return match;
+            }
+          }
+        );
 
         const inputCSS = wrapCSS(text, type);
 

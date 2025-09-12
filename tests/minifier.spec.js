@@ -109,7 +109,7 @@ test('parsing non-trivial markup', async () => {
   expect(await minify(input)).toBe(input);
 
   input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
-    ' <!--FIXME hardcoded placeholder - dates may not be used for service required fields yet. -->' +
+    ' <!--FIXME hardcoded placeholder—dates may not be used for service required fields yet. -->' +
     ' placeholder="YYYY-MM-DD"' +
     ' date-range-picker' +
     ' data-ng-model="vm.value"' +
@@ -2533,6 +2533,92 @@ test('srcset attribute minification', async () => {
   expect(await minify(input, { minifyURLs: { site: 'https://example.com/' } })).toBe(output);
 });
 
+test('async minifyURLs support', async () => {
+  let input, output;
+
+  // Test async function for href attributes
+  const asyncUrlMinifier = async (url) => {
+    await Promise.resolve(); // Simulate async boundary
+    return url.replace('https://example.com/', '');
+  };
+
+  input = '<a href="https://example.com/page.html">link</a>';
+  output = '<a href="page.html">link</a>';
+  expect(await minify(input, { minifyURLs: asyncUrlMinifier })).toBe(output);
+
+  // Test async function with srcset
+  input = '<img srcset="https://example.com/img1.jpg, https://example.com/img2.jpg 2x">';
+  output = '<img srcset="img1.jpg, img2.jpg 2x">';
+  expect(await minify(input, { minifyURLs: asyncUrlMinifier })).toBe(output);
+
+  // Test async function with CSS url()
+  input = '<style>body { background: url("https://example.com/bg.png") }</style>';
+  output = '<style>body{background:url("bg.png")}</style>';
+  expect(await minify(input, { minifyCSS: true, minifyURLs: asyncUrlMinifier })).toBe(output);
+
+  // Test promise-returning function
+  const promiseUrlMinifier = (url) => Promise.resolve(url.toUpperCase());
+
+  input = '<a href="https://example.com/test">link</a>';
+  output = '<a href="HTTPS://EXAMPLE.COM/TEST">link</a>';
+  expect(await minify(input, { minifyURLs: promiseUrlMinifier })).toBe(output);
+
+  // Test backwards compatibility—sync function should still work
+  const syncUrlMinifier = (url) => url.replace('example.com', 'test.com');
+
+  input = '<a href="https://example.com/page">link</a>';
+  output = '<a href="https://test.com/page">link</a>';
+  expect(await minify(input, { minifyURLs: syncUrlMinifier })).toBe(output);
+
+  // Canonical URLs must not be minified even with async minifier
+  input = '<link rel="canonical" href="https://example.com/">';
+  expect(await minify(input, { minifyURLs: asyncUrlMinifier })).toBe(input);
+});
+
+test('async minifyURLs error handling', async () => {
+  let input, output;
+
+  // Test error handling—should fall back to original URL when async function throws
+  const faultyAsyncMinifier = async (url) => {
+    if (url.includes('error')) {
+      throw new Error('Minification failed');
+    }
+    return url.replace('https://example.com/', '');
+  };
+
+  input = '<a href="https://example.com/good.html">good</a><a href="https://example.com/error.html">bad</a>';
+  output = '<a href="good.html">good</a><a href="https://example.com/error.html">bad</a>';
+  expect(await minify(input, { minifyURLs: faultyAsyncMinifier })).toBe(output);
+
+  // Test rejected promise handling
+  const rejectingMinifier = (url) => {
+    if (url.includes('reject')) {
+      return Promise.reject(new Error('Rejected'));
+    }
+    return Promise.resolve(url.replace('https://example.com/', ''));
+  };
+
+  input = '<a href="https://example.com/good.html">good</a><a href="https://example.com/reject.html">bad</a>';
+  output = '<a href="good.html">good</a><a href="https://example.com/reject.html">bad</a>';
+  expect(await minify(input, { minifyURLs: rejectingMinifier })).toBe(output);
+
+  // Test error in srcset processing
+  input = '<img srcset="https://example.com/good.jpg, https://example.com/error.jpg 2x">';
+  output = '<img srcset="good.jpg, https://example.com/error.jpg 2x">';
+  expect(await minify(input, { minifyURLs: faultyAsyncMinifier })).toBe(output);
+
+  // Test error in CSS url() processing
+  input = '<style>body { background: url("https://example.com/error.png") }</style>';
+  output = '<style>body{background:url("https://example.com/error.png")}</style>';
+  expect(await minify(input, { minifyCSS: true, minifyURLs: faultyAsyncMinifier })).toBe(output);
+
+  // Test CSS URLs with parentheses in filename (regression test for CSS URL regex bug)
+  const urlWithParens = async (url) => url.replace('https://example.com/', '');
+  input = '<style>body { background: url("https://example.com/foo(bar).png") }</style>';
+  output = '<style>body{background:url("foo(bar).png")}</style>';
+  expect(await minify(input, { minifyCSS: true, minifyURLs: urlWithParens })).toBe(output);
+});
+
 test('valueless attributes', async () => {
   const input = '<br foo>';
   expect(await minify(input)).toBe(input);
@@ -3656,7 +3742,7 @@ test('inlineCustomElements option', async () => {
     inlineCustomElements: ['custom-element']
   })).toBe(input);
 
-  // Test without inlineCustomElements - spacing should collapse for custom elements
+  // Test without inlineCustomElements—spacing should collapse for custom elements
   output = '<custom-element>A</custom-element><custom-element>B</custom-element>';
   expect(await minify(input, {
     collapseWhitespace: true

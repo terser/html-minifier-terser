@@ -13,19 +13,7 @@
  *     chars: function(text) {},
  *     comment: function(text) {}
  * });
- *
- * // or to get an XML string:
- * HTMLtoXML(htmlString);
- *
- * // or to get an XML DOM Document
- * HTMLtoDOM(htmlString);
- *
- * // or to inject into an existing document/DOM node
- * HTMLtoDOM(htmlString, document);
- * HTMLtoDOM(htmlString, document.body);
- *
  */
-
 
 import { replaceAsync } from './utils.js';
 
@@ -82,7 +70,7 @@ const fillAttrs = new CaseInsensitiveSet(['checked', 'compact', 'declare', 'defe
 // Special elements (can contain anything)
 const special = new CaseInsensitiveSet(['script', 'style']);
 
-// HTML5 elements https://html.spec.whatwg.org/multipage/indices.html#elements-3
+// HTML elements https://html.spec.whatwg.org/multipage/indices.html#elements-3
 // Phrasing Content https://html.spec.whatwg.org/multipage/dom.html#phrasing-content
 const nonPhrasing = new CaseInsensitiveSet(['address', 'article', 'aside', 'base', 'blockquote', 'body', 'caption', 'col', 'colgroup', 'dd', 'details', 'dialog', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'legend', 'li', 'menuitem', 'meta', 'ol', 'optgroup', 'option', 'param', 'rp', 'rt', 'source', 'style', 'summary', 'tbody', 'td', 'tfoot', 'th', 'thead', 'title', 'tr', 'track', 'ul']);
 

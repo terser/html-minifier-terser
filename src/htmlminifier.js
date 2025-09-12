@@ -281,7 +281,8 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
     try {
       const out = await options.minifyURLs(attrValue);
       return typeof out === 'string' ? out : attrValue;
-    } catch {
+    } catch (err) {
+      options.log && options.log(err);
       return attrValue;
     }
   } else if (isNumberTypeAttribute(attrName, tag)) {
@@ -312,7 +313,8 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs, min
       try {
         const out = await options.minifyURLs(url);
         return (typeof out === 'string' ? out : url) + descriptor;
-      } catch {
+      } catch (err) {
+        options.log && options.log(err);
         return url + descriptor;
       }
     }))).join(', ');
@@ -708,12 +710,15 @@ const processOptions = (inputOptions) => {
       options.minifyCSS = async function (text, type) {
         text = await replaceAsync(
           text,
-          /(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig,
-          async function (match, prefix, quote, url, suffix) {
+          /(url\s*\(\s*)(?:"([^"]*)"|'([^']*)'|([^\s)]+))(\s*\))/ig,
+          async function (match, prefix, dq, sq, unq, suffix) {
+            const quote = dq != null ? '"' : (sq != null ? "'" : '');
+            const url = dq ?? sq ?? unq ?? '';
             try {
               const out = await options.minifyURLs(url);
               return prefix + quote + (typeof out === 'string' ? out : url) + quote + suffix;
-            } catch {
+            } catch (err) {
+              options.log && options.log(err);
               return match;
             }
           }

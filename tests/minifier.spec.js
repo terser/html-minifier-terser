@@ -2569,6 +2569,10 @@ test('async minifyURLs support', async () => {
   input = '<a href="https://example.com/page">link</a>';
   output = '<a href="https://test.com/page">link</a>';
   expect(await minify(input, { minifyURLs: syncUrlMinifier })).toBe(output);
+
+  // Canonical URLs must not be minified even with async minifier
+  input = '<link rel="canonical" href="https://example.com/">';
+  expect(await minify(input, { minifyURLs: asyncUrlMinifier })).toBe(input);
 });
 
 test('async minifyURLs error handling', async () => {
@@ -2607,6 +2611,12 @@ test('async minifyURLs error handling', async () => {
   input = '<style>body { background: url("https://example.com/error.png") }</style>';
   output = '<style>body{background:url("https://example.com/error.png")}</style>';
   expect(await minify(input, { minifyCSS: true, minifyURLs: faultyAsyncMinifier })).toBe(output);
+
+  // Test CSS URLs with parentheses in filename (regression test for CSS URL regex bug)
+  const urlWithParens = async (url) => url.replace('https://example.com/', '');
+  input = '<style>body { background: url("https://example.com/foo(bar).png") }</style>';
+  output = '<style>body{background:url("foo(bar).png")}</style>';
+  expect(await minify(input, { minifyCSS: true, minifyURLs: urlWithParens })).toBe(output);
 });
 
 test('valueless attributes', async () => {

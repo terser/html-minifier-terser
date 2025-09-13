@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file. They may be
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-09-13
+
+### Changed
+
+- Replaced Husky with native Git hooks for development workflow
+- Updated `prepare` script to configure Git hooks path automatically  
+
+### Removed
+
+- Removed Husky dependency (2.4kB package size reduction)
+- Removed `.husky/` directory in favor of `.githooks/`
+
+### Internal
+
+- Migrated from Husky-managed Git hooks to native `.githooks/` directory
+- Maintained identical pre-commit and pre-push test execution
+- Simplified development setup with zero external dependencies for Git hooks
+
 ## [2.0.0] - 2025-09-12
 
 ### Breaking Changes

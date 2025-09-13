@@ -15,7 +15,8 @@ import Minimize from 'minimize';
 import Progress from 'progress';
 import Table from 'cli-table3';
 import htmlnano from 'htmlnano';
-import { minify as minifyHtml } from '@minify-html/node';
+import minifyHtmlPkg from '@minify-html/node';
+const { minify: minifyHtml } = minifyHtmlPkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -400,7 +401,7 @@ async function processFile(fileName) {
         // Use htmlnano with default preset
         const result = await htmlnano.process(data, {
           minifyJs: true,
-          minifyCss: true,
+          minifyCss: false, // Disable to avoid CSS parsing errors with modern syntax
           removeEmptyAttributes: true,
           removeRedundantAttributes: true,
           collapseBooleanAttributes: true,

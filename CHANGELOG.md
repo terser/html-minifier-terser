@@ -4,6 +4,13 @@ As of version 2.0.0, all notable changes to this project are documented in this 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2025-09-13
+
+### Fixed
+
+- Added linting enforcement to pre-commit hooks to ensure code quality
+- Removed orphaned `.lintstagedrc.yml` file left from Husky refactoring cleanup
+
 ## [2.1.1] - 2025-09-13
 
 ### Fixed

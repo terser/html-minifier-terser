@@ -2,13 +2,20 @@ name: "Tests"
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
       matrix:
         platform: [ubuntu-latest]
         node: ['lts/*', 'current']
-    name: "CI: Node ${{ matrix.node }} (${{ matrix.platform }})"
+    name: "Node ${{ matrix.node }} (${{ matrix.platform }})"
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4

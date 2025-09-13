@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
 import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
-import pkg from '../package.json' assert { type: 'json' };
+import pkg from '../package.json' with { type: 'json' };
 
 const defaultOptions = [
   {

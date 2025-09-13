@@ -22,7 +22,6 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
     "alpinejs": "^3.14.9",
-    "commitlint-config-non-conventional": "^1.0.1",
     "eslint": "^9.33.0",
     "jest": "^30.1.3",
     "rollup": "^4.50.0",

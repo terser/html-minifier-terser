@@ -120,7 +120,7 @@ if (process.argv.length > 2) {
       function forkTask() {
         if (commits.length && running < nThreads) {
           const hash = commits.shift();
-          const task = fork('./backtest.js', { silent: true });
+          const task = fork(path.join(__dirname, 'backtest.js'), { silent: true });
           let error = '';
           const id = setTimeout(function () {
             if (task.connected) {
@@ -169,18 +169,24 @@ if (process.argv.length > 2) {
       let conf = 'html-minifier-benchmarks.json';
 
       function checkout() {
-        const path = paths.shift();
-        git('checkout', hash, '--', path, function (code) {
-          if (code === 0 && path === 'benchmark.conf') {
-            conf = path;
+        const targetPath = paths.shift();
+        git('checkout', hash, '--', targetPath, function (code) {
+          if (code === 0 && targetPath === 'benchmark.conf') {
+            conf = targetPath;
           }
           if (paths.length) {
             checkout();
           } else {
             readText(conf).then(data => {
-              minify(hash, JSON.parse(data));
+              try {
+                minify(hash, JSON.parse(data));
+              } catch (e) {
+                console.error(`Invalid JSON in ${conf}: ${e.message}`);
+                process.disconnect();
+              }
             }).catch(err => {
-              throw err;
+              console.error(`Failed to read ${conf}: ${err.message}`);
+              process.disconnect();
             });
           }
         });

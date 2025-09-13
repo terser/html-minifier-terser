@@ -7,7 +7,7 @@
     "minimize": "^2.2.0",
     "progress": "^2.0.3"
   },
-  "name": "html-minifer-terser-benchmarks",
+  "name": "html-minifier-next-benchmarks",
   "overrides": {
     "ansi-regex": "^5.0.1",
     "es5-ext": ">=0.10.63"

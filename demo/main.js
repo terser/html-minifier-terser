@@ -304,4 +304,4 @@ Alpine.data('minifier', () => ({
 
 Alpine.start();
 
-document.getElementById('minifer-version').innerText = `(v${pkg.version})`;
+document.getElementById('minifier-version').innerText = `(v${pkg.version})`;

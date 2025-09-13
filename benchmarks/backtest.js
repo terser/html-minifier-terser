@@ -36,7 +36,7 @@ async function writeText(filePath, data) {
 }
 
 async function loadModule() {
-  const { minify } = await import('./src/htmlminifier.js');
+  const { minify } = await import('../src/htmlminifier.js');
   return minify || global.minify;
 }
 

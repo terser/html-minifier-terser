@@ -1,8 +1,16 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. They may be AI-generated.
+As of version 2.0.0, all notable changes to this project are documented in this file, which is AI-generated and human-edited. Dependency updates may or may not be called out specifically.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.1] - 2025-09-13
+
+### Fixed
+
+- Fixed demo not loading in modern browsers due to missing JSON import assertion
+- Fixed demo numeric inputs incorrectly rejecting “0” values
+- Improved demo numeric input validation and error handling with explicit radix
 
 ## [2.1.0] - 2025-09-13
 

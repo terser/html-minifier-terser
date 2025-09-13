@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 
-'use strict';
+import { spawn, fork } from 'child_process';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Progress from 'progress';
 
-const childProcess = require('child_process');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const Progress = require('progress');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const urls = require('./sites.json');
+const urls = JSON.parse(await fs.readFile(path.join(__dirname, 'sites.json'), 'utf8'));
 const fileNames = Object.keys(urls);
 
 function git() {
   const args = [].concat.apply([], [].slice.call(arguments, 0, -1));
   const callback = arguments[arguments.length - 1];
-  const task = childProcess.spawn('git', args, { stdio: ['ignore', 'pipe', 'ignore'] });
+  const task = spawn('git', args, { stdio: ['ignore', 'pipe', 'ignore'] });
   let output = '';
   task.stdout.setEncoding('utf8');
   task.stdout.on('data', function (data) {
@@ -25,21 +27,17 @@ function git() {
   });
 }
 
-function readText(filePath, callback) {
-  fs.readFile(filePath, { encoding: 'utf8' }, callback);
+async function readText(filePath) {
+  return await fs.readFile(filePath, 'utf8');
 }
 
-function writeText(filePath, data) {
-  fs.writeFile(filePath, data, { encoding: 'utf8' }, function (err) {
-    if (err) {
-      throw err;
-    }
-  });
+async function writeText(filePath, data) {
+  await fs.writeFile(filePath, data, 'utf8');
 }
 
-function loadModule() {
-  require('./src/htmlparser');
-  return require('./src/htmlminifier').minify || global.minify;
+async function loadModule() {
+  const { minify } = await import('../src/htmlminifier.js');
+  return minify || global.minify;
 }
 
 function getOptions(fileName, options) {
@@ -54,32 +52,28 @@ function getOptions(fileName, options) {
   return result;
 }
 
-function minify(hash, options) {
-  const minify = loadModule();
+async function minify(hash, options) {
+  const minifyFn = await loadModule();
   process.send('ready');
   let count = fileNames.length;
-  fileNames.forEach(function (fileName) {
-    readText(path.join('./', fileName + '.html'), function (err, data) {
-      if (err) {
-        throw err;
+
+  for (const fileName of fileNames) {
+    try {
+      const data = await readText(path.join('./', fileName + '.html'));
+      const minified = minifyFn(data, getOptions(fileName, options));
+      if (minified) {
+        process.send({ name: fileName, size: minified.length });
       } else {
-        try {
-          const minified = minify(data, getOptions(fileName, options));
-          if (minified) {
-            process.send({ name: fileName, size: minified.length });
-          } else {
-            throw new Error('unexpected result: ' + minified);
-          }
-        } catch (e) {
-          console.error('[' + fileName + ']', e.stack || e);
-        } finally {
-          if (!--count) {
-            process.disconnect();
-          }
-        }
+        throw new Error('unexpected result: ' + minified);
       }
-    });
-  });
+    } catch (e) {
+      console.error('[' + fileName + ']', e.stack || e);
+    } finally {
+      if (!--count) {
+        process.disconnect();
+      }
+    }
+  }
 }
 
 function print(table) {
@@ -123,10 +117,10 @@ if (process.argv.length > 2) {
         total: commits.length * 2
       });
 
-      function fork() {
+      function forkTask() {
         if (commits.length && running < nThreads) {
           const hash = commits.shift();
-          const task = childProcess.fork('./backtest', { silent: true });
+          const task = fork(path.join(__dirname, 'backtest.js'), { silent: true });
           let error = '';
           const id = setTimeout(function () {
             if (task.connected) {
@@ -137,7 +131,7 @@ if (process.argv.length > 2) {
           task.on('message', function (data) {
             if (data === 'ready') {
               progress.tick(1);
-              fork();
+              forkTask();
             } else {
               table[hash][data.name] = data.size;
             }
@@ -150,7 +144,7 @@ if (process.argv.length > 2) {
             if (!--running && !commits.length) {
               print(table);
             } else {
-              fork();
+              forkTask();
             }
           });
           task.stderr.setEncoding('utf8');
@@ -163,7 +157,7 @@ if (process.argv.length > 2) {
         }
       }
 
-      fork();
+      forkTask();
     });
   } else {
     console.error('Invalid input:', process.argv[2]);
@@ -175,20 +169,24 @@ if (process.argv.length > 2) {
       let conf = 'html-minifier-benchmarks.json';
 
       function checkout() {
-        const path = paths.shift();
-        git('checkout', hash, '--', path, function (code) {
-          if (code === 0 && path === 'benchmark.conf') {
-            conf = path;
+        const targetPath = paths.shift();
+        git('checkout', hash, '--', targetPath, function (code) {
+          if (code === 0 && targetPath === 'benchmark.conf') {
+            conf = targetPath;
           }
           if (paths.length) {
             checkout();
           } else {
-            readText(conf, function (err, data) {
-              if (err) {
-                throw err;
-              } else {
+            readText(conf).then(data => {
+              try {
                 minify(hash, JSON.parse(data));
+              } catch (e) {
+                console.error(`Invalid JSON in ${conf}: ${e.message}`);
+                process.disconnect();
               }
+            }).catch(err => {
+              console.error(`Failed to read ${conf}: ${err.message}`);
+              process.disconnect();
             });
           }
         });

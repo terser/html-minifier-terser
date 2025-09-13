@@ -235,8 +235,9 @@ $RECYCLE.BIN/
 # .pnp.*
 
 ### Project ###
+benchmarks/generated/
+benchmarks/sources/*.html
+benchmarks/backtest.csv
 build/
 temp/
 tmp/
-benchmarks/sources/*.html
-benchmarks/generated/

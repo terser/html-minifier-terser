@@ -1,6 +1,6 @@
 import Alpine from 'alpinejs';
 import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
-import pkg from '../package.json';
+import pkg from '../package.json' with { type: 'json' };
 
 const defaultOptions = [
   {
@@ -233,10 +233,12 @@ const getOptions = (options) => {
 
     if (option.type === 'checkbox') {
       value = Boolean(option.checked);
-    } else if (!option.value) {
-      return;
     } else if (option.type === 'number') {
-      value = parseInt(option.value);
+      const n = Number.parseInt(String(option.value), 10);
+      if (Number.isNaN(n)) return;
+      value = n;
+    } else if (option.value === '') {
+      return;
     } else {
       value = option.value;
     }
@@ -304,4 +306,4 @@ Alpine.data('minifier', () => ({
 
 Alpine.start();
 
-document.getElementById('minifer-version').innerText = `(v${pkg.version})`;
+document.getElementById('minifier-version').innerText = `(v${pkg.version})`;

@@ -28,7 +28,7 @@ jobs:
         working-directory: ./benchmarks
 
       - name: "Run benchmarks"
-        run: npm run benchmark
+        run: npm run benchmarks
         working-directory: ./benchmarks
 
       - name: "Create pull request"

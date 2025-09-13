@@ -15,8 +15,7 @@ import Minimize from 'minimize';
 import Progress from 'progress';
 import Table from 'cli-table3';
 import htmlnano from 'htmlnano';
-import minifyHtmlPkg from '@minify-html/node';
-const { minify: minifyHtml } = minifyHtmlPkg;
+import { minify as minifyHtml } from '@minify-html/node';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,10 +31,10 @@ const progress = new Progress('[:bar] :etas :fileName', {
 });
 
 const table = new Table({
-  head: ['File', 'Before', 'After', 'Minimize', 'htmlcompressor.com', 'htmlnano', 'minify-html', 'Savings', 'Time'],
+  head: ['File', 'Before', 'HTML Minifier Next', 'Minimize', 'htmlcompressor.com', 'htmlnano', 'minify-html', 'Savings', 'Time'],
   colWidths: [fileNames.reduce(function (length, fileName) {
     return Math.max(length, fileName.length);
-  }, 0) + 2, 25, 25, 25, 25, 25, 25, 25, 20, 10]
+  }, 0) + 2, 25, 25, 25, 25, 25, 25, 25, 20]
 });
 
 function toKb(size, precision) {
@@ -51,6 +50,14 @@ function greenSize(size) {
 }
 
 function blueSavings(oldSize, newSize) {
+  // Handle invalid inputs
+  if (!oldSize || oldSize <= 0 || typeof oldSize !== 'number') {
+    return chalk.white('N/A');
+  }
+  if (typeof newSize !== 'number' || newSize < 0) {
+    newSize = 0; // Treat invalid newSize as 0
+  }
+
   const savingsPercent = (1 - newSize / oldSize) * 100;
   const savings = oldSize - newSize;
   return chalk.cyan.bold(savingsPercent.toFixed(2)) + chalk.white('% (' + toKb(savings, 2) + ' KB)');
@@ -69,10 +76,12 @@ async function readText(filePath) {
 }
 
 async function writeBuffer(filePath, data) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, data);
 }
 
 async function writeText(filePath, data) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, data, 'utf8');
 }
 
@@ -218,22 +227,54 @@ async function processFile(fileName) {
       const configPath = path.join(__dirname, 'html-minifier-benchmarks.json');
       const args = [filePath, '-c', configPath, '--minify-urls', site, '-o', info.filePath];
 
-      return new Promise((resolve) => {
-        fork('../cli.js', args).on('exit', async function () {
-          await readSizes(info);
-          resolve();
+      return new Promise((resolve, reject) => {
+        const child = fork('../cli.js', args);
+        let timeoutId;
+
+        // Set timeout for CLI process (30 seconds)
+        timeoutId = setTimeout(() => {
+          child.kill('SIGTERM');
+          reject(new Error(`HTML Minifier CLI timed out after 30 seconds for ${fileName}`));
+        }, 30000);
+
+        child.on('exit', async function (code, signal) {
+          clearTimeout(timeoutId);
+
+          if (code !== 0) {
+            reject(new Error(`HTML Minifier CLI failed with exit code ${code}${signal ? ` (signal: ${signal})` : ''} for ${fileName}`));
+            return;
+          }
+
+          try {
+            await readSizes(info);
+            resolve();
+          } catch (error) {
+            reject(new Error(`Failed to read sizes after HTML Minifier processing ${fileName}: ${error.message}`));
+          }
+        });
+
+        child.on('error', function (error) {
+          clearTimeout(timeoutId);
+          reject(new Error(`HTML Minifier CLI process error for ${fileName}: ${error.message}`));
         });
       });
     }
 
     async function testMinimize() {
       const data = await readBuffer(filePath);
-      return new Promise((resolve) => {
-        minimize.parse(data, async function (_, data) {
+      return new Promise((resolve, reject) => {
+        minimize.parse(data, function (err, data) {
+          if (err) {
+            return reject(new Error(`Minimize failed for ${fileName}: ${err.message}`));
+          }
+
           const info = infos.minimize;
-          await writeBuffer(info.filePath, data);
-          await readSizes(info);
-          resolve();
+
+          Promise.resolve()
+            .then(() => writeBuffer(info.filePath, data))
+            .then(() => readSizes(info))
+            .then(() => resolve())
+            .catch(error => reject(new Error(`Failed after minimize processing ${fileName}: ${error.message}`)));
         });
       });
     }
@@ -419,14 +460,15 @@ async function processFile(fileName) {
     for (const name in infos) {
       const info = infos[name];
       display.push([greenSize(info.size), greenSize(info.gzSize), greenSize(info.lzSize), greenSize(info.brSize)].join('\n'));
-      const sizeValue = info.size ? toKb(info.size) : 'n/a';
-      // Use "<1" for sub-1KB files instead of "n/a" for better clarity
-      if (sizeValue === '0' || !info.size) {
+      // Use raw bytes to determine display logic
+      if (info.size == null || info.size === undefined) {
         report.push('n/a');
-      } else if (parseFloat(sizeValue) < 1) {
-        report.push('<1');
+      } else if (info.size === 0) {
+        report.push('n/a'); // 0 bytes = failed/no output
+      } else if (info.size < 1024) {
+        report.push('<1'); // Sub-1KB files
       } else {
-        report.push(sizeValue);
+        report.push(toKb(info.size)); // 1KB+ files
       }
     }
     display.push(
@@ -438,9 +480,9 @@ async function processFile(fileName) {
       ].join('\n'),
       [
         blueTime(infos.minifier.endTime - infos.minifier.startTime),
-        blueTime(original.gzTime - original.endTime),
-        blueTime(original.lzTime - original.gzTime),
-        blueTime(original.brTime - original.lzTime)
+        blueTime(infos.minifier.gzTime - infos.minifier.endTime),
+        blueTime(infos.minifier.lzTime - infos.minifier.gzTime),
+        blueTime(infos.minifier.brTime - infos.minifier.lzTime)
       ].join('\n')
     );
     rows[fileName] = {
@@ -454,24 +496,79 @@ async function processFile(fileName) {
     const url = new URL(site);
 
     return new Promise((resolve) => {
-      https.get(url, function (res) {
+      let resolved = false;
+
+      function safeResolve(value) {
+        if (!resolved) {
+          resolved = true;
+          resolve(value);
+        }
+      }
+
+      const request = https.get(url, function (res) {
         const status = res.statusCode;
+
         if (status === 200) {
+          let stream = res;
+          let gunzipStream = null;
+
+          // Handle gzip compression
           if (res.headers['content-encoding'] === 'gzip') {
-            res = res.pipe(zlib.createGunzip());
+            gunzipStream = zlib.createGunzip();
+            stream = res.pipe(gunzipStream);
+
+            gunzipStream.on('error', function (err) {
+              console.error(`Gunzip error for ${site}: ${err.message}`);
+              safeResolve(null);
+            });
           }
-          res.pipe(createWriteStream(filePath)).on('finish', function () {
-            resolve(site);
+
+          const writeStream = createWriteStream(filePath);
+
+          // Handle all possible stream errors
+          res.on('error', function (err) {
+            console.error(`Response stream error for ${site}: ${err.message}`);
+            safeResolve(null);
           });
+
+          writeStream.on('error', function (err) {
+            console.error(`Write stream error for ${site}: ${err.message}`);
+            safeResolve(null);
+          });
+
+          writeStream.on('finish', function () {
+            safeResolve(site);
+          });
+
+          writeStream.on('close', function () {
+            // Ensure cleanup if stream closes without finish
+            if (!resolved) {
+              safeResolve(null);
+            }
+          });
+
+          stream.pipe(writeStream);
+
         } else if (status >= 300 && status < 400 && res.headers.location) {
-          get(new URL(res.headers.location, site)).then(resolve);
+          res.resume(); // Consume response to free memory
+          get(new URL(res.headers.location, site)).then(safeResolve);
         } else {
           console.warn(`Warning: HTTP error ${status} for ${site}`);
-          resolve(null); // Pass `null` to indicate failure
+          res.resume(); // Consume response to free memory
+          safeResolve(null);
         }
-      }).on('error', function (err) {
+      });
+
+      // Set request timeout (30 seconds)
+      request.setTimeout(30000, function() {
+        console.warn(`Request timeout for ${site}`);
+        request.destroy();
+        safeResolve(null);
+      });
+
+      request.on('error', function (err) {
         console.error(`Error: Failed to fetch ${site} - ${err.message}`);
-        resolve(null); // Pass `null` to indicate failure
+        safeResolve(null);
       });
     });
   }

@@ -17,7 +17,7 @@
     "es5-ext": ">=0.10.63"
   },
   "overrides_comment": "@@ Remove",
-  "private": "true",
+  "private": true,
   "scripts": {
     "backtest": "node backtest.js",
     "benchmark": "node benchmark.js"

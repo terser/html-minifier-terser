@@ -14,6 +14,9 @@ import lzma from 'lzma';
 import Minimize from 'minimize';
 import Progress from 'progress';
 import Table from 'cli-table3';
+import htmlnano from 'htmlnano';
+import minifyHtmlPkg from '@minify-html/node';
+const { minify: minifyHtml } = minifyHtmlPkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,10 +32,10 @@ const progress = new Progress('[:bar] :etas :fileName', {
 });
 
 const table = new Table({
-  head: ['File', 'Before', 'After', 'Minimize', 'htmlcompressor.com', 'Savings', 'Time'],
+  head: ['File', 'Before', 'After', 'Minimize', 'htmlcompressor.com', 'htmlnano', 'minify-html', 'Savings', 'Time'],
   colWidths: [fileNames.reduce(function (length, fileName) {
     return Math.max(length, fileName.length);
-  }, 0) + 2, 25, 25, 25, 25, 25, 20, 10]
+  }, 0) + 2, 25, 25, 25, 25, 25, 25, 25, 20, 10]
 });
 
 function toKb(size, precision) {
@@ -111,7 +114,9 @@ function generateMarkdownTable() {
     'Original size (KB)',
     'HTML Minifier Next',
     'minimize',
-    'htmlcompressor.com'
+    'htmlcompressor.com',
+    'htmlnano',
+    'minify-html'
   ];
 
   fileNames.forEach(function (fileName) {
@@ -174,7 +179,7 @@ async function processFile(fileName) {
       brFilePath: path.join('./generated/', fileName + '.html.br')
     };
     const infos = {};
-    ['minifier', 'minimize', 'compressor'].forEach(function (name) {
+    ['minifier', 'minimize', 'compressor', 'htmlnano', 'minifyhtml'].forEach(function (name) {
       infos[name] = {
         filePath: path.join('./generated/', fileName + '.' + name + '.html'),
         gzFilePath: path.join('./generated/', fileName + '.' + name + '.html.gz'),
@@ -261,7 +266,7 @@ async function processFile(fileName) {
         const request = https.request(url, options, function (res) {
           // Check HTTP status code
           if (res.statusCode < 200 || res.statusCode >= 300) {
-            console.warn(`htmlcompressor.com returned status ${res.statusCode}`);
+            console.warn(`htmlcompressor.com failed for ${fileName}: HTTP ${res.statusCode}`);
             failed();
             resolve();
             return;
@@ -319,13 +324,14 @@ async function processFile(fileName) {
 
         // Set request timeout (15 seconds)
         request.setTimeout(15000, function() {
-          console.warn('htmlcompressor.com request timed out');
+          console.warn(`htmlcompressor.com timed out for ${fileName}`);
           request.destroy();
           failed();
           resolve();
         });
 
-        request.on('error', () => {
+        request.on('error', (err) => {
+          console.warn(`htmlcompressor.com error for ${fileName}: ${err.message}`);
           failed();
           resolve();
         }).end(new URLSearchParams({
@@ -345,10 +351,62 @@ async function processFile(fileName) {
       });
     }
 
+    async function testhtmlnano() {
+      const data = await readText(filePath);
+      const info = infos.htmlnano;
+
+      try {
+        // Use htmlnano with default preset
+        const result = await htmlnano.process(data, {
+          minifyJs: true,
+          minifyCss: true,
+          removeEmptyAttributes: true,
+          removeRedundantAttributes: true,
+          collapseBooleanAttributes: true,
+          removeComments: true,
+          collapseWhitespace: true
+        });
+        await writeText(info.filePath, result.html);
+        await readSizes(info);
+      } catch (e) {
+        console.warn(`htmlnano failed for ${fileName}: ${e.message}`);
+        info.size = 0;
+        info.gzSize = 0;
+        info.lzSize = 0;
+        info.brSize = 0;
+      }
+    }
+
+    async function testMinifyHTML() {
+      const data = await readBuffer(filePath);
+      const info = infos.minifyhtml;
+
+      try {
+        const result = minifyHtml(data, {
+          keep_closing_tags: false,
+          keep_html_and_head_opening_tags: false,
+          keep_spaces_between_attributes: false,
+          keep_comments: false,
+          minify_js: false, // Disable JS minification to avoid Rust panics
+          minify_css: true
+        });
+        await writeBuffer(info.filePath, result);
+        await readSizes(info);
+      } catch (e) {
+        console.warn(`minify-html failed for ${fileName}:`, e.message);
+        info.size = 0;
+        info.gzSize = 0;
+        info.lzSize = 0;
+        info.brSize = 0;
+      }
+    }
+
     await readSizes(original);
     await testHTMLMinifier();
     await testMinimize();
     await testHTMLCompressor();
+    await testhtmlnano();
+    await testMinifyHTML();
 
     const display = [
       [fileName, '+ gzip', '+ lzma', '+ brotli'].join('\n'),

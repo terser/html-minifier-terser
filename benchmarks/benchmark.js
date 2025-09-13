@@ -128,31 +128,14 @@ function generateMarkdownTable() {
     }
   });
 
-  const widths = headers.map(function (header, index) {
-    let width = header.length;
-    fileNames.forEach(function (fileName) {
-      if (rows[fileName] && rows[fileName].report) {
-        width = Math.max(width, rows[fileName].report[index].length);
-      }
-    });
-    return width;
-  });
-
   let content = '';
 
   function output(row) {
-    widths.forEach(function (width, index) {
-      const text = row[index];
-      content += '| ' + text + new Array(width - text.length + 2).join(' ');
-    });
-    content += '|\n';
+    content += '| ' + row.join(' | ') + ' |\n';
   }
 
   output(headers);
-  widths.forEach(function (width, index) {
-    content += '| ' + '-'.repeat(width) + ' ';
-  });
-  content += '|\n';
+  content += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
 
   fileNames.forEach(function (fileName) {
     if (!rows[fileName] || !rows[fileName].report) return; // Prevent outputting rows with missing data

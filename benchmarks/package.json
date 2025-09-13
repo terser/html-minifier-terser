@@ -20,6 +20,6 @@
   "private": true,
   "scripts": {
     "backtest": "node backtest.js",
-    "benchmark": "node benchmark.js"
+    "benchmarks": "node benchmark.js"
   }
 }

@@ -288,7 +288,7 @@ Benchmarks for minified HTML:
 ```shell
 cd benchmarks
 npm install
-npm run benchmark
+npm run benchmarks
 ```
 
 ## Running local server

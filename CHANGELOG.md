@@ -6,10 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [2.1.2] - 2025-09-13
 
-### Fixed
+### Changed
 
 - Added linting enforcement to pre-commit hooks to ensure code quality
+- Renamed workflow files for clarity: `main.yaml` → `tests.yml`, `pages.yml` → `github-pages.yml`
+
+### Removed
+
 - Removed orphaned `.lintstagedrc.yml` file left from Husky refactoring cleanup
+- Removed non-functional `.github/workflows/benchmarks.yml` workflow
 
 ## [2.1.1] - 2025-09-13
 

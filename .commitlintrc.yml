@@ -1,1 +1,14 @@
-extends: non-conventional
+extends: []
+
+rules:
+  # Basic requirements
+  header-min-length: [2, always, 5]
+  header-max-length: [2, always, 100]
+  body-max-line-length: [2, always, 200]
+  footer-max-line-length: [2, always, 200]
+
+  # Flexible formatting
+  subject-empty: [2, never]
+
+  # Optional: Short-subject warning
+  subject-min-length: [1, always, 3]

@@ -229,7 +229,7 @@ async function processFile(fileName) {
       const args = [filePath, '-c', configPath, '--minify-urls', site, '-o', info.filePath];
 
       return new Promise((resolve, reject) => {
-        const child = fork('../cli.js', args);
+        const child = fork(path.join(__dirname, '../cli.js'), args);
         let timeoutId;
 
         // Set timeout for CLI process (30 seconds)
@@ -317,7 +317,6 @@ async function processFile(fileName) {
           // Validate content type for better response parsing
           const contentType = res.headers['content-type'] || '';
           const isJson = contentType.includes('application/json');
-          const isHtml = contentType.includes('text/html') || contentType.includes('text/plain');
 
           if (res.headers['content-encoding'] === 'gzip') {
             res = res.pipe(zlib.createGunzip());
@@ -496,6 +495,7 @@ async function processFile(fileName) {
   async function get(site) {
     const url = new URL(site);
 
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
     return new Promise((resolve) => {
       let resolved = false;
 

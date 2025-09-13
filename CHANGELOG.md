@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Removed Husky dependency (2.4kB package size reduction)
 - Removed `.husky/` directory in favor of `.githooks/`
+- Removed unused `commitlint-config-non-conventional` dependency
 
 ### Internal
 

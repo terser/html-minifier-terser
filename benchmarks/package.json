@@ -1,11 +1,15 @@
 {
   "type": "module",
   "dependencies": {
+    "@minify-html/node": "^0.16.4",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
+    "cssnano": "^7.0.9",
+    "htmlnano": "^2.1.2",
     "lzma": "^2.3.2",
     "minimize": "^2.2.0",
-    "progress": "^2.0.3"
+    "progress": "^2.0.3",
+    "svgo": "^3.0.0"
   },
   "name": "html-minifier-next-benchmarks",
   "overrides": {

@@ -4,8 +4,8 @@ rules:
   # Basic requirements
   header-min-length: [2, always, 5]
   header-max-length: [2, always, 100]
-  body-max-line-length: [2, always, 200]
-  footer-max-line-length: [2, always, 200]
+  body-max-line-length: [2, always, 250]
+  footer-max-line-length: [2, always, 100]
 
   # Flexible formatting
   subject-empty: [2, never]

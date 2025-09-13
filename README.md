@@ -131,21 +131,21 @@ How does HTML Minifier Next compare to other solutions, like [minimize](https://
 
 | Site | Original size (KB) | HTML Minifier Next | minimize | htmlcompressor.com | htmlnano | minify-html |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 | 57 | 56 |
-| [Amazon](https://www.amazon.com/) | 724 | **652** | 711 | n/a | n/a | 690 |
-| [BBC](https://www.bbc.co.uk/) | 741 | **680** | 735 | n/a | 707 | 720 |
-| [CSS-Tricks](https://css-tricks.com/) | 165 | **123** | 151 | 148 | 133 | 148 |
-| [ECMAScript](https://tc39.es/ecma262/) | 7205 | **6365** | 6585 | n/a | 6869 | 6538 |
+| [A List Apart](https://alistapart.com/) | 64 | **54** | 59 | 57 | 59 | 56 |
+| [Amazon](https://www.amazon.com/) | 718 | **645** | 704 | n/a | 667 | 683 |
+| [BBC](https://www.bbc.co.uk/) | 739 | **678** | 733 | n/a | 709 | 718 |
+| [CSS-Tricks](https://css-tricks.com/) | 165 | **123** | 151 | 148 | 136 | 148 |
+| [ECMAScript](https://tc39.es/ecma262/) | 7205 | **6365** | 6585 | n/a | 6871 | 6538 |
 | [EFF](https://www.eff.org/) | 58 | **49** | 53 | 53 | 55 | 52 |
 | [Eloquent JavaScript](https://eloquentjavascript.net/) | 6 | **5** | 6 | 5 | 6 | 5 |
-| [FAZ](https://www.faz.net/aktuell/) | 1805 | **1688** | 1722 | n/a | 1608 | 1726 |
+| [FAZ](https://www.faz.net/aktuell/) | 1814 | **1696** | 1730 | n/a | 1623 | 1735 |
 | [Frontend Dogma](https://frontenddogma.com/) | 118 | **113** | 127 | 117 | 131 | 117 |
-| [Google](https://www.google.com/) | 50 | **45** | 50 | 50 | 48 | 49 |
-| [HTML Minifier Next](https://github.com/j9t/html-minifier-next) | 393 | **274** | 371 | n/a | 338 | 359 |
+| [Google](https://www.google.com/) | 50 | **46** | 50 | 50 | 48 | 49 |
+| [HTML Minifier Next](https://github.com/j9t/html-minifier-next) | 393 | **274** | 371 | n/a | 339 | 359 |
 | [Mastodon](https://mastodon.social/explore) | 35 | **26** | 34 | 34 | 31 | 33 |
 | [meiert.com](https://meiert.com/) | 25 | **24** | 26 | 25 | 26 | 25 |
-| [NBC](https://www.nbc.com/) | 585 | **534** | 577 | n/a | 560 | 572 |
-| [New York Times](https://www.nytimes.com/) | 850 | **726** | 838 | n/a | n/a | 834 |
+| [NBC](https://www.nbc.com/) | 584 | **533** | 576 | n/a | 559 | 571 |
+| [New York Times](https://www.nytimes.com/) | 864 | **738** | 852 | n/a | 801 | 848 |
 | [United Nations](https://www.un.org/) | 9 | **7** | 8 | 8 | 8 | 7 |
 | [W3C](https://www.w3.org/) | 50 | **36** | 41 | 39 | 40 | 41 |
 

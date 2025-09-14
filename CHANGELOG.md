@@ -1,8 +1,14 @@
 # Changelog
 
-As of version 2.0.0, all notable changes to this project are documented in this file, which is AI-generated and human-edited. Dependency updates may or may not be called out specifically.
+As of version 2.0.0, all notable changes to this project are documented in this file, which is (mostly) AI-generated and (always) human-edited. Dependency updates may or may not be called out specifically.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.3] - 2025-09-14
+
+### Changed
+
+- Cleaned up `.gitignore` file
 
 ## [2.1.2] - 2025-09-13
 

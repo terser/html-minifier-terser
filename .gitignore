@@ -2,6 +2,7 @@ benchmarks/generated/
 benchmarks/sources/
 benchmarks/backtest.csv
 benchmarks/backtest.log
+demo/build/
 dist/
 node_modules/
 tmp/

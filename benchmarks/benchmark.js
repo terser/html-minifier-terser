@@ -32,7 +32,7 @@ const progress = new Progress('[:bar] :etas :fileName', {
 });
 
 const table = new Table({
-  head: ['File', 'Before', 'HTML Minifier Next', 'Minimize', 'htmlcompressor.com', 'htmlnano', 'minify-html', 'Savings', 'Time'],
+  head: ['File', 'Before', 'HTML Minifier Next', 'Minimize', 'html&shy;compressor.com', 'htmlnano', 'minify-html', 'Savings', 'Time'],
   colWidths: [fileNames.reduce(function (length, fileName) {
     return Math.max(length, fileName.length);
   }, 0) + 2, 25, 25, 25, 25, 25, 25, 25, 20]
@@ -261,6 +261,7 @@ async function processFile(fileName) {
       });
     }
 
+    // Minimize (with defaults for best minification)
     async function testMinimize() {
       const data = await readBuffer(filePath);
       return new Promise((resolve, reject) => {
@@ -280,6 +281,7 @@ async function processFile(fileName) {
       });
     }
 
+    // htmlcompressor.com @@ https://htmlcompressor.com/api/#:~:text=HTMLCompressor%20API%20reference
     async function testHTMLCompressor() {
       const data = await readText(filePath);
       const url = new URL('https://htmlcompressor.com/compress');
@@ -392,12 +394,12 @@ async function processFile(fileName) {
       });
     }
 
+    // htmlnano @@ https://htmlnano.netlify.app/presets
     async function testhtmlnano() {
       const data = await readText(filePath);
       const info = infos.htmlnano;
 
       try {
-        // Use htmlnano with default preset
         const result = await htmlnano.process(data, {
           minifyJs: true,
           minifyCss: false, // Disable to avoid CSS parsing errors with modern syntax
@@ -418,6 +420,7 @@ async function processFile(fileName) {
       }
     }
 
+    // minify-html @@ https://github.com/wilsonzlin/minify-html
     async function testMinifyHTML() {
       const data = await readBuffer(filePath);
       const info = infos.minifyhtml;

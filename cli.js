@@ -75,7 +75,7 @@ function parseJSON(value) {
     try {
       return JSON.parse(value);
     } catch (e) {
-      if (/^{/.test(value)) {
+      if (value.startsWith('{')) {
         fatal('Could not parse JSON value \'' + value + '\'');
       }
       return value;

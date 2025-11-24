@@ -2,17 +2,20 @@ name: CI
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   test-node:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: [14, 16, 18, 'current']
+        node: [20, 22, 24, 'current']
     name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -27,12 +30,12 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        node: [14, 16, 18, 'current']
+        node: [20, 22, 24, 'current']
     name: CI - Node ${{ matrix.node }} (${{ matrix.platform }})
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm

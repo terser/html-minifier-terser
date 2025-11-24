@@ -1,4 +1,4 @@
-import { test, expect } from '@jest/globals';
+import { test, expect } from 'vitest';
 import { minify } from '../src/htmlminifier';
 
 test('`minifiy` exists', () => {

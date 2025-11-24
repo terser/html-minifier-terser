@@ -8,7 +8,7 @@ const https = require('https');
 const path = require('path');
 const { fork } = require('child_process');
 
-const chalk = require('chalk');
+const pc = require('picocolors');
 const lzma = require('lzma');
 const Minimize = require('minimize');
 const Progress = require('progress');
@@ -36,21 +36,21 @@ function toKb(size, precision) {
 }
 
 function redSize(size) {
-  return chalk.red.bold(size) + chalk.white(' (' + toKb(size, 2) + ' KB)');
+  return pc.bold(pc.red(size)) + pc.white(' (' + toKb(size, 2) + ' KB)');
 }
 
 function greenSize(size) {
-  return chalk.green.bold(size) + chalk.white(' (' + toKb(size, 2) + ' KB)');
+  return pc.bold(pc.green(size)) + pc.white(' (' + toKb(size, 2) + ' KB)');
 }
 
 function blueSavings(oldSize, newSize) {
   const savingsPercent = (1 - newSize / oldSize) * 100;
   const savings = oldSize - newSize;
-  return chalk.cyan.bold(savingsPercent.toFixed(2)) + chalk.white('% (' + toKb(savings, 2) + ' KB)');
+  return pc.bold(pc.cyan(savingsPercent.toFixed(2))) + pc.white('% (' + toKb(savings, 2) + ' KB)');
 }
 
 function blueTime(time) {
-  return chalk.cyan.bold(time) + chalk.white(' ms');
+  return pc.bold(pc.cyan(time)) + pc.white(' ms');
 }
 
 function readBuffer(filePath, callback) {
@@ -188,7 +188,7 @@ run(fileNames.map(function (fileName) {
 
   function processFile(site, done) {
     const original = {
-      filePath: filePath,
+      filePath,
       gzFilePath: path.join('./generated/', fileName + '.html.gz'),
       lzFilePath: path.join('./generated/', fileName + '.html.lz'),
       brFilePath: path.join('./generated/', fileName + '.html.br')
@@ -416,8 +416,8 @@ run(fileNames.map(function (fileName) {
         ].join('\n')
       );
       rows[fileName] = {
-        display: display,
-        report: report
+        display,
+        report
       };
       progress.tick({ fileName: '' });
       done();
@@ -427,7 +427,11 @@ run(fileNames.map(function (fileName) {
   function get(site, callback) {
     const url = new URL(site);
 
-    https.get(url, function (res) {
+    https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    }, function (res) {
       const status = res.statusCode;
       if (status === 200) {
         if (res.headers['content-encoding'] === 'gzip') {
@@ -445,7 +449,7 @@ run(fileNames.map(function (fileName) {
   }
 
   return function (done) {
-    progress.tick(0, { fileName: fileName });
+    progress.tick(0, { fileName });
     get(urls[fileName], function (site) {
       processFile(site, done);
     });

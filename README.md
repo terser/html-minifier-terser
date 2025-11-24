@@ -54,18 +54,18 @@ How does HTMLMinifier compare to other solutions — [HTML Minifier from Will Pe
 
 | Site                                                                         | Original size *(KB)* | HTMLMinifier | minimize | Will Peavy | htmlcompressor.com |
 | ---------------------------------------------------------------------------- |:--------------------:| ------------:| --------:| ----------:| ------------------:|
-| [Google](https://www.google.com/)                                            | 52                   | **48**       | 52       | 54         | n/a                |
-| [Stack Overflow](https://stackoverflow.com/)                                 | 177                  | **143**      | 154      | 154        | n/a                |
-| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 252                  | **171**      | 230      | 250        | n/a                |
-| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | 229        | n/a                |
-| [BBC](https://www.bbc.co.uk/)                                                | 355                  | **324**      | 353      | 344        | n/a                |
-| [Amazon](https://www.amazon.co.uk/)                                          | 466                  | **430**      | 456      | 474        | n/a                |
-| [Twitter](https://twitter.com/)                                              | 469                  | **394**      | 462      | 513        | n/a                |
-| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 703                  | **569**      | 682      | 708        | n/a                |
-| [Eloquent Javascript](https://eloquentjavascript.net/1st_edition/print.html) | 870                  | **815**      | 840      | 864        | n/a                |
-| [NBC](https://www.nbc.com/)                                                  | 1701                 | **1566**     | 1689     | 1705       | n/a                |
-| [New York Times](https://www.nytimes.com/)                                   | 1731                 | **1583**     | 1726     | 1680       | n/a                |
-| [ES draft](https://tc39.github.io/ecma262/)                                  | 6296                 | **5538**     | 5733     | n/a        | n/a                |
+| [Google](https://www.google.com/)                                            | 167                  | **152**      | 165      | n/a        | n/a                |
+| [Twitter](https://twitter.com/)                                              | 214                  | **195**      | 214      | n/a        | n/a                |
+| [Stack Overflow](https://stackoverflow.com/)                                 | 233                  | **179**      | 191      | n/a        | n/a                |
+| [Bootstrap CSS](https://getbootstrap.com/docs/3.3/css/)                      | 271                  | **260**      | 269      | n/a        | n/a                |
+| [HTMLMinifier](https://github.com/kangax/html-minifier)                      | 363                  | **241**      | 340      | n/a        | n/a                |
+| [NBC](https://www.nbc.com/)                                                  | 568                  | **518**      | 561      | n/a        | n/a                |
+| [BBC](https://www.bbc.co.uk/)                                                | 608                  | **560**      | 603      | n/a        | n/a                |
+| [Wikipedia](https://en.wikipedia.org/wiki/President_of_the_United_States)    | 860                  | **698**      | 832      | n/a        | n/a                |
+| [Eloquent Javascript](https://eloquentjavascript.net/1st_edition/print.html) | 870                  | **815**      | 840      | n/a        | n/a                |
+| [Amazon](https://www.amazon.co.uk/)                                          | 919                  | **832**      | 898      | n/a        | n/a                |
+| [New York Times](https://www.nytimes.com/)                                   | 1072                 | **931**      | 1059     | n/a        | n/a                |
+| [ES draft](https://tc39.github.io/ecma262/)                                  | 7238                 | **6393**     | 6615     | n/a        | n/a                |
 
 ## Options Quick Reference
 

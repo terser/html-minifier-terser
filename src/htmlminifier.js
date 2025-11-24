@@ -282,7 +282,7 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
   } else if (attrName === 'style') {
     attrValue = trimWhitespace(attrValue);
     if (attrValue) {
-      if (/;$/.test(attrValue) && !/&#?[0-9a-zA-Z]+;$/.test(attrValue)) {
+      if (attrValue.endsWith(';') && !/&#?[0-9a-zA-Z]+;$/.test(attrValue)) {
         attrValue = attrValue.replace(/\s*;$/, ';');
       }
       attrValue = await options.minifyCSS(attrValue, 'inline');
@@ -606,7 +606,7 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
     if (!isLast && !options.removeTagWhitespace) {
       emittedAttrValue += ' ';
     }
-  } else if (isLast && !hasUnarySlash && !/\/$/.test(attrValue)) {
+  } else if (isLast && !hasUnarySlash && !attrValue?.endsWith('/')) {
     // make sure trailing slash is not interpreted as HTML self-closing tag
     emittedAttrValue = attrValue;
   } else {
@@ -986,7 +986,7 @@ async function minifyHTML(value, options, partialMarkup) {
 
   function removeEndTag() {
     let index = buffer.length - 1;
-    while (index > 0 && !/^<\//.test(buffer[index])) {
+    while (index > 0 && !buffer[index].startsWith('</')) {
       index--;
     }
     buffer.length = Math.max(0, index);
@@ -999,7 +999,7 @@ async function minifyHTML(value, options, partialMarkup) {
       const match = str.match(/^<\/([\w:-]+)>$/);
       if (match) {
         endTag = match[1];
-      } else if (/>$/.test(str) || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options))) {
+      } else if (str.endsWith('>') || (buffer[index] = collapseWhitespaceSmart(str, null, nextTag, options))) {
         break;
       }
     }
@@ -1187,7 +1187,7 @@ async function minifyHTML(value, options, partialMarkup) {
               if (!prevComment) {
                 prevTag = charsPrevTag;
               }
-              if (buffer.length > 1 && (!prevComment || (!options.conservativeCollapse && / $/.test(currentChars)))) {
+              if (buffer.length > 1 && (!prevComment || (!options.conservativeCollapse && currentChars.endsWith(' ')))) {
                 const charsIndex = buffer.length - 2;
                 buffer[charsIndex] = buffer[charsIndex].replace(/\s+$/, function (trailingSpaces) {
                   text = trailingSpaces + text;

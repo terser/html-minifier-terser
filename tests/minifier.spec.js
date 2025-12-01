@@ -3594,3 +3594,14 @@ test('minify Content-Security-Policy', async () => {
   input = '<meta http-equiv="content-security-policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(input);
 });
+
+test('minify CSS multiple ignore in single warning', async () => {
+  const input = '<style type="text/css">\n{% ignore1 %}\na {\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  const output = '<style type="text/css">\n{% ignore1 %}\na{\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  expect(await minify(input, {
+    ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
+    minifyCSS: {
+      level: 0
+    }
+  })).toBe(output);
+});

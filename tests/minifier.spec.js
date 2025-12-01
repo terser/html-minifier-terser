@@ -175,6 +175,12 @@ test('space normalization between attributes', async () => {
   expect(await minify('<input title="bar"       id="boo"    value="hello world">')).toBe('<input title="bar" id="boo" value="hello world">');
 });
 
+test('not normalize attributes', async () => {
+  expect(await minify('<p title="bar">foo</p>', { normalizeAttributes: false })).toBe('<p title="bar">foo</p>');
+  expect(await minify('<img src="test"/>', { normalizeAttributes: false })).toBe('<img src="test">');
+  expect(await minify('<img src=" test "/>', { normalizeAttributes: false })).toBe('<img src=" test ">');
+});
+
 test('space normalization around text', async () => {
   let input, output;
   input = '   <p>blah</p>\n\n\n   ';

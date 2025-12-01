@@ -112,6 +112,7 @@ Most of the options are disabled by default.
 | `sortClassName`                | [Sort style classes by frequency](#sorting-attributes--style-classes) | `false` |
 | `trimCustomFragments`          | Trim white space around `ignoreCustomFragments`. | `false` |
 | `useShortDoctype`              | [Replaces the `doctype` with the short (HTML5) doctype](http://perfectionkills.com/experimenting-with-html-minifier#use_short_doctype) | `false` |
+| `normalizeAttributes`          | Normalize attributes | `true` |
 
 ### Sorting attributes / style classes
 

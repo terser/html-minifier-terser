@@ -63,7 +63,7 @@
     "cli.js"
   ],
   "scripts": {
-    "build": "rolldown -c",
+    "build": "tsdown src/htmlminifier.js",
     "test:node": "vitest --reporter=verbose",
     "test:web": "vitest --reporter=verbose --environment=happy-dom",
     "test": "npm run test:node",
@@ -82,16 +82,15 @@
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
-    "@rolldown/plugin-node-polyfills": "^1.0.0",
     "alpinejs": "^3.15.2",
     "commitlint-config-non-conventional": "^1.0.1",
-    "happy-dom": "^20.0.10",
+    "happy-dom": "^20.0.11",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "lint-staged": "^16.2.7",
     "oxlint": "^1.30.0",
-    "rolldown": "^1.0.0-beta.51",
-    "vite": "^7.2.4",
-    "vitest": "^4.0.13"
+    "tsdown": "^0.17.0-beta.4",
+    "vite": "^7.2.6",
+    "vitest": "^4.0.14"
   }
 }

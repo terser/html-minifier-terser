@@ -1,5 +1,5 @@
 import Alpine from 'alpinejs';
-import HTMLMinifier from '../dist/htmlminifier.esm.bundle.js';
+import HTMLMinifier from '../dist/htmlminifier.mjs';
 import pkg from '../package.json';
 
 const defaultOptions = [

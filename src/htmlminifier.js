@@ -542,6 +542,14 @@ function canTrimWhitespace(tag) {
 }
 
 async function normalizeAttr(attr, attrs, tag, options) {
+  if (!options.normalizeAttributes) {
+    return {
+      attr,
+      name: attr.name,
+      value: attr.value
+    };
+  }
+
   const attrName = options.name(attr.name);
   let attrValue = attr.value;
 
@@ -654,7 +662,8 @@ const processOptions = (inputOptions) => {
     log: identity,
     minifyCSS: identityAsync,
     minifyJS: identity,
-    minifyURLs: identity
+    minifyURLs: identity,
+    normalizeAttributes: true,
   };
 
   Object.keys(inputOptions).forEach(function (key) {

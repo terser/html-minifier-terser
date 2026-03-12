@@ -56,7 +56,7 @@ test('parsing non-trivial markup', async () => {
   expect(await minify(input)).toBe(input);
 
   input = '<$unicorn>';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
 
   expect(await minify(input, {
     continueOnParseError: true
@@ -92,7 +92,7 @@ test('parsing non-trivial markup', async () => {
   expect(await minify(input)).toBe(input);
 
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ " ss"123>';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
 
   expect(await minify(input, {
     continueOnParseError: true
@@ -117,7 +117,7 @@ test('parsing non-trivial markup', async () => {
     ' data-ng-pattern="vm.options.format"' +
     ' data-options="vm.datepickerOptions">';
 
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
 
   expect(await minify(input, {
     continueOnParseError: true
@@ -125,7 +125,7 @@ test('parsing non-trivial markup', async () => {
 
   // // https://github.com/kangax/html-minifier/issues/974
   input = '<!–– Failing New York Times Comment -->';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
 
   expect(await minify(input, {
     continueOnParseError: true

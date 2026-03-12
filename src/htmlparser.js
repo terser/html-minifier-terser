@@ -18,7 +18,7 @@
  * HTMLtoXML(htmlString);
  *
  * // or to get an XML DOM Document
- * HTMLtoDOM(htmlString);
+ * HTMLtoDOM(htmlString, document);
  *
  * // or to inject into an existing document/DOM node
  * HTMLtoDOM(htmlString, document);
@@ -28,7 +28,7 @@
 
 /* global ActiveXObject, DOMDocument */
 
-import { replaceAsync } from './utils.js';
+import { replaceGen, yieldCall } from './utils.js';
 
 class CaseInsensitiveSet extends Set {
   has(str) {
@@ -122,7 +122,9 @@ export class HTMLParser {
     this.handler = handler;
   }
 
-  async parse() {
+  // parse() is a generator so it can be driven either asynchronously (minify)
+  // or synchronously (minify_sync, HTMLtoXML, HTMLtoDOM).
+  * parse() {
     let html = this.html;
     const handler = this.handler;
 
@@ -141,7 +143,7 @@ export class HTMLParser {
 
             if (commentEnd >= 0) {
               if (handler.comment) {
-                await handler.comment(html.substring(4, commentEnd));
+                yield* yieldCall(handler.comment, html.substring(4, commentEnd));
               }
               html = html.substring(commentEnd + 3);
               prevTag = '';
@@ -155,7 +157,7 @@ export class HTMLParser {
 
             if (conditionalEnd >= 0) {
               if (handler.comment) {
-                await handler.comment(html.substring(2, conditionalEnd + 1), true /* non-standard */);
+                yield* yieldCall(handler.comment, html.substring(2, conditionalEnd + 1), true /* non-standard */);
               }
               html = html.substring(conditionalEnd + 2);
               prevTag = '';
@@ -178,7 +180,7 @@ export class HTMLParser {
           const endTagMatch = html.match(endTag);
           if (endTagMatch) {
             html = html.substring(endTagMatch[0].length);
-            await replaceAsync(endTagMatch[0], endTag, parseEndTag);
+            yield* replaceGen(endTagMatch[0], endTag, parseEndTag);
             prevTag = '/' + endTagMatch[1].toLowerCase();
             continue;
           }
@@ -187,7 +189,7 @@ export class HTMLParser {
           const startTagMatch = parseStartTag(html);
           if (startTagMatch) {
             html = startTagMatch.rest;
-            await handleStartTag(startTagMatch);
+            yield* handleStartTag(startTagMatch);
             prevTag = startTagMatch.tagName.toLowerCase();
             continue;
           }
@@ -221,14 +223,14 @@ export class HTMLParser {
         }
 
         if (handler.chars) {
-          await handler.chars(text, prevTag, nextTag);
+          yield* yieldCall(handler.chars, text, prevTag, nextTag);
         }
         prevTag = '';
       } else {
         const stackedTag = lastTag.toLowerCase();
         const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)</' + stackedTag + '[^>]*>', 'i'));
 
-        html = await replaceAsync(html, reStackedTag, async (_, text) => {
+        html = yield* replaceGen(html, reStackedTag, function* (_, text) {
           if (stackedTag !== 'script' && stackedTag !== 'style' && stackedTag !== 'noscript') {
             text = text
               .replace(/<!--([\s\S]*?)-->/g, '$1')
@@ -236,13 +238,13 @@ export class HTMLParser {
           }
 
           if (handler.chars) {
-            await handler.chars(text);
+            yield* yieldCall(handler.chars, text);
           }
 
           return '';
         });
 
-        await parseEndTag('</' + stackedTag + '>', stackedTag);
+        yield* parseEndTag('</' + stackedTag + '>', stackedTag);
       }
 
       if (html === last) {
@@ -252,7 +254,7 @@ export class HTMLParser {
 
     if (!handler.partialMarkup) {
       // Clean up any remaining tags
-      await parseEndTag();
+      yield* parseEndTag();
     }
 
     function parseStartTag(input) {
@@ -276,44 +278,45 @@ export class HTMLParser {
       }
     }
 
-    async function closeIfFound(tagName) {
+    function* closeIfFound(tagName) {
       if (findTag(tagName) >= 0) {
-        await parseEndTag('', tagName);
+        yield* parseEndTag('', tagName);
         return true;
       }
     }
 
-    async function handleStartTag(match) {
+    function* handleStartTag(match) {
       const tagName = match.tagName;
       let unarySlash = match.unarySlash;
 
       if (handler.html5) {
         if (lastTag === 'p' && nonPhrasing.has(tagName)) {
-          await parseEndTag('', lastTag);
+          yield* parseEndTag('', lastTag);
         } else if (tagName === 'tbody') {
-          await closeIfFound('thead');
+          yield* closeIfFound('thead');
         } else if (tagName === 'tfoot') {
-          if (!await closeIfFound('tbody')) {
-            await closeIfFound('thead');
+          const closedTbody = yield* closeIfFound('tbody');
+          if (!closedTbody) {
+            yield* closeIfFound('thead');
           }
         }
         if (tagName === 'col' && findTag('colgroup') < 0) {
           lastTag = 'colgroup';
           stack.push({ tag: lastTag, attrs: [] });
           if (handler.start) {
-            await handler.start(lastTag, [], false, '');
+            yield* yieldCall(handler.start, lastTag, [], false, '');
           }
         }
       }
 
       if (!handler.html5 && !inline.has(tagName)) {
         while (lastTag && inline.has(lastTag)) {
-          await parseEndTag('', lastTag);
+          yield* parseEndTag('', lastTag);
         }
       }
 
       if (closeSelf.has(tagName) && lastTag === tagName) {
-        await parseEndTag('', tagName);
+        yield* parseEndTag('', tagName);
       }
 
       const unary = empty.has(tagName) || (tagName === 'html' && lastTag === 'head') || !!unarySlash;
@@ -380,7 +383,7 @@ export class HTMLParser {
       }
 
       if (handler.start) {
-        await handler.start(tagName, attrs, unary, unarySlash);
+        yield* yieldCall(handler.start, tagName, attrs, unary, unarySlash);
       }
     }
 
@@ -395,7 +398,7 @@ export class HTMLParser {
       return pos;
     }
 
-    async function parseEndTag(tag, tagName) {
+    function* parseEndTag(tag, tagName) {
       let pos;
 
       // Find the closest opened tag of the same type
@@ -418,17 +421,25 @@ export class HTMLParser {
         lastTag = pos && stack[pos - 1].tag;
       } else if (tagName.toLowerCase() === 'br') {
         if (handler.start) {
-          await handler.start(tagName, [], true, '');
+          yield* yieldCall(handler.start, tagName, [], true, '');
         }
       } else if (tagName.toLowerCase() === 'p') {
         if (handler.start) {
-          await handler.start(tagName, [], false, '', true);
+          yield* yieldCall(handler.start, tagName, [], false, '', true);
         }
         if (handler.end) {
           handler.end(tagName, []);
         }
       }
     }
+  }
+}
+
+// Drive a parser generator synchronously (all handlers must be sync or also generators with no Promises).
+function driveSync(gen) {
+  let step = gen.next();
+  while (!step.done) {
+    step = gen.next(step.value);
   }
 }
 
@@ -459,7 +470,7 @@ export const HTMLtoXML = (html) => {
     }
   });
 
-  parser.parse();
+  driveSync(parser.parse());
 
   return results;
 };
@@ -559,7 +570,7 @@ export const HTMLtoDOM = (html, doc) => {
     }
   });
 
-  parser.parse();
+  driveSync(parser.parse());
 
   return doc;
 };

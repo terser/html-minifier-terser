@@ -70,7 +70,7 @@
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",
     "lint": "oxlint .",
-    "prepare": "is-ci || husky install"
+    "prepare": "is-ci || husky"
   },
   "dependencies": {
     "change-case": "^5.4.4",

@@ -1,23 +1,7 @@
 {
   "name": "html-minifier-terser",
-  "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "version": "7.2.0",
-  "license": "MIT",
-  "repository": "https://github.com/terser/html-minifier-terser.git",
-  "bugs": "https://github.com/terser/html-minifier-terser/issues",
-  "homepage": "https://terser.org/html-minifier-terser/",
-  "author": "Daniel Ruf",
-  "maintainers": [
-    "Daniel Ruf <daniel@daniel-ruf.de",
-    "Alex Lam <alexlamsl@gmail.com>",
-    "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)",
-    "Sibiraj <sibiraj.dev>"
-  ],
-  "contributors": [
-    "Gilmore Davidson (https://github.com/gilmoreorless)",
-    "Hugo Wetterberg <hugo@wetterberg.nu>",
-    "Zoltan Frombach <tssajo@gmail.com>"
-  ],
+  "description": "Highly configurable, well-tested, JavaScript-based HTML minifier.",
   "keywords": [
     "cli",
     "compress",
@@ -40,9 +24,30 @@
     "uglifier",
     "uglify"
   ],
-  "engines": {
-    "node": "^14.13.1 || >=16.0.0"
+  "homepage": "https://terser.org/html-minifier-terser/",
+  "bugs": "https://github.com/terser/html-minifier-terser/issues",
+  "license": "MIT",
+  "author": "Daniel Ruf",
+  "maintainers": [
+    "Daniel Ruf <daniel@daniel-ruf.de",
+    "Alex Lam <alexlamsl@gmail.com>",
+    "Juriy Zaytsev <kangax@gmail.com> (http://perfectionkills.com/)",
+    "Sibiraj <sibiraj.dev>"
+  ],
+  "contributors": [
+    "Gilmore Davidson (https://github.com/gilmoreorless)",
+    "Hugo Wetterberg <hugo@wetterberg.nu>",
+    "Zoltan Frombach <tssajo@gmail.com>"
+  ],
+  "repository": "https://github.com/terser/html-minifier-terser.git",
+  "bin": {
+    "html-minifier-terser": "./cli.js"
   },
+  "files": [
+    "dist/",
+    "src/",
+    "cli.js"
+  ],
   "type": "module",
   "main": "./dist/htmlminifier.cjs",
   "module": "./src/htmlminifier.js",
@@ -54,14 +59,6 @@
     "./dist/*": "./dist/*.js",
     "./package.json": "./package.json"
   },
-  "bin": {
-    "html-minifier-terser": "./cli.js"
-  },
-  "files": [
-    "dist/",
-    "src/",
-    "cli.js"
-  ],
   "scripts": {
     "build": "tsdown src/htmlminifier.js",
     "test:node": "vitest --reporter=verbose",
@@ -70,7 +67,7 @@
     "serve": "vite",
     "build:docs": "vite build --base /html-minifier-terser/",
     "lint": "oxlint .",
-    "prepare": "is-ci || husky install"
+    "prepare": "is-ci || husky"
   },
   "dependencies": {
     "change-case": "^5.4.4",
@@ -88,9 +85,13 @@
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "lint-staged": "^16.3.3",
+    "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
     "tsdown": "^0.21.2",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": "^14.13.1 || >=16.0.0"
   }
 }

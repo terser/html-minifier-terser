@@ -33,7 +33,7 @@ const removeFixture = async (p) => {
 
 const execCli = (args = []) => {
   const spawnOptions = {
-    cwd: fixturesDir
+    cwd: fixturesDir,
   };
 
   const { stdout, stderr } = spawnSync('node', [cliPath, ...args], spawnOptions);
@@ -56,14 +56,10 @@ describe('cli', () => {
 
     const minfiyOptions = {
       collapseWhitespace: true,
-      removeComments: true
+      removeComments: true,
     };
 
-    const cliArguments = [
-      'default.html',
-      '--collapse-whitespace',
-      '--remove-comments'
-    ];
+    const cliArguments = ['default.html', '--collapse-whitespace', '--remove-comments'];
 
     let cliMinifiedHTML = execCli(cliArguments);
     const minifedHTML = await minify(input, minfiyOptions);
@@ -75,44 +71,36 @@ describe('cli', () => {
   });
 
   test('should throw error if input file not found', () => {
-    const cliArguments = [
-      'no-file.html'
-    ];
+    const cliArguments = ['no-file.html'];
 
     expect(() => execCli(cliArguments)).toThrow('no such file');
   });
 
   test('should throw if output directory not specified', () => {
-    const cliArguments = [
-      '--input-dir=./'
-    ];
+    const cliArguments = ['--input-dir=./'];
 
-    expect(() => execCli(cliArguments)).toThrow('You need to specify where to write the output files with the option --output-dir');
+    expect(() => execCli(cliArguments)).toThrow(
+      'You need to specify where to write the output files with the option --output-dir',
+    );
   });
 
   test('should throw if input directory not specified', () => {
-    const cliArguments = [
-      '--output-dir=./'
-    ];
+    const cliArguments = ['--output-dir=./'];
 
-    expect(() => execCli(cliArguments)).toThrow('The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o');
+    expect(() => execCli(cliArguments)).toThrow(
+      'The option output-dir needs to be used with the option input-dir. If you are working with a single file, use -o',
+    );
   });
 
   test('should write files to output directory', () => {
-    const cliArguments = [
-      '--input-dir=./',
-      '--output-dir=./tmp'
-    ];
+    const cliArguments = ['--input-dir=./', '--output-dir=./tmp'];
 
     execCli(cliArguments);
     expect(existsFixutre('tmp/default.html')).toBe(true);
   });
 
   test('should write files to output nested directory', () => {
-    const cliArguments = [
-      '--input-dir=./',
-      '--output-dir=./tmp/nested'
-    ];
+    const cliArguments = ['--input-dir=./', '--output-dir=./tmp/nested'];
 
     execCli(cliArguments);
     expect(existsFixutre('tmp/nested/default.html')).toBe(true);
@@ -125,15 +113,11 @@ describe('cli', () => {
     const minfiyOptions = {
       collapseWhitespace: true,
       minifyURLs: {
-        site: 'http://website.com/folder/'
-      }
+        site: 'http://website.com/folder/',
+      },
     };
 
-    const cliArguments = [
-      'url.html',
-      '--collapse-whitespace',
-      '--minify-urls={"site":"http://website.com/folder/"}'
-    ];
+    const cliArguments = ['url.html', '--collapse-whitespace', '--minify-urls={"site":"http://website.com/folder/"}'];
 
     const cliMinifiedHTML = execCli(cliArguments);
     const minifedHTML = await minify(input, minfiyOptions);
@@ -146,14 +130,10 @@ describe('cli', () => {
 
     const minfiyOptions = {
       collapseWhitespace: true,
-      quoteCharacter: '\''
+      quoteCharacter: "'",
     };
 
-    const cliArguments = [
-      'quote-char.html',
-      '--collapse-whitespace',
-      '--quote-character=\''
-    ];
+    const cliArguments = ['quote-char.html', '--collapse-whitespace', "--quote-character='"];
 
     const cliMinifiedHTML = execCli(cliArguments);
     const minifedHTML = await minify(input, minfiyOptions);

@@ -1,5 +1,5 @@
 name: Bug Report
-title: "[Bug]: "
+title: '[Bug]: '
 description: File a bug report
 
 body:
@@ -36,7 +36,7 @@ body:
     attributes:
       label: Link to reproduce
       description: A Github repo or a stackblitz/codesandbox link to reproduce the issue and speedup the process
-      placeholder: "https://stackblitz.com/edit/..."
+      placeholder: 'https://stackblitz.com/edit/...'
   - type: textarea
     id: logs
     attributes:

@@ -45,8 +45,8 @@ function loadModule() {
 function getOptions(fileName, options) {
   const result = {
     minifyURLs: {
-      site: urls[fileName]
-    }
+      site: urls[fileName],
+    },
   };
   for (const key in options) {
     result[key] = options[key];
@@ -112,7 +112,10 @@ if (process.argv.length > 2) {
         const index = line.indexOf(' ');
         const hash = line.substr(0, index);
         table[hash] = {
-          date: line.substr(index + 1).replace('+', '').replace(/ 0000$/, '')
+          date: line
+            .substr(index + 1)
+            .replace('+', '')
+            .replace(/ 0000$/, ''),
         };
         return hash;
       });
@@ -120,7 +123,7 @@ if (process.argv.length > 2) {
       let running = 0;
       const progress = new Progress('[:bar] :etas', {
         width: 50,
-        total: commits.length * 2
+        total: commits.length * 2,
       });
 
       function fork() {
@@ -134,25 +137,27 @@ if (process.argv.length > 2) {
               task.kill();
             }
           }, 60000);
-          task.on('message', function (data) {
-            if (data === 'ready') {
+          task
+            .on('message', function (data) {
+              if (data === 'ready') {
+                progress.tick(1);
+                fork();
+              } else {
+                table[hash][data.name] = data.size;
+              }
+            })
+            .on('exit', function () {
               progress.tick(1);
-              fork();
-            } else {
-              table[hash][data.name] = data.size;
-            }
-          }).on('exit', function () {
-            progress.tick(1);
-            clearTimeout(id);
-            if (error) {
-              table[hash].error = error;
-            }
-            if (!--running && !commits.length) {
-              print(table);
-            } else {
-              fork();
-            }
-          });
+              clearTimeout(id);
+              if (error) {
+                table[hash].error = error;
+              }
+              if (!--running && !commits.length) {
+                print(table);
+              } else {
+                fork();
+              }
+            });
           task.stderr.setEncoding('utf8');
           task.stderr.on('data', function (data) {
             error += data;

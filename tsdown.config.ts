@@ -6,7 +6,7 @@ export default defineConfig([
     platform: 'browser',
     outputOptions: {
       file: 'dist/htmlminifier.umd.bundle.js',
-      name: 'HTMLMinifier'
+      name: 'HTMLMinifier',
     },
   },
   {
@@ -15,7 +15,7 @@ export default defineConfig([
     outputOptions: {
       file: 'dist/htmlminifier.umd.bundle.min.js',
       name: 'HTMLMinifier',
-      minify: true
+      minify: true,
     },
   },
   {

@@ -14,20 +14,23 @@ test('parsing non-trivial markup', async () => {
   expect(await minify('<br>x</br>')).toBe('<br>x<br>');
   expect(await minify('<p title="</p>">x</p>')).toBe('<p title="</p>">x</p>');
   expect(await minify('<p title=" <!-- hello world --> ">x</p>')).toBe('<p title=" <!-- hello world --> ">x</p>');
-  expect(await minify('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>')).toBe('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>');
+  expect(await minify('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>')).toBe(
+    '<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>',
+  );
   expect(await minify('<p foo-bar=baz>xxx</p>')).toBe('<p foo-bar="baz">xxx</p>');
   expect(await minify('<p foo:bar=baz>xxx</p>')).toBe('<p foo:bar="baz">xxx</p>');
   expect(await minify('<p foo.bar=baz>xxx</p>')).toBe('<p foo.bar="baz">xxx</p>');
 
-  input = '<div><div><div><div><div><div><div><div><div><div>' +
-    'i\'m 10 levels deep' +
+  input =
+    '<div><div><div><div><div><div><div><div><div><div>' +
+    "i'm 10 levels deep" +
     '</div></div></div></div></div></div></div></div></div></div>';
 
   expect(await minify(input)).toBe(input);
 
-  expect(await minify('<script>alert(\'<!--\')</script>')).toBe('<script>alert(\'<!--\')</script>');
-  expect(await minify('<script>alert(\'<!-- foo -->\')</script>')).toBe('<script>alert(\'<!-- foo -->\')</script>');
-  expect(await minify('<script>alert(\'-->\')</script>')).toBe('<script>alert(\'-->\')</script>');
+  expect(await minify("<script>alert('<!--')</script>")).toBe("<script>alert('<!--')</script>");
+  expect(await minify("<script>alert('<!-- foo -->')</script>")).toBe("<script>alert('<!-- foo -->')</script>");
+  expect(await minify("<script>alert('-->')</script>")).toBe("<script>alert('-->')</script>");
 
   expect(await minify('<a title="x"href=" ">foo</a>')).toBe('<a title="x" href="">foo</a>');
   expect(await minify('<p id=""class=""title="">x')).toBe('<p id="" class="" title="">x</p>');
@@ -35,18 +38,20 @@ test('parsing non-trivial markup', async () => {
   expect(await minify('<a href="#"><p>Click me</p></a>')).toBe('<a href="#"><p>Click me</p></a>');
   expect(await minify('<span><button>Hit me</button></span>')).toBe('<span><button>Hit me</button></span>');
   expect(await minify('<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>')).toBe(
-    '<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>'
+    '<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>',
   );
 
   expect(await minify('<ng-include src="x"></ng-include>')).toBe('<ng-include src="x"></ng-include>');
   expect(await minify('<ng:include src="x"></ng:include>')).toBe('<ng:include src="x"></ng:include>');
-  expect(await minify('<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>')).toBe(
-    '<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>'
-  );
+  expect(
+    await minify('<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>'),
+  ).toBe('<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>');
 
   // will cause test to time-out if fail
-  input = '<p>For more information, read <a href=https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685>this Stack Overflow answer</a>.</p>';
-  output = '<p>For more information, read <a href="https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685">this Stack Overflow answer</a>.</p>';
+  input =
+    '<p>For more information, read <a href=https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685>this Stack Overflow answer</a>.</p>';
+  output =
+    '<p>For more information, read <a href="https://stackoverflow.com/questions/17408815/fieldset-resizes-wrong-appears-to-have-unremovable-min-width-min-content/17863685#17863685">this Stack Overflow answer</a>.</p>';
   expect(await minify(input)).toBe(output);
 
   input = '<html ⚡></html>';
@@ -56,18 +61,21 @@ test('parsing non-trivial markup', async () => {
   expect(await minify(input)).toBe(input);
 
   input = '<$unicorn>';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'Invalid tag name');
 
-  expect(await minify(input, {
-    continueOnParseError: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      continueOnParseError: true,
+    }),
+  ).toBe(input);
 
-  input = '<begriffs.pagination ng-init="perPage=20" collection="logs" url="\'/api/logs?user=-1\'" per-page="perPage" per-page-presets="[10,20,50,100]" template-url="/assets/paginate-anything.html"></begriffs.pagination>';
+  input =
+    '<begriffs.pagination ng-init="perPage=20" collection="logs" url="\'/api/logs?user=-1\'" per-page="perPage" per-page-presets="[10,20,50,100]" template-url="/assets/paginate-anything.html"></begriffs.pagination>';
   expect(await minify(input)).toBe(input);
 
   // https://github.com/kangax/html-minifier/issues/41
   expect(await minify('<some-tag-1></some-tag-1><some-tag-2></some-tag-2>')).toBe(
-    '<some-tag-1></some-tag-1><some-tag-2></some-tag-2>'
+    '<some-tag-1></some-tag-1><some-tag-2></some-tag-2>',
   );
 
   // https://github.com/kangax/html-minifier/issues/40
@@ -85,21 +93,26 @@ test('parsing non-trivial markup', async () => {
   expect(await minify('<a onclick></a>')).toBe('<a onclick></a>');
 
   // https://github.com/kangax/html-minifier/issues/229
-  expect(await minify('<CUSTOM-TAG></CUSTOM-TAG><div>Hello :)</div>')).toBe('<custom-tag></custom-tag><div>Hello :)</div>');
+  expect(await minify('<CUSTOM-TAG></CUSTOM-TAG><div>Hello :)</div>')).toBe(
+    '<custom-tag></custom-tag><div>Hello :)</div>',
+  );
 
   // https://github.com/kangax/html-minifier/issues/507
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ "></tag>';
   expect(await minify(input)).toBe(input);
 
   input = '<tag v-ref:vm_pv :imgs=" objpicsurl_ " ss"123>';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid attribute name');
 
-  expect(await minify(input, {
-    continueOnParseError: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      continueOnParseError: true,
+    }),
+  ).toBe(input);
 
   // https://github.com/kangax/html-minifier/issues/512
-  input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
+  input =
+    '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
     ' placeholder="YYYY-MM-DD"' +
     ' date-range-picker' +
     ' data-ng-model="vm.value"' +
@@ -108,7 +121,8 @@ test('parsing non-trivial markup', async () => {
     ' data-options="vm.datepickerOptions">';
   expect(await minify(input)).toBe(input);
 
-  input = '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
+  input =
+    '<input class="form-control" type="text" style="" id="{{vm.formInputName}}" name="{{vm.formInputName}}"' +
     ' <!--FIXME hardcoded placeholder - dates may not be used for service required fields yet. -->' +
     ' placeholder="YYYY-MM-DD"' +
     ' date-range-picker' +
@@ -117,38 +131,48 @@ test('parsing non-trivial markup', async () => {
     ' data-ng-pattern="vm.options.format"' +
     ' data-options="vm.datepickerOptions">';
 
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'HTML comment inside tag');
 
-  expect(await minify(input, {
-    continueOnParseError: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      continueOnParseError: true,
+    }),
+  ).toBe(input);
 
   // // https://github.com/kangax/html-minifier/issues/974
   input = '<!–– Failing New York Times Comment -->';
-  expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
+  await expect(minify(input)).rejects.toBeInstanceOf(Error, 'invalid HTML comment');
 
-  expect(await minify(input, {
-    continueOnParseError: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      continueOnParseError: true,
+    }),
+  ).toBe(input);
 
   input = '<br a=\u00A0 b="&nbsp;" c="\u00A0">';
   output = '<br a="\u00A0" b="&nbsp;" c="\u00A0">';
   expect(await minify(input)).toBe(output);
   output = '<br a="\u00A0"b="\u00A0"c="\u00A0">';
-  expect(await minify(input, {
-    decodeEntities: true,
-    removeTagWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      decodeEntities: true,
+      removeTagWhitespace: true,
+    }),
+  ).toBe(output);
   output = '<br a=\u00A0 b=\u00A0 c=\u00A0>';
-  expect(await minify(input, {
-    decodeEntities: true,
-    removeAttributeQuotes: true
-  })).toBe(output);
-  expect(await minify(input, {
-    decodeEntities: true,
-    removeAttributeQuotes: true,
-    removeTagWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      decodeEntities: true,
+      removeAttributeQuotes: true,
+    }),
+  ).toBe(output);
+  expect(
+    await minify(input, {
+      decodeEntities: true,
+      removeAttributeQuotes: true,
+      removeTagWhitespace: true,
+    }),
+  ).toBe(output);
 });
 
 test('options', async () => {
@@ -172,7 +196,9 @@ test('space normalization between attributes', async () => {
   expect(await minify('<p title = "bar">foo</p>')).toBe('<p title="bar">foo</p>');
   expect(await minify('<p title\n\n\t  =\n     "bar">foo</p>')).toBe('<p title="bar">foo</p>');
   expect(await minify('<img src="test" \n\t />')).toBe('<img src="test">');
-  expect(await minify('<input title="bar"       id="boo"    value="hello world">')).toBe('<input title="bar" id="boo" value="hello world">');
+  expect(await minify('<input title="bar"       id="boo"    value="hello world">')).toBe(
+    '<input title="bar" id="boo" value="hello world">',
+  );
 });
 
 test('space normalization around text', async () => {
@@ -182,101 +208,200 @@ test('space normalization around text', async () => {
   output = '<p>blah</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
   output = ' <p>blah</p> ';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
   output = '<p>blah</p>\n';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
   output = ' <p>blah</p>\n';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true,
-    preserveLineBreaks: true
-  })).toBe(output);
-  await Promise.all([
-    'a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd',
-    'mark', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup',
-    'time', 'tt', 'u', 'var'
-  ].map(async function (el) {
-    expect(await minify('foo <' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '> bar');
-    expect(await minify('foo<' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo <' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo<' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '> bar');
-    expect(await minify('foo <' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz </' + el + '>bar');
-    expect(await minify('foo<' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe('foo<' + el + '> baz </' + el + '>bar');
-    expect(await minify('foo <' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz </' + el + '>bar');
-    expect(await minify('foo<' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe('foo<' + el + '> baz </' + el + '>bar');
-    expect(await minify('<div>foo <' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '> bar</div>');
-    expect(await minify('<div>foo<' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo <' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo<' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '> bar</div>');
-    expect(await minify('<div>foo <' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz </' + el + '>bar</div>');
-    expect(await minify('<div>foo<' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '> baz </' + el + '>bar</div>');
-    expect(await minify('<div>foo <' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz </' + el + '>bar</div>');
-    expect(await minify('<div>foo<' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '> baz </' + el + '>bar</div>');
-  }));
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
+  await Promise.all(
+    [
+      'a',
+      'abbr',
+      'acronym',
+      'b',
+      'big',
+      'del',
+      'em',
+      'font',
+      'i',
+      'ins',
+      'kbd',
+      'mark',
+      's',
+      'samp',
+      'small',
+      'span',
+      'strike',
+      'strong',
+      'sub',
+      'sup',
+      'time',
+      'tt',
+      'u',
+      'var',
+    ].map(async function (el) {
+      expect(await minify('foo <' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('foo<' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo <' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo<' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('foo <' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz </' + el + '>bar',
+      );
+      expect(await minify('foo<' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '> baz </' + el + '>bar',
+      );
+      expect(await minify('foo <' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz </' + el + '>bar',
+      );
+      expect(await minify('foo<' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '> baz </' + el + '>bar',
+      );
+      expect(await minify('<div>foo <' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '> bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '> bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz </' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '> baz </' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz </' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '> baz </' + el + '>bar</div>',
+      );
+    }),
+  );
   // Don't trim whitespace around element, but do trim within
-  await Promise.all([
-    'bdi', 'bdo', 'button', 'cite', 'code', 'dfn', 'math', 'q', 'rt', 'rtc', 'ruby', 'svg'
-  ].map(async function (el) {
-    expect(await minify('foo <' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '> bar');
-    expect(await minify('foo<' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo <' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo<' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '> bar');
-    expect(await minify('foo <' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '> bar');
-    expect(await minify('foo<' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo <' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe('foo <' + el + '>baz</' + el + '>bar');
-    expect(await minify('foo<' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe('foo<' + el + '>baz</' + el + '> bar');
-    expect(await minify('<div>foo <' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '> bar</div>');
-    expect(await minify('<div>foo<' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo <' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo<' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '> bar</div>');
-    expect(await minify('<div>foo <' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '> bar</div>');
-    expect(await minify('<div>foo<' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo <' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe('<div>foo <' + el + '>baz</' + el + '>bar</div>');
-    expect(await minify('<div>foo<' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe('<div>foo<' + el + '>baz</' + el + '> bar</div>');
-  }));
-  await Promise.all([
-    ['<span> foo </span>', '<span>foo</span>'],
-    [' <span> foo </span> ', '<span>foo</span>'],
-    ['<nobr>a</nobr>', '<nobr>a</nobr>'],
-    ['<nobr>a </nobr>', '<nobr>a</nobr>'],
-    ['<nobr> a</nobr>', '<nobr>a</nobr>'],
-    ['<nobr> a </nobr>', '<nobr>a</nobr>'],
-    ['a<nobr>b</nobr>c', 'a<nobr>b</nobr>c'],
-    ['a<nobr>b </nobr>c', 'a<nobr>b </nobr>c'],
-    ['a<nobr> b</nobr>c', 'a<nobr> b</nobr>c'],
-    ['a<nobr> b </nobr>c', 'a<nobr> b </nobr>c'],
-    ['a<nobr>b</nobr> c', 'a<nobr>b</nobr> c'],
-    ['a<nobr>b </nobr> c', 'a<nobr>b</nobr> c'],
-    ['a<nobr> b</nobr> c', 'a<nobr> b</nobr> c'],
-    ['a<nobr> b </nobr> c', 'a<nobr> b</nobr> c'],
-    ['a <nobr>b</nobr>c', 'a <nobr>b</nobr>c'],
-    ['a <nobr>b </nobr>c', 'a <nobr>b </nobr>c'],
-    ['a <nobr> b</nobr>c', 'a <nobr>b</nobr>c'],
-    ['a <nobr> b </nobr>c', 'a <nobr>b </nobr>c'],
-    ['a <nobr>b</nobr> c', 'a <nobr>b</nobr> c'],
-    ['a <nobr>b </nobr> c', 'a <nobr>b</nobr> c'],
-    ['a <nobr> b</nobr> c', 'a <nobr>b</nobr> c'],
-    ['a <nobr> b </nobr> c', 'a <nobr>b</nobr> c']
-  ].map(async function (inputs) {
-    expect(await minify(inputs[0], {
-      collapseWhitespace: true,
-      conservativeCollapse: true
-    })).toBe(inputs[0], inputs[0]);
-    expect(await minify(inputs[0], { collapseWhitespace: true })).toBe(inputs[1], inputs[0]);
-    const input = '<div>' + inputs[0] + '</div>';
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      conservativeCollapse: true
-    })).toBe(input, input);
-    const output = '<div>' + inputs[1] + '</div>';
-    expect(await minify(input, { collapseWhitespace: true })).toBe(output, input);
-  }));
+  await Promise.all(
+    ['bdi', 'bdo', 'button', 'cite', 'code', 'dfn', 'math', 'q', 'rt', 'rtc', 'ruby', 'svg'].map(async function (el) {
+      expect(await minify('foo <' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('foo<' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo <' + el + '>baz</' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo<' + el + '>baz</' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('foo <' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('foo<' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo <' + el + '> baz </' + el + '>bar', { collapseWhitespace: true })).toBe(
+        'foo <' + el + '>baz</' + el + '>bar',
+      );
+      expect(await minify('foo<' + el + '> baz </' + el + '> bar', { collapseWhitespace: true })).toBe(
+        'foo<' + el + '>baz</' + el + '> bar',
+      );
+      expect(await minify('<div>foo <' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '> bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '>baz</' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '>baz</' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '> bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '> bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo <' + el + '> baz </' + el + '>bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo <' + el + '>baz</' + el + '>bar</div>',
+      );
+      expect(await minify('<div>foo<' + el + '> baz </' + el + '> bar</div>', { collapseWhitespace: true })).toBe(
+        '<div>foo<' + el + '>baz</' + el + '> bar</div>',
+      );
+    }),
+  );
+  await Promise.all(
+    [
+      ['<span> foo </span>', '<span>foo</span>'],
+      [' <span> foo </span> ', '<span>foo</span>'],
+      ['<nobr>a</nobr>', '<nobr>a</nobr>'],
+      ['<nobr>a </nobr>', '<nobr>a</nobr>'],
+      ['<nobr> a</nobr>', '<nobr>a</nobr>'],
+      ['<nobr> a </nobr>', '<nobr>a</nobr>'],
+      ['a<nobr>b</nobr>c', 'a<nobr>b</nobr>c'],
+      ['a<nobr>b </nobr>c', 'a<nobr>b </nobr>c'],
+      ['a<nobr> b</nobr>c', 'a<nobr> b</nobr>c'],
+      ['a<nobr> b </nobr>c', 'a<nobr> b </nobr>c'],
+      ['a<nobr>b</nobr> c', 'a<nobr>b</nobr> c'],
+      ['a<nobr>b </nobr> c', 'a<nobr>b</nobr> c'],
+      ['a<nobr> b</nobr> c', 'a<nobr> b</nobr> c'],
+      ['a<nobr> b </nobr> c', 'a<nobr> b</nobr> c'],
+      ['a <nobr>b</nobr>c', 'a <nobr>b</nobr>c'],
+      ['a <nobr>b </nobr>c', 'a <nobr>b </nobr>c'],
+      ['a <nobr> b</nobr>c', 'a <nobr>b</nobr>c'],
+      ['a <nobr> b </nobr>c', 'a <nobr>b </nobr>c'],
+      ['a <nobr>b</nobr> c', 'a <nobr>b</nobr> c'],
+      ['a <nobr>b </nobr> c', 'a <nobr>b</nobr> c'],
+      ['a <nobr> b</nobr> c', 'a <nobr>b</nobr> c'],
+      ['a <nobr> b </nobr> c', 'a <nobr>b</nobr> c'],
+    ].map(async function (inputs) {
+      expect(
+        await minify(inputs[0], {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+        }),
+      ).toBe(inputs[0], inputs[0]);
+      expect(await minify(inputs[0], { collapseWhitespace: true })).toBe(inputs[1], inputs[0]);
+      const input = '<div>' + inputs[0] + '</div>';
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+        }),
+      ).toBe(input, input);
+      const output = '<div>' + inputs[1] + '</div>';
+      expect(await minify(input, { collapseWhitespace: true })).toBe(output, input);
+    }),
+  );
   expect(await minify('<p>foo <img> bar</p>', { collapseWhitespace: true })).toBe('<p>foo <img> bar</p>');
   expect(await minify('<p>foo<img>bar</p>', { collapseWhitespace: true })).toBe('<p>foo<img>bar</p>');
   expect(await minify('<p>foo <img>bar</p>', { collapseWhitespace: true })).toBe('<p>foo <img>bar</p>');
@@ -285,57 +410,89 @@ test('space normalization around text', async () => {
   expect(await minify('<p>foo<wbr>bar</p>', { collapseWhitespace: true })).toBe('<p>foo<wbr>bar</p>');
   expect(await minify('<p>foo <wbr>bar</p>', { collapseWhitespace: true })).toBe('<p>foo <wbr>bar</p>');
   expect(await minify('<p>foo<wbr> bar</p>', { collapseWhitespace: true })).toBe('<p>foo<wbr> bar</p>');
-  expect(await minify('<p>foo <wbr baz moo=""> bar</p>', { collapseWhitespace: true })).toBe('<p>foo<wbr baz moo=""> bar</p>');
-  expect(await minify('<p>foo<wbr baz moo="">bar</p>', { collapseWhitespace: true })).toBe('<p>foo<wbr baz moo="">bar</p>');
-  expect(await minify('<p>foo <wbr baz moo="">bar</p>', { collapseWhitespace: true })).toBe('<p>foo <wbr baz moo="">bar</p>');
-  expect(await minify('<p>foo<wbr baz moo=""> bar</p>', { collapseWhitespace: true })).toBe('<p>foo<wbr baz moo=""> bar</p>');
-  expect(await minify('<p>  <a href="#">  <code>foo</code></a> bar</p>', { collapseWhitespace: true })).toBe('<p><a href="#"><code>foo</code></a> bar</p>');
-  expect(await minify('<p><a href="#"><code>foo  </code></a> bar</p>', { collapseWhitespace: true })).toBe('<p><a href="#"><code>foo</code></a> bar</p>');
-  expect(await minify('<p>  <a href="#">  <code>   foo</code></a> bar   </p>', { collapseWhitespace: true })).toBe('<p><a href="#"><code>foo</code></a> bar</p>');
-  expect(await minify('<div> Empty <!-- or --> not </div>', { collapseWhitespace: true })).toBe('<div>Empty<!-- or --> not</div>');
-  expect(await minify('<div> a <input><!-- b --> c </div>', {
-    collapseWhitespace: true,
-    removeComments: true
-  })).toBe('<div>a <input> c</div>');
-  await Promise.all([
-    ' a <? b ?> c ',
-    '<!-- d --> a <? b ?> c ',
-    ' <!-- d -->a <? b ?> c ',
-    ' a<!-- d --> <? b ?> c ',
-    ' a <!-- d --><? b ?> c ',
-    ' a <? b ?><!-- d --> c ',
-    ' a <? b ?> <!-- d -->c ',
-    ' a <? b ?> c<!-- d --> ',
-    ' a <? b ?> c <!-- d -->'
-  ].map(async function (input) {
-    expect(await minify(input, {
+  expect(await minify('<p>foo <wbr baz moo=""> bar</p>', { collapseWhitespace: true })).toBe(
+    '<p>foo<wbr baz moo=""> bar</p>',
+  );
+  expect(await minify('<p>foo<wbr baz moo="">bar</p>', { collapseWhitespace: true })).toBe(
+    '<p>foo<wbr baz moo="">bar</p>',
+  );
+  expect(await minify('<p>foo <wbr baz moo="">bar</p>', { collapseWhitespace: true })).toBe(
+    '<p>foo <wbr baz moo="">bar</p>',
+  );
+  expect(await minify('<p>foo<wbr baz moo=""> bar</p>', { collapseWhitespace: true })).toBe(
+    '<p>foo<wbr baz moo=""> bar</p>',
+  );
+  expect(await minify('<p>  <a href="#">  <code>foo</code></a> bar</p>', { collapseWhitespace: true })).toBe(
+    '<p><a href="#"><code>foo</code></a> bar</p>',
+  );
+  expect(await minify('<p><a href="#"><code>foo  </code></a> bar</p>', { collapseWhitespace: true })).toBe(
+    '<p><a href="#"><code>foo</code></a> bar</p>',
+  );
+  expect(await minify('<p>  <a href="#">  <code>   foo</code></a> bar   </p>', { collapseWhitespace: true })).toBe(
+    '<p><a href="#"><code>foo</code></a> bar</p>',
+  );
+  expect(await minify('<div> Empty <!-- or --> not </div>', { collapseWhitespace: true })).toBe(
+    '<div>Empty<!-- or --> not</div>',
+  );
+  expect(
+    await minify('<div> a <input><!-- b --> c </div>', {
       collapseWhitespace: true,
-      conservativeCollapse: true
-    })).toBe(input, input);
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      removeComments: true
-    })).toBe('a <? b ?> c', input);
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      conservativeCollapse: true,
-      removeComments: true
-    })).toBe(' a <? b ?> c ', input);
-    input = '<p>' + input + '</p>';
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      conservativeCollapse: true
-    })).toBe(input, input);
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      removeComments: true
-    })).toBe('<p>a <? b ?> c</p>', input);
-    expect(await minify(input, {
-      collapseWhitespace: true,
-      conservativeCollapse: true,
-      removeComments: true
-    })).toBe('<p> a <? b ?> c </p>', input);
-  }));
+      removeComments: true,
+    }),
+  ).toBe('<div>a <input> c</div>');
+  await Promise.all(
+    [
+      ' a <? b ?> c ',
+      '<!-- d --> a <? b ?> c ',
+      ' <!-- d -->a <? b ?> c ',
+      ' a<!-- d --> <? b ?> c ',
+      ' a <!-- d --><? b ?> c ',
+      ' a <? b ?><!-- d --> c ',
+      ' a <? b ?> <!-- d -->c ',
+      ' a <? b ?> c<!-- d --> ',
+      ' a <? b ?> c <!-- d -->',
+    ].map(async function (input) {
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+        }),
+      ).toBe(input, input);
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          removeComments: true,
+        }),
+      ).toBe('a <? b ?> c', input);
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+          removeComments: true,
+        }),
+      ).toBe(' a <? b ?> c ', input);
+      input = '<p>' + input + '</p>';
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+        }),
+      ).toBe(input, input);
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          removeComments: true,
+        }),
+      ).toBe('<p>a <? b ?> c</p>', input);
+      expect(
+        await minify(input, {
+          collapseWhitespace: true,
+          conservativeCollapse: true,
+          removeComments: true,
+        }),
+      ).toBe('<p> a <? b ?> c </p>', input);
+    }),
+  );
   input = '<li><i></i> <b></b> foo</li>';
   output = '<li><i></i> <b></b> foo</li>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
@@ -359,19 +516,15 @@ test('space normalization around text', async () => {
   input = '<p> foo\u00A0bar\nbaz  \u00A0\nmoo\t</p>';
   output = '<p>foo\u00A0bar baz \u00A0 moo</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  input = '<label> foo </label>\n' +
+  input =
+    '<label> foo </label>\n' +
     '<input>\n' +
     '<object> bar </object>\n' +
     '<select> baz </select>\n' +
     '<textarea> moo </textarea>\n';
   output = '<label>foo</label> <input> <object>bar</object> <select>baz</select> <textarea> moo </textarea>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  input = '<pre>\n' +
-    'foo\n' +
-    '<br>\n' +
-    'bar\n' +
-    '</pre>\n' +
-    'baz\n';
+  input = '<pre>\n' + 'foo\n' + '<br>\n' + 'bar\n' + '</pre>\n' + 'baz\n';
   output = '<pre>\nfoo\n<br>\nbar\n</pre>baz';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 });
@@ -421,10 +574,12 @@ test('doctype normalization', async () => {
   expect(await minify(input, { useShortDoctype: false })).toBe(input);
   expect(await minify(input, { useShortDoctype: true })).toBe(output);
 
-  expect(await minify(input, {
-    useShortDoctype: true,
-    removeTagWhitespace: true
-  })).toBe('<!doctypehtml>');
+  expect(
+    await minify(input, {
+      useShortDoctype: true,
+      removeTagWhitespace: true,
+    }),
+  ).toBe('<!doctypehtml>');
 
   input = '<!DOCTYPE\nhtml>';
   expect(await minify(input, { useShortDoctype: false })).toBe('<!DOCTYPE html>');
@@ -435,7 +590,9 @@ test('doctype normalization', async () => {
   expect(await minify(input, { useShortDoctype: true })).toBe(output);
 
   input = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"\n    "http://www.w3.org/TR/html4/strict.dtd">';
-  expect(await minify(input, { useShortDoctype: false })).toBe('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">');
+  expect(await minify(input, { useShortDoctype: false })).toBe(
+    '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">',
+  );
   expect(await minify(input, { useShortDoctype: true })).toBe(output);
 });
 
@@ -478,7 +635,8 @@ test('ignoring comments', async () => {
   expect(await minify(input, { removeComments: true })).toBe('');
   expect(await minify(input, { removeComments: false })).toBe(input);
 
-  input = '<div>\n\n   \t<div><div>\n\n<p>\n\n<!--!      \t\n\nbar\n\n moo         -->      \n\n</p>\n\n        </div>  </div></div>';
+  input =
+    '<div>\n\n   \t<div><div>\n\n<p>\n\n<!--!      \t\n\nbar\n\n moo         -->      \n\n</p>\n\n        </div>  </div></div>';
   const output = '<div><div><div><p><!--!      \t\n\nbar\n\n moo         --></p></div></div></div>';
   expect(await minify(input, { removeComments: true })).toBe(input);
   expect(await minify(input, { removeComments: true, collapseWhitespace: true })).toBe(output);
@@ -510,7 +668,8 @@ test('conditional comments', async () => {
   input = '<!--[if (gt IE 5)&(lt IE 7)]>test<![endif]-->';
   expect(await minify(input, { removeComments: true })).toBe(input);
 
-  input = '<html>\n' +
+  input =
+    '<html>\n' +
     '  <head>\n' +
     '    <!--[if lte IE 8]>\n' +
     '      <script type="text/javascript">\n' +
@@ -521,29 +680,35 @@ test('conditional comments', async () => {
     '  <body>\n' +
     '  </body>\n' +
     '</html>';
-  output = '<head><!--[if lte IE 8]>\n' +
+  output =
+    '<head><!--[if lte IE 8]>\n' +
     '      <script type="text/javascript">\n' +
     '        alert("ie8!");\n' +
     '      </script>\n' +
     '    <![endif]-->';
-  expect(await minify(input, {
-    minifyJS: true,
-    removeComments: true,
-    collapseWhitespace: true,
-    removeOptionalTags: true,
-    removeScriptTypeAttributes: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyJS: true,
+      removeComments: true,
+      collapseWhitespace: true,
+      removeOptionalTags: true,
+      removeScriptTypeAttributes: true,
+    }),
+  ).toBe(output);
   output = '<head><!--[if lte IE 8]><script>alert("ie8!")</script><![endif]-->';
-  expect(await minify(input, {
-    minifyJS: true,
-    removeComments: true,
-    collapseWhitespace: true,
-    removeOptionalTags: true,
-    removeScriptTypeAttributes: true,
-    processConditionalComments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyJS: true,
+      removeComments: true,
+      collapseWhitespace: true,
+      removeOptionalTags: true,
+      removeScriptTypeAttributes: true,
+      processConditionalComments: true,
+    }),
+  ).toBe(output);
 
-  input = '<!DOCTYPE html>\n' +
+  input =
+    '<!DOCTYPE html>\n' +
     '<html lang="en">\n' +
     '  <head>\n' +
     '    <meta http-equiv="X-UA-Compatible"\n' +
@@ -559,7 +724,8 @@ test('conditional comments', async () => {
     '  <body>\n' +
     '  </body>\n' +
     '</html>';
-  output = '<!DOCTYPE html>' +
+  output =
+    '<!DOCTYPE html>' +
     '<html lang="en">' +
     '<head>' +
     '<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">' +
@@ -569,51 +735,56 @@ test('conditional comments', async () => {
     '<!--[if IE 8]><html class="no-js ie8"><![endif]-->' +
     '<!--[if gt IE 8]><!--><html class="no-js"><!--<![endif]-->' +
     '<title>Document</title></head><body></body></html>';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true
-  })).toBe(output);
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    processConditionalComments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+    }),
+  ).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      processConditionalComments: true,
+    }),
+  ).toBe(output);
 });
 
 test('collapsing space in conditional comments', async () => {
   let input, output;
 
-  input = '<!--[if IE 7]>\n\n   \t\n   \t\t ' +
+  input =
+    '<!--[if IE 7]>\n\n   \t\n   \t\t ' +
     '<link rel="stylesheet" href="/css/ie7-fixes.css" type="text/css" />\n\t' +
     '<![endif]-->';
   expect(await minify(input, { removeComments: true })).toBe(input);
   expect(await minify(input, { removeComments: true, collapseWhitespace: true })).toBe(input);
-  output = '<!--[if IE 7]>\n\n   \t\n   \t\t ' +
+  output =
+    '<!--[if IE 7]>\n\n   \t\n   \t\t ' +
     '<link rel="stylesheet" href="/css/ie7-fixes.css" type="text/css">\n\t' +
     '<![endif]-->';
   expect(await minify(input, { removeComments: true, processConditionalComments: true })).toBe(output);
-  output = '<!--[if IE 7]>' +
-    '<link rel="stylesheet" href="/css/ie7-fixes.css" type="text/css">' +
-    '<![endif]-->';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    processConditionalComments: true
-  })).toBe(output);
+  output = '<!--[if IE 7]>' + '<link rel="stylesheet" href="/css/ie7-fixes.css" type="text/css">' + '<![endif]-->';
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      processConditionalComments: true,
+    }),
+  ).toBe(output);
 
-  input = '<!--[if lte IE 6]>\n    \n   \n\n\n\t' +
-    '<p title=" sigificant     whitespace   ">blah blah</p>' +
-    '<![endif]-->';
+  input =
+    '<!--[if lte IE 6]>\n    \n   \n\n\n\t' + '<p title=" sigificant     whitespace   ">blah blah</p>' + '<![endif]-->';
   expect(await minify(input, { removeComments: true })).toBe(input);
   expect(await minify(input, { removeComments: true, collapseWhitespace: true })).toBe(input);
-  output = '<!--[if lte IE 6]>' +
-    '<p title=" sigificant     whitespace   ">blah blah</p>' +
-    '<![endif]-->';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    processConditionalComments: true
-  })).toBe(output);
+  output = '<!--[if lte IE 6]>' + '<p title=" sigificant     whitespace   ">blah blah</p>' + '<![endif]-->';
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      processConditionalComments: true,
+    }),
+  ).toBe(output);
 });
 
 test('remove comments from scripts', async () => {
@@ -881,7 +1052,8 @@ test('empty attributes', async () => {
   input = '<p id="" class="" STYLE=" " title="\n" lang="" dir="">x</p>';
   expect(await minify(input, { removeEmptyAttributes: true })).toBe('<p>x</p>');
 
-  input = '<p onclick=""   ondblclick=" " onmousedown="" ONMOUSEUP="" onmouseover=" " onmousemove="" onmouseout="" ' +
+  input =
+    '<p onclick=""   ondblclick=" " onmousedown="" ONMOUSEUP="" onmouseover=" " onmousemove="" onmouseout="" ' +
     'onkeypress=\n\n  "\n     " onkeydown=\n"" onkeyup\n="">x</p>';
   expect(await minify(input, { removeEmptyAttributes: true })).toBe('<p>x</p>');
 
@@ -896,12 +1068,19 @@ test('empty attributes', async () => {
 
   // preserve unrecognized attribute
   // remove recognized attrs with unspecified values
-  input = '<div data-foo class id style title lang dir onfocus onblur onchange onclick ondblclick onmousedown onmouseup onmouseover onmousemove onmouseout onkeypress onkeydown onkeyup></div>';
+  input =
+    '<div data-foo class id style title lang dir onfocus onblur onchange onclick ondblclick onmousedown onmouseup onmouseover onmousemove onmouseout onkeypress onkeydown onkeyup></div>';
   expect(await minify(input, { removeEmptyAttributes: true })).toBe('<div data-foo></div>');
 
   // additional remove attributes
   input = '<img src="" alt="">';
-  expect(await minify(input, { removeEmptyAttributes: function (attrName, tag) { return tag === 'img' && attrName === 'src'; } })).toBe('<img alt="">');
+  expect(
+    await minify(input, {
+      removeEmptyAttributes: function (attrName, tag) {
+        return tag === 'img' && attrName === 'src';
+      },
+    }),
+  ).toBe('<img alt="">');
 });
 
 test('cleaning class/style attributes', async () => {
@@ -1179,7 +1358,9 @@ test('removing attribute quotes', async () => {
   let input;
 
   input = '<p title="blah" class="a23B-foo.bar_baz:qux" id="moo">foo</p>';
-  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<p title=blah class=a23B-foo.bar_baz:qux id=moo>foo</p>');
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe(
+    '<p title=blah class=a23B-foo.bar_baz:qux id=moo>foo</p>',
+  );
 
   input = '<input value="hello world">';
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<input value="hello world">');
@@ -1191,13 +1372,19 @@ test('removing attribute quotes', async () => {
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a href=# title=foo#bar>x</a>');
 
   input = '<a href="http://example.com/" title="blah">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a href=http://example.com/ title=blah>\nfoo\n\n</a>');
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe(
+    '<a href=http://example.com/ title=blah>\nfoo\n\n</a>',
+  );
 
   input = '<a title="blah" href="http://example.com/">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true })).toBe('<a title=blah href=http://example.com/ >\nfoo\n\n</a>');
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe(
+    '<a title=blah href=http://example.com/ >\nfoo\n\n</a>',
+  );
 
   input = '<a href="http://example.com/" title="">\nfoo\n\n</a>';
-  expect(await minify(input, { removeAttributeQuotes: true, removeEmptyAttributes: true })).toBe('<a href=http://example.com/ >\nfoo\n\n</a>');
+  expect(await minify(input, { removeAttributeQuotes: true, removeEmptyAttributes: true })).toBe(
+    '<a href=http://example.com/ >\nfoo\n\n</a>',
+  );
 
   input = '<p class=foo|bar:baz></p>';
   expect(await minify(input, { removeAttributeQuotes: true })).toBe('<p class=foo|bar:baz></p>');
@@ -1208,7 +1395,7 @@ test('preserving custom attribute-wrapping markup', async () => {
 
   // With a single rule
   customAttrOptions = {
-    customAttrSurround: [[/\{\{#if\s+\w+\}\}/, /\{\{\/if\}\}/]]
+    customAttrSurround: [[/\{\{#if\s+\w+\}\}/, /\{\{\/if\}\}/]],
   };
 
   input = '<input {{#if value}}checked="checked"{{/if}}>';
@@ -1221,8 +1408,8 @@ test('preserving custom attribute-wrapping markup', async () => {
   customAttrOptions = {
     customAttrSurround: [
       [/\{\{#if\s+\w+\}\}/, /\{\{\/if\}\}/],
-      [/\{\{#unless\s+\w+\}\}/, /\{\{\/unless\}\}/]
-    ]
+      [/\{\{#unless\s+\w+\}\}/, /\{\{\/unless\}\}/],
+    ],
   };
 
   input = '<input {{#if value}}checked="checked"{{/if}}>';
@@ -1241,27 +1428,31 @@ test('preserving custom attribute-wrapping markup', async () => {
   customAttrOptions = {
     customAttrSurround: [
       [/\{\{#if\s+\w+\}\}/, /\{\{\/if\}\}/],
-      [/\{\{#unless\s+\w+\}\}/, /\{\{\/unless\}\}/]
+      [/\{\{#unless\s+\w+\}\}/, /\{\{\/unless\}\}/],
     ],
     collapseBooleanAttributes: true,
-    removeAttributeQuotes: true
+    removeAttributeQuotes: true,
   };
 
   input = '<input {{#if value}}checked="checked"{{/if}}>';
   expect(await minify(input, customAttrOptions)).toBe('<input {{#if value}}checked{{/if}}>');
 
   input = '<input {{#if value1}}checked="checked"{{/if}} {{#if value2}}data-attr="foo"{{/if}}/>';
-  expect(await minify(input, customAttrOptions)).toBe('<input {{#if value1}}checked {{/if}}{{#if value2}}data-attr=foo{{/if}}>');
+  expect(await minify(input, customAttrOptions)).toBe(
+    '<input {{#if value1}}checked {{/if}}{{#if value2}}data-attr=foo{{/if}}>',
+  );
 
   customAttrOptions.keepClosingSlash = true;
-  expect(await minify(input, customAttrOptions)).toBe('<input {{#if value1}}checked {{/if}}{{#if value2}}data-attr=foo {{/if}}/>');
+  expect(await minify(input, customAttrOptions)).toBe(
+    '<input {{#if value1}}checked {{/if}}{{#if value2}}data-attr=foo {{/if}}/>',
+  );
 });
 
 test('preserving custom attribute-joining markup', async () => {
   let input;
   const polymerConditionalAttributeJoin = /\?=/;
   const customAttrOptions = {
-    customAttrAssign: [polymerConditionalAttributeJoin]
+    customAttrAssign: [polymerConditionalAttributeJoin],
   };
   input = '<div flex?="{{mode != cover}}"></div>';
   expect(await minify(input, customAttrOptions)).toBe(input);
@@ -1306,7 +1497,8 @@ test('collapsing whitespace', async () => {
   output = '<div><pRe>$foo = "baz";</pRe></div>';
   expect(await minify(input, { collapseWhitespace: true, caseSensitive: true })).toBe(output);
 
-  input = '<script type="text/javascript">var = "hello";</script>\r\n\r\n\r\n' +
+  input =
+    '<script type="text/javascript">var = "hello";</script>\r\n\r\n\r\n' +
     '<style type="text/css">#foo { color: red;        }          </style>\r\n\r\n\r\n' +
     '<div>\r\n  <div>\r\n    <div><!-- hello -->\r\n      <div>' +
     '<!--! hello -->\r\n        <div>\r\n          <div class="">\r\n\r\n            ' +
@@ -1314,7 +1506,8 @@ test('collapsing whitespace', async () => {
     '</div>\r\n        </div>\r\n      </div>\r\n    </div>\r\n  </div>\r\n</div>' +
     '<pre>       \r\nxxxx</pre><span>x</span> <span>Hello</span> <b>billy</b>     \r\n' +
     '<input type="text">\r\n<textarea></textarea>\r\n<pre></pre>';
-  output = '<script type="text/javascript">var = "hello";</script>' +
+  output =
+    '<script type="text/javascript">var = "hello";</script>' +
     '<style type="text/css">#foo { color: red;        }</style>' +
     '<div><div><div>' +
     '<!-- hello --><div><!--! hello --><div><div class="">' +
@@ -1470,18 +1663,21 @@ test('collapsing boolean attributes', async () => {
   input = '<input multiple="multiple">';
   expect(await minify(input, { collapseBooleanAttributes: true })).toBe('<input multiple>');
 
-  input = '<div Allowfullscreen=foo Async=foo Autofocus=foo Autoplay=foo Checked=foo Compact=foo Controls=foo ' +
+  input =
+    '<div Allowfullscreen=foo Async=foo Autofocus=foo Autoplay=foo Checked=foo Compact=foo Controls=foo ' +
     'Declare=foo Default=foo Defaultchecked=foo Defaultmuted=foo Defaultselected=foo Defer=foo Disabled=foo ' +
     'Enabled=foo Formnovalidate=foo Hidden=foo Indeterminate=foo Inert=foo Ismap=foo Itemscope=foo ' +
     'Loop=foo Multiple=foo Muted=foo Nohref=foo Noresize=foo Noshade=foo Novalidate=foo Nowrap=foo Open=foo ' +
     'Pauseonexit=foo Readonly=foo Required=foo Reversed=foo Scoped=foo Seamless=foo Selected=foo Sortable=foo ' +
     'Truespeed=foo Typemustmatch=foo Visible=foo></div>';
-  output = '<div allowfullscreen async autofocus autoplay checked compact controls declare default defaultchecked ' +
+  output =
+    '<div allowfullscreen async autofocus autoplay checked compact controls declare default defaultchecked ' +
     'defaultmuted defaultselected defer disabled enabled formnovalidate hidden indeterminate inert ' +
     'ismap itemscope loop multiple muted nohref noresize noshade novalidate nowrap open pauseonexit readonly ' +
     'required reversed scoped seamless selected sortable truespeed typemustmatch visible></div>';
   expect(await minify(input, { collapseBooleanAttributes: true })).toBe(output);
-  output = '<div Allowfullscreen Async Autofocus Autoplay Checked Compact Controls Declare Default Defaultchecked ' +
+  output =
+    '<div Allowfullscreen Async Autofocus Autoplay Checked Compact Controls Declare Default Defaultchecked ' +
     'Defaultmuted Defaultselected Defer Disabled Enabled Formnovalidate Hidden Indeterminate Inert ' +
     'Ismap Itemscope Loop Multiple Muted Nohref Noresize Noshade Novalidate Nowrap Open Pauseonexit Readonly ' +
     'Required Reversed Scoped Seamless Selected Sortable Truespeed Typemustmatch Visible></div>';
@@ -1489,25 +1685,53 @@ test('collapsing boolean attributes', async () => {
 });
 
 test('collapsing enumerated attributes', async () => {
-  expect(await minify('<div draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
-  expect(await minify('<div draggable="true"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="true"></div>');
-  expect(await minify('<div draggable="false"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="false"></div>');
-  expect(await minify('<div draggable="foo"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
+  expect(await minify('<div draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable></div>',
+  );
+  expect(await minify('<div draggable="true"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable="true"></div>',
+  );
+  expect(await minify('<div draggable="false"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable="false"></div>',
+  );
+  expect(await minify('<div draggable="foo"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable></div>',
+  );
   expect(await minify('<div draggable></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
-  expect(await minify('<div Draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
-  expect(await minify('<div Draggable="true"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="true"></div>');
-  expect(await minify('<div Draggable="false"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable="false"></div>');
-  expect(await minify('<div Draggable="foo"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
+  expect(await minify('<div Draggable="auto"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable></div>',
+  );
+  expect(await minify('<div Draggable="true"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable="true"></div>',
+  );
+  expect(await minify('<div Draggable="false"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable="false"></div>',
+  );
+  expect(await minify('<div Draggable="foo"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable></div>',
+  );
   expect(await minify('<div Draggable></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
-  expect(await minify('<div draggable="Auto"></div>', { collapseBooleanAttributes: true })).toBe('<div draggable></div>');
+  expect(await minify('<div draggable="Auto"></div>', { collapseBooleanAttributes: true })).toBe(
+    '<div draggable></div>',
+  );
 });
 
 test('keeping trailing slashes in tags', async () => {
   expect(await minify('<img src="test"/>', { keepClosingSlash: true })).toBe('<img src="test"/>');
   // https://github.com/kangax/html-minifier/issues/233
-  expect(await minify('<img src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe('<img src=test />');
-  expect(await minify('<img src="test" id=""/>', { keepClosingSlash: true, removeAttributeQuotes: true, removeEmptyAttributes: true })).toBe('<img src=test />');
-  expect(await minify('<img title="foo" src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe('<img title=foo src=test />');
+  expect(await minify('<img src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe(
+    '<img src=test />',
+  );
+  expect(
+    await minify('<img src="test" id=""/>', {
+      keepClosingSlash: true,
+      removeAttributeQuotes: true,
+      removeEmptyAttributes: true,
+    }),
+  ).toBe('<img src=test />');
+  expect(await minify('<img title="foo" src="test"/>', { keepClosingSlash: true, removeAttributeQuotes: true })).toBe(
+    '<img title=foo src=test />',
+  );
 });
 
 test('removing optional tags', async () => {
@@ -1589,40 +1813,50 @@ test('removing optional tags', async () => {
   output = '<title>hello</title><p>foo<span>bar</span>';
   expect(await minify(input, { removeOptionalTags: true, removeEmptyAttributes: true })).toBe(output);
 
-  input = '<html><head><title>a</title><link href="b.css" rel="stylesheet"/></head><body><a href="c.html"></a><div class="d"><input value="e"/></div></body></html>';
-  output = '<title>a</title><link href="b.css" rel="stylesheet"><a href="c.html"></a><div class="d"><input value="e"></div>';
+  input =
+    '<html><head><title>a</title><link href="b.css" rel="stylesheet"/></head><body><a href="c.html"></a><div class="d"><input value="e"/></div></body></html>';
+  output =
+    '<title>a</title><link href="b.css" rel="stylesheet"><a href="c.html"></a><div class="d"><input value="e"></div>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 
-  input = '<!DOCTYPE html><html><head><title>Blah</title></head><body><div><p>This is some text in a div</p><details>Followed by some details</details></div><div><p>This is some more text in a div</p></div></body></html>';
-  output = '<!DOCTYPE html><title>Blah</title><div><p>This is some text in a div<details>Followed by some details</details></div><div><p>This is some more text in a div</div>';
+  input =
+    '<!DOCTYPE html><html><head><title>Blah</title></head><body><div><p>This is some text in a div</p><details>Followed by some details</details></div><div><p>This is some more text in a div</p></div></body></html>';
+  output =
+    '<!DOCTYPE html><title>Blah</title><div><p>This is some text in a div<details>Followed by some details</details></div><div><p>This is some more text in a div</div>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 
-  input = '<!DOCTYPE html><html><head><title>Blah</title></head><body><noscript><p>This is some text in a noscript</p><details>Followed by some details</details></noscript><noscript><p>This is some more text in a noscript</p></noscript></body></html>';
-  output = '<!DOCTYPE html><title>Blah</title><body><noscript><p>This is some text in a noscript<details>Followed by some details</details></noscript><noscript><p>This is some more text in a noscript</p></noscript>';
+  input =
+    '<!DOCTYPE html><html><head><title>Blah</title></head><body><noscript><p>This is some text in a noscript</p><details>Followed by some details</details></noscript><noscript><p>This is some more text in a noscript</p></noscript></body></html>';
+  output =
+    '<!DOCTYPE html><title>Blah</title><body><noscript><p>This is some text in a noscript<details>Followed by some details</details></noscript><noscript><p>This is some more text in a noscript</p></noscript>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 
-  input = '<md-list-item ui-sref=".app-config"><md-icon md-font-icon="mdi-settings"></md-icon><p translate>Configure</p></md-list-item>';
+  input =
+    '<md-list-item ui-sref=".app-config"><md-icon md-font-icon="mdi-settings"></md-icon><p translate>Configure</p></md-list-item>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(input);
 });
 
 test('removing optional tags in tables', async () => {
   let input, output;
 
-  input = '<table>' +
+  input =
+    '<table>' +
     '<thead><tr><th>foo</th><th>bar</th> <th>baz</th></tr></thead> ' +
     '<tbody><tr><td>boo</td><td>moo</td><td>loo</td></tr> </tbody>' +
     '<tfoot><tr><th>baz</th> <th>qux</th><td>boo</td></tr></tfoot>' +
     '</table>';
   expect(await minify(input)).toBe(input);
 
-  output = '<table>' +
+  output =
+    '<table>' +
     '<thead><tr><th>foo<th>bar</th> <th>baz</thead> ' +
     '<tr><td>boo<td>moo<td>loo</tr> ' +
     '<tfoot><tr><th>baz</th> <th>qux<td>boo' +
     '</table>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 
-  output = '<table>' +
+  output =
+    '<table>' +
     '<thead><tr><th>foo<th>bar<th>baz' +
     '<tbody><tr><td>boo<td>moo<td>loo' +
     '<tfoot><tr><th>baz<th>qux<td>boo' +
@@ -1630,7 +1864,8 @@ test('removing optional tags in tables', async () => {
   expect(await minify(input, { collapseWhitespace: true, removeOptionalTags: true })).toBe(output);
   expect(await minify(output, { collapseWhitespace: true, removeOptionalTags: true })).toBe(output);
 
-  input = '<table>' +
+  input =
+    '<table>' +
     '<caption>foo</caption>' +
     '<!-- blah -->' +
     '<colgroup><col span="2"><col></colgroup>' +
@@ -1639,7 +1874,8 @@ test('removing optional tags in tables', async () => {
     '</table>';
   expect(await minify(input)).toBe(input);
 
-  output = '<table>' +
+  output =
+    '<table>' +
     '<caption>foo</caption>' +
     '<!-- blah -->' +
     '<col span="2"><col></colgroup>' +
@@ -1649,16 +1885,10 @@ test('removing optional tags in tables', async () => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
   expect(await minify(output, { removeOptionalTags: true })).toBe(output);
 
-  output = '<table>' +
-    '<caption>foo' +
-    '<col span="2"><col>' +
-    '<tr><th>bar<td>baz<th>qux' +
-    '</table>';
+  output = '<table>' + '<caption>foo' + '<col span="2"><col>' + '<tr><th>bar<td>baz<th>qux' + '</table>';
   expect(await minify(input, { removeComments: true, removeOptionalTags: true })).toBe(output);
 
-  input = '<table>' +
-    '<tbody></tbody>' +
-    '</table>';
+  input = '<table>' + '<tbody></tbody>' + '</table>';
   expect(await minify(input)).toBe(input);
 
   output = '<table><tbody></table>';
@@ -1672,18 +1902,18 @@ test('removing optional tags in options', async () => {
   output = '<select><option>foo<option>bar</select>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(output);
 
-  input = '<select>\n' +
-    '  <option>foo</option>\n' +
-    '  <option>bar</option>\n' +
-    '</select>';
+  input = '<select>\n' + '  <option>foo</option>\n' + '  <option>bar</option>\n' + '</select>';
   expect(await minify(input, { removeOptionalTags: true })).toBe(input);
   output = '<select><option>foo<option>bar</select>';
   expect(await minify(input, { removeOptionalTags: true, collapseWhitespace: true })).toBe(output);
   output = '<select> <option>foo</option> <option>bar</option> </select>';
-  expect(await minify(input, { removeOptionalTags: true, collapseWhitespace: true, conservativeCollapse: true })).toBe(output);
+  expect(await minify(input, { removeOptionalTags: true, collapseWhitespace: true, conservativeCollapse: true })).toBe(
+    output,
+  );
 
   // example from htmldog.com
-  input = '<select name="catsndogs">' +
+  input =
+    '<select name="catsndogs">' +
     '<optgroup label="Cats">' +
     '<option>Tiger</option><option>Leopard</option><option>Lynx</option>' +
     '</optgroup>' +
@@ -1692,7 +1922,8 @@ test('removing optional tags in options', async () => {
     '</optgroup>' +
     '</select>';
 
-  output = '<select name="catsndogs">' +
+  output =
+    '<select name="catsndogs">' +
     '<optgroup label="Cats">' +
     '<option>Tiger<option>Leopard<option>Lynx' +
     '<optgroup label="Dogs">' +
@@ -1784,30 +2015,40 @@ test('Ignore custom fragments', async () => {
   let input, output;
   const reFragments = [/<\?[^?]+\?>/, /<%[^%]+%>/, /\{\{[^}]*\}\}/];
 
-  input = 'This is the start. <% ... %>\r\n<%= ... %>\r\n<? ... ?>\r\n<!-- This is the middle, and a comment. -->\r\nNo comment, but middle.\r\n{{ ... }}\r\n<?php ... ?>\r\n<?xml ... ?>\r\nHello, this is the end!';
-  output = 'This is the start. <% ... %> <%= ... %> <? ... ?> No comment, but middle. {{ ... }} <?php ... ?> <?xml ... ?> Hello, this is the end!';
+  input =
+    'This is the start. <% ... %>\r\n<%= ... %>\r\n<? ... ?>\r\n<!-- This is the middle, and a comment. -->\r\nNo comment, but middle.\r\n{{ ... }}\r\n<?php ... ?>\r\n<?xml ... ?>\r\nHello, this is the end!';
+  output =
+    'This is the start. <% ... %> <%= ... %> <? ... ?> No comment, but middle. {{ ... }} <?php ... ?> <?xml ... ?> Hello, this is the end!';
   expect(await minify(input, {})).toBe(input);
   expect(await minify(input, { removeComments: true, collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    ignoreCustomFragments: reFragments
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      ignoreCustomFragments: reFragments,
+    }),
+  ).toBe(output);
 
-  output = 'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle. {{ ... }}\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  output =
+    'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle. {{ ... }}\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
-  output = 'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle.\n{{ ... }}\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    preserveLineBreaks: true,
-    ignoreCustomFragments: reFragments
-  })).toBe(output);
+  output =
+    'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle.\n{{ ... }}\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+      ignoreCustomFragments: reFragments,
+    }),
+  ).toBe(output);
 
   input = '{{ if foo? }}\r\n  <div class="bar">\r\n    ...\r\n  </div>\r\n{{ end \n}}';
   output = '{{ if foo? }}<div class="bar">...</div>{{ end }}';
@@ -1819,11 +2060,13 @@ test('Ignore custom fragments', async () => {
   expect(await minify(input, { collapseWhitespace: true, ignoreCustomFragments: reFragments })).toBe(output);
 
   output = '{{ if foo? }}\n<div class="bar">\n...\n</div>\n{{ end \n}}';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true,
-    ignoreCustomFragments: reFragments
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+      ignoreCustomFragments: reFragments,
+    }),
+  ).toBe(output);
 
   input = '<a class="<% if foo? %>bar<% end %> {{ ... }}"></a>';
   expect(await minify(input, {})).toBe(input);
@@ -1833,170 +2076,189 @@ test('Ignore custom fragments', async () => {
   output = '<img src="{% static "images/logo.png" %}">';
   expect(await minify(input, { ignoreCustomFragments: [/\{%[^%]*?%\}/g] })).toBe(output);
 
-  input = '<p{% if form.name.errors %}class=\'error\'{% endif %}>' +
+  input =
+    "<p{% if form.name.errors %}class='error'{% endif %}>" +
     '{{ form.name.label_tag }}' +
     '{{ form.name }}' +
     ' <label>{{ label }}</label> ' +
     '{% if form.name.errors %}' +
     '{% for error in form.name.errors %}' +
-    '<span class=\'error_msg\' style=\'color:#ff0000\'>{{ error }}</span>' +
+    "<span class='error_msg' style='color:#ff0000'>{{ error }}</span>" +
     '{% endfor %}' +
     '{% endif %}' +
     '</p>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{%[\s\S]*?%\}/g,
-      /\{\{[\s\S]*?\}\}/g
-    ],
-    quoteCharacter: '\''
-  })).toBe(input);
-  output = '<p {% if form.name.errors %} class=\'error\' {% endif %}>' +
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[\s\S]*?%\}/g, /\{\{[\s\S]*?\}\}/g],
+      quoteCharacter: "'",
+    }),
+  ).toBe(input);
+  output =
+    "<p {% if form.name.errors %} class='error' {% endif %}>" +
     '{{ form.name.label_tag }}' +
     '{{ form.name }}' +
     ' <label>{{ label }}</label> ' +
     '{% if form.name.errors %}' +
     '{% for error in form.name.errors %}' +
-    '<span class=\'error_msg\' style=\'color:#ff0000\'>{{ error }}</span>' +
+    "<span class='error_msg' style='color:#ff0000'>{{ error }}</span>" +
     '{% endfor %}' +
     '{% endif %}' +
     '</p>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{%[\s\S]*?%\}/g,
-      /\{\{[\s\S]*?\}\}/g
-    ],
-    quoteCharacter: '\'',
-    collapseWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[\s\S]*?%\}/g, /\{\{[\s\S]*?\}\}/g],
+      quoteCharacter: "'",
+      collapseWhitespace: true,
+    }),
+  ).toBe(output);
 
-  input = '<a href="/legal.htm"<?php echo e(Request::path() == \'/\' ? \' rel="nofollow"\':\'\'); ?>>Legal Notices</a>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /<\?php[\s\S]*?\?>/g
-    ]
-  })).toBe(input);
+  input = "<a href=\"/legal.htm\"<?php echo e(Request::path() == '/' ? ' rel=\"nofollow\"':''); ?>>Legal Notices</a>";
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<\?php[\s\S]*?\?>/g],
+    }),
+  ).toBe(input);
 
   input = '<input type="checkbox"<%= (model.isChecked ? \'checked="checked"\' : \'\') %>>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /<%=[\s\S]*?%>/g
-    ]
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<%=[\s\S]*?%>/g],
+    }),
+  ).toBe(input);
 
-  input = '<div' +
-    '{{IF text}}' +
-    'data-yashareDescription="{{shorted(text, 300)}}"' +
-    '{{END IF}}></div>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{\{[\s\S]*?\}\}/g
-    ],
-    caseSensitive: true
-  })).toBe(input);
+  input = '<div' + '{{IF text}}' + 'data-yashareDescription="{{shorted(text, 300)}}"' + '{{END IF}}></div>';
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{\{[\s\S]*?\}\}/g],
+      caseSensitive: true,
+    }),
+  ).toBe(input);
 
   input = '<img class="{% foo %} {% bar %}">';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{%[^%]*?%\}/g
-    ]
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[^%]*?%\}/g],
+    }),
+  ).toBe(input);
   // trimCustomFragments withOUT collapseWhitespace, does
   // not break the "{% foo %} {% bar %}" test
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{%[^%]*?%\}/g
-    ],
-    trimCustomFragments: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[^%]*?%\}/g],
+      trimCustomFragments: true,
+    }),
+  ).toBe(input);
   // trimCustomFragments WITH collapseWhitespace, changes output
   output = '<img class="{% foo %}{% bar %}">';
-  expect(await minify(input, {
-    ignoreCustomFragments: [
-      /\{%[^%]*?%\}/g
-    ],
-    collapseWhitespace: true,
-    trimCustomFragments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[^%]*?%\}/g],
+      collapseWhitespace: true,
+      trimCustomFragments: true,
+    }),
+  ).toBe(output);
 
   input = '<img class="titi.<%=tsItem_[0]%>">';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
 
   input = '<table id="<?php echo $this->escapeHtmlAttr($this->table_id); ?>"></table>';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
 
   input = '<!--{{comment}}-->{{if a}}<div>b</div>{{/if}}';
   expect(await minify(input)).toBe(input);
   output = '{{if a}}<div>b</div>{{/if}}';
-  expect(await minify(input, {
-    removeComments: true,
-    ignoreCustomFragments: [
-      /\{\{.*?\}\}/g
-    ]
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      ignoreCustomFragments: [/\{\{.*?\}\}/g],
+    }),
+  ).toBe(output);
 
   // https://github.com/kangax/html-minifier/issues/722
   input = '<? echo "foo"; ?> <span>bar</span>';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
   output = '<? echo "foo"; ?><span>bar</span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    trimCustomFragments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      trimCustomFragments: true,
+    }),
+  ).toBe(output);
 
   input = ' <? echo "foo"; ?> bar';
   expect(await minify(input)).toBe(input);
   output = '<? echo "foo"; ?> bar';
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(output);
   output = '<? echo "foo"; ?>bar';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    trimCustomFragments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      trimCustomFragments: true,
+    }),
+  ).toBe(output);
 
   input = '<span>foo</span> <? echo "bar"; ?> baz';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
   output = '<span>foo</span><? echo "bar"; ?>baz';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    trimCustomFragments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      trimCustomFragments: true,
+    }),
+  ).toBe(output);
 
   input = '<span>foo</span> <? echo "bar"; ?> <? echo "baz"; ?> <span>foo</span>';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
   output = '<span>foo</span><? echo "bar"; ?><? echo "baz"; ?><span>foo</span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    trimCustomFragments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      trimCustomFragments: true,
+    }),
+  ).toBe(output);
 
   input = 'foo <WC@bar> baz moo </WC@bar> loo';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [
-      /<(WC@[\s\S]*?)>(.*?)<\/\1>/
-    ]
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/<(WC@[\s\S]*?)>(.*?)<\/\1>/],
+    }),
+  ).toBe(input);
   output = 'foo<wc @bar>baz moo</wc>loo';
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(output);
 
   input = '<link href="<?php echo \'http://foo/\' ?>">';
   expect(await minify(input)).toBe(input);
@@ -2015,13 +2277,15 @@ test('Ignore custom fragments', async () => {
   expect(await minify(input, { minifyCSS: true })).toBe(input);
 });
 
-test('bootstrap\'s span > button > span', async () => {
-  const input = '<span class="input-group-btn">' +
+test("bootstrap's span > button > span", async () => {
+  const input =
+    '<span class="input-group-btn">' +
     '\n  <button class="btn btn-default" type="button">' +
     '\n    <span class="glyphicon glyphicon-search"></span>' +
     '\n  </button>' +
     '</span>';
-  const output = '<span class=input-group-btn><button class="btn btn-default" type=button><span class="glyphicon glyphicon-search"></span></button></span>';
+  const output =
+    '<span class=input-group-btn><button class="btn btn-default" type=button><span class="glyphicon glyphicon-search"></span></button></span>';
   expect(await minify(input, { collapseWhitespace: true, removeAttributeQuotes: true })).toBe(output);
 });
 
@@ -2034,7 +2298,8 @@ test('caseSensitive', async () => {
 });
 
 test('source & track', async () => {
-  const input = '<audio controls="controls">' +
+  const input =
+    '<audio controls="controls">' +
     '<source src="foo.wav">' +
     '<source src="far.wav">' +
     '<source src="foobar.wav">' +
@@ -2045,7 +2310,8 @@ test('source & track', async () => {
 });
 
 test('mixed html and svg', async () => {
-  const input = '<html><body>\n' +
+  const input =
+    '<html><body>\n' +
     '  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"\n' +
     '     width="612px" height="502.174px" viewBox="0 65.326 612 502.174" enable-background="new 0 65.326 612 502.174"\n' +
     '     xml:space="preserve" class="logo">' +
@@ -2058,7 +2324,8 @@ test('mixed html and svg', async () => {
     '    </filter>\n' +
     '  </svg>\n' +
     '</body></html>';
-  const output = '<html><body>' +
+  const output =
+    '<html><body>' +
     '<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="612px" height="502.174px" viewBox="0 65.326 612 502.174" enable-background="new 0 65.326 612 502.174" xml:space="preserve" class="logo">' +
     '<ellipse class="ground" cx="283.5" cy="487.5" rx="259" ry="80"/>' +
     '<polygon points="100,10 40,198 190,78 10,78 160,198" style="fill:lime;stroke:purple;stroke-width:5;fill-rule:evenodd;"/>' +
@@ -2072,7 +2339,7 @@ test('mixed html and svg', async () => {
 test('nested quotes', async () => {
   const input = '<div data=\'{"test":"\\"test\\""}\'></div>';
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, { quoteCharacter: '\'' })).toBe(input);
+  expect(await minify(input, { quoteCharacter: "'" })).toBe(input);
 
   const output = '<div data="{&#34;test&#34;:&#34;\\&#34;test\\&#34;&#34;}"></div>';
   expect(await minify(input, { quoteCharacter: '"' })).toBe(output);
@@ -2095,22 +2362,27 @@ test('script minification', async () => {
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 
-  input = '<script type="application/javascript;version=1.8">(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()</script>';
+  input =
+    '<script type="application/javascript;version=1.8">(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()</script>';
   output = '<script type="application/javascript;version=1.8">alert("1 2")</script>';
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 
-  input = '<script type=" application/javascript  ; charset=utf-8 ">(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()</script>';
+  input =
+    '<script type=" application/javascript  ; charset=utf-8 ">(function(){ var foo = 1; var bar = 2; alert(foo + " " + bar); })()</script>';
   output = '<script type="application/javascript;charset=utf-8">alert("1 2")</script>';
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 
-  input = '<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!=\'dataLayer\'?\'&l=\'+l:\'\';j.async=true;j.src=\'//www.googletagmanager.com/gtm.js?id=\'+i+dl;f.parentNode.insertBefore(j,f);})(window,document,\'script\',\'dataLayer\',\'GTM-67NT\');</script>';
-  output = '<script>!function(w,d,s,l){w[l]=w[l]||[],w[l].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=!0,j.src="//www.googletagmanager.com/gtm.js?id=GTM-67NT",f.parentNode.insertBefore(j,f)}(window,document,"script","dataLayer")</script>';
+  input =
+    "<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-67NT');</script>";
+  output =
+    '<script>!function(w,d,s,l){w[l]=w[l]||[],w[l].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=!0,j.src="//www.googletagmanager.com/gtm.js?id=GTM-67NT",f.parentNode.insertBefore(j,f)}(window,document,"script","dataLayer")</script>';
 
   expect(await minify(input, { minifyJS: { mangle: false } })).toBe(output);
 
-  input = '<script>\n' +
+  input =
+    '<script>\n' +
     '  <!--\n' +
     '    Platform.Mobile.Bootstrap.init(function () {\n' +
     '      Platform.Mobile.Core.Navigation.go("Login", {\n' +
@@ -2119,7 +2391,8 @@ test('script minification', async () => {
     '    });\n' +
     '  //-->\n' +
     '</script>';
-  output = '<script>Platform.Mobile.Bootstrap.init(function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})})</script>';
+  output =
+    '<script>Platform.Mobile.Bootstrap.init(function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})})</script>';
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
@@ -2160,51 +2433,61 @@ test('minification of scripts with custom fragments', async () => {
   input = '<script><?php ?></script>';
   expect(await minify(input, { minifyJS: true })).toBe(input);
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(input);
 
   input = '<script>\n<?php ?></script>';
   expect(await minify(input, { minifyJS: true })).toBe(input);
   output = '<script> <?php ?></script>';
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(input);
 
   input = '<script><?php ?>\n</script>';
   expect(await minify(input, { minifyJS: true })).toBe(input);
   output = '<script><?php ?> </script>';
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(input);
 
   input = '<script>\n<?php ?>\n</script>';
   expect(await minify(input, { minifyJS: true })).toBe(input);
   output = '<script> <?php ?> </script>';
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(input);
 
   input = '<script>// <% ... %></script>';
   output = '<script></script>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<script>// \n<% ... %></script>';
   output = '<script> \n<% ... %></script>';
@@ -2212,21 +2495,25 @@ test('minification of scripts with custom fragments', async () => {
   output = '<script> <% ... %></script>';
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
   output = '<script>\n<% ... %></script>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<script>// <% ... %>\n</script>';
   output = '<script></script>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<script>// \n<% ... %>\n</script>';
   output = '<script> \n<% ... %>\n</script>';
@@ -2234,11 +2521,13 @@ test('minification of scripts with custom fragments', async () => {
   output = '<script> <% ... %> </script>';
   expect(await minify(input, { collapseWhitespace: true, minifyJS: true })).toBe(output);
   output = '<script>\n<% ... %>\n</script>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyJS: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyJS: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<script>function f(){  return <?php ?>  }</script>';
   output = '<script>function f(){return <?php ?>  }</script>';
@@ -2266,21 +2555,21 @@ test('event minification', async () => {
   output = '<a href="/" onclick="return this.href=getUpdatedURL(this.href),!0">test</a>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
 
-  input = '<a onclick="try{ dcsMultiTrack(\'DCS.dcsuri\',\'USPS\',\'WT.ti\') }catch(e){}"> foobar</a>';
+  input = "<a onclick=\"try{ dcsMultiTrack('DCS.dcsuri','USPS','WT.ti') }catch(e){}\"> foobar</a>";
   output = '<a onclick=\'try{dcsMultiTrack("DCS.dcsuri","USPS","WT.ti")}catch(e){}\'> foobar</a>';
   expect(await minify(input, { minifyJS: { mangle: false } })).toBe(output);
-  expect(await minify(input, { minifyJS: { mangle: false }, quoteCharacter: '\'' })).toBe(output);
+  expect(await minify(input, { minifyJS: { mangle: false }, quoteCharacter: "'" })).toBe(output);
 
-  input = '<a onclick="try{ dcsMultiTrack(\'DCS.dcsuri\',\'USPS\',\'WT.ti\') }catch(e){}"> foobar</a>';
+  input = "<a onclick=\"try{ dcsMultiTrack('DCS.dcsuri','USPS','WT.ti') }catch(e){}\"> foobar</a>";
   output = '<a onclick="try{dcsMultiTrack(&#34;DCS.dcsuri&#34;,&#34;USPS&#34;,&#34;WT.ti&#34;)}catch(e){}"> foobar</a>';
   expect(await minify(input, { minifyJS: { mangle: false }, quoteCharacter: '"' })).toBe(output);
 
-  input = '<a onClick="_gaq.push([\'_trackEvent\', \'FGF\', \'banner_click\']);"></a>';
+  input = "<a onClick=\"_gaq.push(['_trackEvent', 'FGF', 'banner_click']);\"></a>";
   output = '<a onclick=\'_gaq.push(["_trackEvent","FGF","banner_click"])\'></a>';
   expect(await minify(input, { minifyJS: true })).toBe(output);
-  expect(await minify(input, { minifyJS: true, quoteCharacter: '\'' })).toBe(output);
+  expect(await minify(input, { minifyJS: true, quoteCharacter: "'" })).toBe(output);
 
-  input = '<a onClick="_gaq.push([\'_trackEvent\', \'FGF\', \'banner_click\']);"></a>';
+  input = "<a onClick=\"_gaq.push(['_trackEvent', 'FGF', 'banner_click']);\"></a>";
   output = '<a onclick="_gaq.push([&#34;_trackEvent&#34;,&#34;FGF&#34;,&#34;banner_click&#34;])"></a>';
   expect(await minify(input, { minifyJS: true, quoteCharacter: '"' })).toBe(output);
 
@@ -2334,57 +2623,69 @@ test('style minification', async () => {
   expect(await minify(input)).toBe(input);
   output = '<div style="background:url(images/<% image %>)"></div>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyCSS: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyCSS: true,
+    }),
+  ).toBe(output);
 
   input = '<div style="background: url(\'images/<% image %>\')"></div>';
   expect(await minify(input)).toBe(input);
   output = '<div style="background:url(\'images/<% image %>\')"></div>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyCSS: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyCSS: true,
+    }),
+  ).toBe(output);
 
   input = '<style>\np {\n  background: url(images/<% image %>);\n}\n</style>';
   expect(await minify(input)).toBe(input);
   output = '<style>p{background:url(images/<% image %>)}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyCSS: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyCSS: true,
+    }),
+  ).toBe(output);
 
   input = '<style>p { background: url("images/<% image %>") }</style>';
   expect(await minify(input)).toBe(input);
   output = '<style>p{background:url("images/<% image %>")}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    minifyCSS: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      minifyCSS: true,
+    }),
+  ).toBe(output);
 
   input = '<link rel="stylesheet" href="css/style-mobile.css" media="(max-width: 737px)">';
   expect(await minify(input)).toBe(input);
   output = '<link rel="stylesheet" href="css/style-mobile.css" media="(max-width:737px)">';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<link rel=stylesheet href=css/style-mobile.css media=(max-width:737px)>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    removeAttributeQuotes: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      removeAttributeQuotes: true,
+    }),
+  ).toBe(output);
 
   input = '<style media="(max-width: 737px)"></style>';
   expect(await minify(input)).toBe(input);
   output = '<style media="(max-width:737px)"></style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style media=(max-width:737px)></style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    removeAttributeQuotes: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      removeAttributeQuotes: true,
+    }),
+  ).toBe(output);
 });
 
 test('style attribute minification', async () => {
@@ -2464,7 +2765,8 @@ test('minification of style with custom fragments', async () => {
 test('url attribute minification', async () => {
   let input, output;
 
-  input = '<link rel="stylesheet" href="http://website.com/style.css"><form action="http://website.com/folder/folder2/index.html"><a href="http://website.com/folder/file.html">link</a></form>';
+  input =
+    '<link rel="stylesheet" href="http://website.com/style.css"><form action="http://website.com/folder/folder2/index.html"><a href="http://website.com/folder/file.html">link</a></form>';
   output = '<link rel="stylesheet" href="/style.css"><form action="folder2/"><a href="file.html">link</a></form>';
   expect(await minify(input, { minifyURLs: 'http://website.com/folder/' })).toBe(output);
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/folder/' } })).toBe(output);
@@ -2473,50 +2775,62 @@ test('url attribute minification', async () => {
   expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(input);
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
 
-  input = '<style>body { background: url(\'http://website.com/bg.png\') }</style>';
+  input = "<style>body { background: url('http://website.com/bg.png') }</style>";
   expect(await minify(input, { minifyURLs: 'http://website.com/' })).toBe(input);
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
-  output = '<style>body{background:url(\'http://website.com/bg.png\')}</style>';
+  output = "<style>body{background:url('http://website.com/bg.png')}</style>";
   expect(await minify(input, { minifyCSS: true })).toBe(output);
-  output = '<style>body{background:url(\'bg.png\')}</style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: 'http://website.com/'
-  })).toBe(output);
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/' }
-  })).toBe(output);
+  output = "<style>body{background:url('bg.png')}</style>";
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: 'http://website.com/',
+    }),
+  ).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: { site: 'http://website.com/' },
+    }),
+  ).toBe(output);
 
   input = '<style>body { background: url("http://website.com/foo bar/bg.png") }</style>';
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo bar/' } })).toBe(input);
   output = '<style>body{background:url("http://website.com/foo bar/bg.png")}</style>';
   expect(await minify(input, { minifyCSS: true })).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo bar/' }
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: { site: 'http://website.com/foo bar/' },
+    }),
+  ).toBe(output);
 
   input = '<style>body { background: url("http://website.com/foo bar/(baz)/bg.png") }</style>';
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/' } })).toBe(input);
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo%20bar/' } })).toBe(input);
   expect(await minify(input, { minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' } })).toBe(input);
   output = '<style>body{background:url("foo%20bar/(baz)/bg.png")}</style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/' }
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: { site: 'http://website.com/' },
+    }),
+  ).toBe(output);
   output = '<style>body{background:url("(baz)/bg.png")}</style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo%20bar/' }
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: { site: 'http://website.com/foo%20bar/' },
+    }),
+  ).toBe(output);
   output = '<style>body{background:url("bg.png")}</style>';
-  expect(await minify(input, {
-    minifyCSS: true,
-    minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' }
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      minifyCSS: true,
+      minifyURLs: { site: 'http://website.com/foo%20bar/(baz)/' },
+    }),
+  ).toBe(output);
 
   input = '<img src="http://cdn.site.com/foo.png">';
   output = '<img src="//cdn.site.com/foo.png">';
@@ -2525,7 +2839,8 @@ test('url attribute minification', async () => {
 
 test('srcset attribute minification', async () => {
   let output;
-  const input = '<source srcset="http://site.com/foo.gif ,http://site.com/bar.jpg 1x, baz moo 42w,' +
+  const input =
+    '<source srcset="http://site.com/foo.gif ,http://site.com/bar.jpg 1x, baz moo 42w,' +
     '\n\n\n\n\n\t    http://site.com/zo om.png 1.00x">';
   output = '<source srcset="http://site.com/foo.gif, http://site.com/bar.jpg, baz moo 42w, http://site.com/zo om.png">';
   expect(await minify(input)).toBe(output);
@@ -2549,119 +2864,148 @@ test('conservative collapse', async () => {
 
   input = '<b>   foo \n\n</b>';
   output = '<b> foo </b>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<html>\n\n<!--test-->\n\n</html>';
   output = '<html> </html>';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(input);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(input);
 
   input = '<p> \u00A0</p>';
   output = '<p>\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>\u00A0 </p>';
   output = '<p>\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p> \u00A0 </p>';
   output = '<p>\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>  \u00A0\u00A0  \u00A0  </p>';
   output = '<p>\u00A0\u00A0 \u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>foo  \u00A0\u00A0  \u00A0  </p>';
   output = '<p>foo \u00A0\u00A0 \u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>  \u00A0\u00A0  \u00A0  bar</p>';
   output = '<p>\u00A0\u00A0 \u00A0 bar</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p>foo  \u00A0\u00A0  \u00A0  bar</p>';
   output = '<p>foo \u00A0\u00A0 \u00A0 bar</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p> \u00A0foo\u00A0\t</p>';
   output = '<p>\u00A0foo\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p> \u00A0\nfoo\u00A0\t</p>';
   output = '<p>\u00A0 foo\u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p> \u00A0foo \u00A0\t</p>';
   output = '<p>\u00A0foo \u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 
   input = '<p> \u00A0\nfoo \u00A0\t</p>';
   output = '<p>\u00A0 foo \u00A0</p>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+    }),
+  ).toBe(output);
 });
 
 test('collapse preseving a line break', async () => {
   let input, output;
 
-  input = '\n\n\n<!DOCTYPE html>   \n<html lang="en" class="no-js">\n' +
+  input =
+    '\n\n\n<!DOCTYPE html>   \n<html lang="en" class="no-js">\n' +
     '  <head>\n    <meta charset="utf-8">\n    <meta http-equiv="X-UA-Compatible" content="IE=edge">\n\n\n\n' +
     '\t<!-- Copyright Notice -->\n' +
     '    <title>Carbon</title>\n\n\t<meta name="title" content="Carbon">\n\t\n\n' +
@@ -2673,7 +3017,8 @@ test('collapse preseving a line break', async () => {
     '    <script src="scripts/application.js"></script>\n' +
     '    <link href="images/icn-32x32.png" rel="shortcut icon">\n' +
     '    <link href="images/icn-152x152.png" rel="apple-touch-icon">\n  </head>\n  <body><p>\n   test test\n\ttest\n\n</p></body>\n</html>';
-  output = '\n<!DOCTYPE html>\n<html lang="en" class="no-js">\n' +
+  output =
+    '\n<!DOCTYPE html>\n<html lang="en" class="no-js">\n' +
     '<head>\n<meta charset="utf-8">\n<meta http-equiv="X-UA-Compatible" content="IE=edge">\n' +
     '<!-- Copyright Notice -->\n' +
     '<title>Carbon</title>\n<meta name="title" content="Carbon">\n' +
@@ -2685,16 +3030,21 @@ test('collapse preseving a line break', async () => {
     '<script src="scripts/application.js"></script>\n' +
     '<link href="images/icn-32x32.png" rel="shortcut icon">\n' +
     '<link href="images/icn-152x152.png" rel="apple-touch-icon">\n</head>\n<body><p>\ntest test test\n</p></body>\n</html>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true,
-    preserveLineBreaks: true
-  })).toBe(output);
-  output = '\n<!DOCTYPE html>\n<html lang="en" class="no-js">\n' +
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
+  output =
+    '\n<!DOCTYPE html>\n<html lang="en" class="no-js">\n' +
     '<head>\n<meta charset="utf-8">\n<meta http-equiv="X-UA-Compatible" content="IE=edge">\n' +
     '<title>Carbon</title>\n<meta name="title" content="Carbon">\n' +
     '<meta name="description" content="A front-end framework.">\n' +
@@ -2705,80 +3055,104 @@ test('collapse preseving a line break', async () => {
     '<script src="scripts/application.js"></script>\n' +
     '<link href="images/icn-32x32.png" rel="shortcut icon">\n' +
     '<link href="images/icn-152x152.png" rel="apple-touch-icon">\n</head>\n<body><p>\ntest test test\n</p></body>\n</html>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true,
-    preserveLineBreaks: true,
-    removeComments: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      preserveLineBreaks: true,
+      removeComments: true,
+    }),
+  ).toBe(output);
 
   input = '<div> text <span>\n text</span> \n</div>';
   output = '<div>text <span>\ntext</span>\n</div>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<div>  text \n </div>';
   output = '<div>text\n</div>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
   output = '<div> text\n</div>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
   input = '<div>\ntext  </div>';
   output = '<div>\ntext</div>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
   output = '<div>\ntext </div>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    conservativeCollapse: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 
-  input = 'This is the start. <% ... %>\r\n<%= ... %>\r\n<? ... ?>\r\n<!-- This is the middle, and a comment. -->\r\nNo comment, but middle.\r\n<?= ... ?>\r\n<?php ... ?>\r\n<?xml ... ?>\r\nHello, this is the end!';
-  output = 'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle.\n<?= ... ?>\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
-  expect(await minify(input, {
-    removeComments: true,
-    collapseWhitespace: true,
-    preserveLineBreaks: true
-  })).toBe(output);
+  input =
+    'This is the start. <% ... %>\r\n<%= ... %>\r\n<? ... ?>\r\n<!-- This is the middle, and a comment. -->\r\nNo comment, but middle.\r\n<?= ... ?>\r\n<?php ... ?>\r\n<?xml ... ?>\r\nHello, this is the end!';
+  output =
+    'This is the start. <% ... %>\n<%= ... %>\n<? ... ?>\nNo comment, but middle.\n<?= ... ?>\n<?php ... ?>\n<?xml ... ?>\nHello, this is the end!';
+  expect(
+    await minify(input, {
+      removeComments: true,
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+    }),
+  ).toBe(output);
 });
 
 test('collapse inline tag whitespace', async () => {
   let input, output;
 
   input = '<button>a</button> <button>b</button>';
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(input);
 
   output = '<button>a</button><button>b</button>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    collapseInlineTagWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      collapseInlineTagWhitespace: true,
+    }),
+  ).toBe(output);
 
   input = '<p>where <math> <mi>R</mi> </math> is the Rici tensor.</p>';
   output = '<p>where <math><mi>R</mi></math> is the Rici tensor.</p>';
-  expect(await minify(input, {
-    collapseWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+    }),
+  ).toBe(output);
 
   output = '<p>where<math><mi>R</mi></math>is the Rici tensor.</p>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    collapseInlineTagWhitespace: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      collapseInlineTagWhitespace: true,
+    }),
+  ).toBe(output);
 });
 
 test('ignore custom comments', async () => {
@@ -2788,38 +3162,45 @@ test('ignore custom comments', async () => {
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { removeComments: true })).toBe(input);
   expect(await minify(input, { ignoreCustomComments: false })).toBe(input);
-  expect(await minify(input, {
-    removeComments: true,
-    ignoreCustomComments: []
-  })).toBe('');
-  expect(await minify(input, {
-    removeComments: true,
-    ignoreCustomComments: false
-  })).toBe('');
+  expect(
+    await minify(input, {
+      removeComments: true,
+      ignoreCustomComments: [],
+    }),
+  ).toBe('');
+  expect(
+    await minify(input, {
+      removeComments: true,
+      ignoreCustomComments: false,
+    }),
+  ).toBe('');
 
   input = '<!-- htmlmin:ignore -->test<!-- htmlmin:ignore -->';
   const output = 'test';
   expect(await minify(input)).toBe(output);
   expect(await minify(input, { removeComments: true })).toBe(output);
   expect(await minify(input, { ignoreCustomComments: false })).toBe(output);
-  expect(await minify(input, {
-    removeComments: true,
-    ignoreCustomComments: []
-  })).toBe(output);
-  expect(await minify(input, {
-    removeComments: true,
-    ignoreCustomComments: false
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      ignoreCustomComments: [],
+    }),
+  ).toBe(output);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      ignoreCustomComments: false,
+    }),
+  ).toBe(output);
 
   input = '<!-- ko if: someExpressionGoesHere --><li>test</li><!-- /ko -->';
-  expect(await minify(input, {
-    removeComments: true,
-    // ignore knockout comments
-    ignoreCustomComments: [
-      /^\s+ko/,
-      /\/ko\s+$/
-    ]
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      removeComments: true,
+      // ignore knockout comments
+      ignoreCustomComments: [/^\s+ko/, /\/ko\s+$/],
+    }),
+  ).toBe(input);
 
   input = '<!--#include virtual="/cgi-bin/counter.pl" -->';
   expect(await minify(input)).toBe(input);
@@ -2831,38 +3212,45 @@ test('ignore custom comments', async () => {
 test('processScripts', async () => {
   const input = '<script type="text/ng-template"><!--test--><div>   <span> foobar </span> \n\n</div></script>';
   const output = '<script type="text/ng-template"><div><span>foobar</span></div></script>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    removeComments: true,
-    processScripts: ['text/ng-template']
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      removeComments: true,
+      processScripts: ['text/ng-template'],
+    }),
+  ).toBe(output);
 });
 
 test('ignore', async () => {
   let input, output;
 
-  input = '<!-- htmlmin:ignore --><div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div><!-- htmlmin:ignore -->' +
+  input =
+    '<!-- htmlmin:ignore --><div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div><!-- htmlmin:ignore -->' +
     '<div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div>';
-  output = '<div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div>' +
+  output =
+    '<div class="blah" style="color: red">\n   test   <span> <input disabled/>  foo </span>\n\n   </div>' +
     '<div class="blah" style="color: red">test <span><input disabled="disabled"> foo</span></div>';
   expect(await minify(input, { collapseWhitespace: true })).toBe(output);
 
   input = '<!-- htmlmin:ignore --><!-- htmlmin:ignore -->';
   expect(await minify(input)).toBe('');
 
-  input = '<p>.....</p><!-- htmlmin:ignore -->' +
+  input =
+    '<p>.....</p><!-- htmlmin:ignore -->' +
     '@for( $i = 0 ; $i < $criterions->count() ; $i++ )' +
     '<h1>{{ $criterions[$i]->value }}</h1>' +
     '@endfor' +
     '<!-- htmlmin:ignore --><p>....</p>';
-  output = '<p>.....</p>' +
+  output =
+    '<p>.....</p>' +
     '@for( $i = 0 ; $i < $criterions->count() ; $i++ )' +
     '<h1>{{ $criterions[$i]->value }}</h1>' +
     '@endfor' +
     '<p>....</p>';
   expect(await minify(input, { removeComments: true })).toBe(output);
 
-  input = '<!-- htmlmin:ignore --> <p class="logged"|cond="$is_logged === true" id="foo"> bar</p> <!-- htmlmin:ignore -->';
+  input =
+    '<!-- htmlmin:ignore --> <p class="logged"|cond="$is_logged === true" id="foo"> bar</p> <!-- htmlmin:ignore -->';
   output = ' <p class="logged"|cond="$is_logged === true" id="foo"> bar</p> ';
   expect(await minify(input)).toBe(output);
 
@@ -2914,10 +3302,12 @@ test('noscript', async () => {
   input = '<SCRIPT SRC="x"></SCRIPT><NOSCRIPT>x</NOSCRIPT>';
   expect(await minify(input)).toBe('<script src="x"></script><noscript>x</noscript>');
 
-  input = '<noscript>\n<!-- anchor linking to external file -->\n' +
+  input =
+    '<noscript>\n<!-- anchor linking to external file -->\n' +
     '<a href="#" onclick="javascript:">External Link</a>\n</noscript>';
   expect(await minify(input, { removeComments: true, collapseWhitespace: true, removeEmptyAttributes: true })).toBe(
-    '<noscript><a href="#">External Link</a></noscript>');
+    '<noscript><a href="#">External Link</a></noscript>',
+  );
 });
 
 test('max line length', async () => {
@@ -2930,31 +3320,27 @@ test('max line length', async () => {
   input = '<div data-attr="foo"></div>';
   expect(await minify(input, options)).toBe('<div data-attr="foo">\n</div>');
 
-  input = [
-    '<code>    hello   world   ',
-    '    world   hello  </code>'
-  ].join('\n');
+  input = ['<code>    hello   world   ', '    world   hello  </code>'].join('\n');
   expect(await minify(input)).toBe(input);
-  expect(await minify(input, options)).toBe([
-    '<code>',
-    '    hello   world   ',
-    '    world   hello  ',
-    '</code>'
-  ].join('\n'));
+  expect(await minify(input, options)).toBe(
+    ['<code>', '    hello   world   ', '    world   hello  ', '</code>'].join('\n'),
+  );
 
   expect(await minify('<p title="</p>">x</p>')).toBe('<p title="</p>">x</p>');
   expect(await minify('<p title=" <!-- hello world --> ">x</p>')).toBe('<p title=" <!-- hello world --> ">x</p>');
-  expect(await minify('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>')).toBe('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>');
+  expect(await minify('<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>')).toBe(
+    '<p title=" <![CDATA[ \n\n foobar baz ]]> ">x</p>',
+  );
   expect(await minify('<p foo-bar=baz>xxx</p>')).toBe('<p foo-bar="baz">xxx</p>');
   expect(await minify('<p foo:bar=baz>xxx</p>')).toBe('<p foo:bar="baz">xxx</p>');
 
   input = [
     '<div><div><div><div><div>',
     '<div><div><div><div><div>',
-    'i\'m 10 levels deep</div>',
+    "i'm 10 levels deep</div>",
     '</div></div></div></div>',
     '</div></div></div></div>',
-    '</div>'
+    '</div>',
   ];
   expect(await minify(input.join(''))).toBe(input.join(''));
   expect(await minify(input.join(''), options)).toBe(input.join('\n'));
@@ -2963,19 +3349,19 @@ test('max line length', async () => {
     '<div><div><?foo?><div>',
     '<div><div><?bar?><div>',
     '<div><div>',
-    'i\'m 9 levels deep</div>',
+    "i'm 9 levels deep</div>",
     '</div></div><%baz%></div>',
     '</div></div><%moo%></div>',
-    '</div>'
+    '</div>',
   ];
   expect(await minify(input.join(''))).toBe(input.join(''));
   expect(await minify(input.join(''), options)).toBe(input.join('\n'));
 
-  expect(await minify('<script>alert(\'<!--\')</script>', options)).toBe('<script>alert(\'<!--\')\n</script>');
-  input = '<script>\nalert(\'<!-- foo -->\')\n</script>';
-  expect(await minify('<script>alert(\'<!-- foo -->\')</script>', options)).toBe(input);
+  expect(await minify("<script>alert('<!--')</script>", options)).toBe("<script>alert('<!--')\n</script>");
+  input = "<script>\nalert('<!-- foo -->')\n</script>";
+  expect(await minify("<script>alert('<!-- foo -->')</script>", options)).toBe(input);
   expect(await minify(input, options)).toBe(input);
-  expect(await minify('<script>alert(\'-->\')</script>', options)).toBe('<script>alert(\'-->\')\n</script>');
+  expect(await minify("<script>alert('-->')</script>", options)).toBe("<script>alert('-->')\n</script>");
 
   expect(await minify('<a title="x"href=" ">foo</a>', options)).toBe('<a title="x" href="">foo\n</a>');
   expect(await minify('<p id=""class=""title="">x', options)).toBe('<p id="" class="" \ntitle="">x</p>');
@@ -2984,30 +3370,33 @@ test('max line length', async () => {
   input = '<span><button>Hit me\n</button></span>';
   expect(await minify('<span><button>Hit me</button></span>', options)).toBe(input);
   expect(await minify(input, options)).toBe(input);
-  expect(await minify('<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>', options)).toBe(
-    '<object \ntype="image/svg+xml" \ndata="image.svg"><div>\n[fallback image]</div>\n</object>'
-  );
+  expect(
+    await minify('<object type="image/svg+xml" data="image.svg"><div>[fallback image]</div></object>', options),
+  ).toBe('<object \ntype="image/svg+xml" \ndata="image.svg"><div>\n[fallback image]</div>\n</object>');
 
   expect(await minify('<ng-include src="x"></ng-include>', options)).toBe('<ng-include src="x">\n</ng-include>');
   expect(await minify('<ng:include src="x"></ng:include>', options)).toBe('<ng:include src="x">\n</ng:include>');
-  expect(await minify('<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>', options)).toBe(
-    '<ng-include \nsrc="\'views/partial-notification.html\'">\n</ng-include><div \nng-view=""></div>'
-  );
+  expect(
+    await minify('<ng-include src="\'views/partial-notification.html\'"></ng-include><div ng-view=""></div>', options),
+  ).toBe('<ng-include \nsrc="\'views/partial-notification.html\'">\n</ng-include><div \nng-view=""></div>');
 
-  input = [
-    '<some-tag-1></some-tag-1>',
-    '<some-tag-2></some-tag-2>',
-    '<some-tag-3>4',
-    '</some-tag-3>'
-  ];
+  input = ['<some-tag-1></some-tag-1>', '<some-tag-2></some-tag-2>', '<some-tag-3>4', '</some-tag-3>'];
   expect(await minify(input.join(''))).toBe(input.join(''));
   expect(await minify(input.join(''), options)).toBe(input.join('\n'));
 
   expect(await minify('[\']["]', options)).toBe('[\']["]');
-  expect(await minify('<a href="/test.html"><div>hey</div></a>', options)).toBe('<a href="/test.html">\n<div>hey</div></a>');
-  expect(await minify(':) <a href="http://example.com">link</a>', options)).toBe(':) <a \nhref="http://example.com">\nlink</a>');
-  expect(await minify(':) <a href="http://example.com">\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\nlink</a>');
-  expect(await minify(':) <a href="http://example.com">\n\nlink</a>', options)).toBe(':) <a \nhref="http://example.com">\n\nlink</a>');
+  expect(await minify('<a href="/test.html"><div>hey</div></a>', options)).toBe(
+    '<a href="/test.html">\n<div>hey</div></a>',
+  );
+  expect(await minify(':) <a href="http://example.com">link</a>', options)).toBe(
+    ':) <a \nhref="http://example.com">\nlink</a>',
+  );
+  expect(await minify(':) <a href="http://example.com">\nlink</a>', options)).toBe(
+    ':) <a \nhref="http://example.com">\nlink</a>',
+  );
+  expect(await minify(':) <a href="http://example.com">\n\nlink</a>', options)).toBe(
+    ':) <a \nhref="http://example.com">\n\nlink</a>',
+  );
 
   expect(await minify('<a href>ok</a>', options)).toBe('<a href>ok</a>');
 
@@ -3018,37 +3407,38 @@ test('max line length', async () => {
 test('custom attribute collapse', async () => {
   let input, output;
 
-  input = '<div data-bind="\n' +
+  input =
+    '<div data-bind="\n' +
     'css: {\n' +
     'fadeIn: selected(),\n' +
     'fadeOut: !selected()\n' +
     '},\n' +
     'visible: function () {\n' +
-    'return pageWeAreOn() == \'home\';\n' +
+    "return pageWeAreOn() == 'home';\n" +
     '}\n' +
     '">foo</div>';
-  output = '<div data-bind="css: {fadeIn: selected(),fadeOut: !selected()},visible: function () {return pageWeAreOn() == \'home\';}">foo</div>';
+  output =
+    '<div data-bind="css: {fadeIn: selected(),fadeOut: !selected()},visible: function () {return pageWeAreOn() == \'home\';}">foo</div>';
 
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { customAttrCollapse: /data-bind/ })).toBe(output);
 
-  input = '<div style="' +
-    'color: red;' +
-    'font-size: 100em;' +
-    '">bar</div>';
+  input = '<div style="' + 'color: red;' + 'font-size: 100em;' + '">bar</div>';
   output = '<div style="color: red;font-size: 100em;">bar</div>';
   expect(await minify(input, { customAttrCollapse: /style/ })).toBe(output);
 
-  input = '<div ' +
+  input =
+    '<div ' +
     'class="fragment square" ' +
     'ng-hide="square1.hide" ' +
     'ng-class="{ \n\n' +
-    '\'bounceInDown\': !square1.hide, ' +
-    '\'bounceOutDown\': square1.hide ' +
+    "'bounceInDown': !square1.hide, " +
+    "'bounceOutDown': square1.hide " +
     '}" ' +
     '> ' +
     '</div>';
-  output = '<div class="fragment square" ng-hide="square1.hide" ng-class="{\'bounceInDown\': !square1.hide, \'bounceOutDown\': square1.hide }"> </div>';
+  output =
+    '<div class="fragment square" ng-hide="square1.hide" ng-class="{\'bounceInDown\': !square1.hide, \'bounceOutDown\': square1.hide }"> </div>';
   expect(await minify(input, { customAttrCollapse: /ng-class/ })).toBe(output);
 });
 
@@ -3059,7 +3449,8 @@ test('custom attribute collapse with empty attribute value', async () => {
 });
 
 test('custom attribute collapse with newlines, whitespace, and carriage returns', async () => {
-  const input = '<div ng-class="{ \n\r' +
+  const input =
+    '<div ng-class="{ \n\r' +
     '               value:true, \n\r' +
     '               value2:false \n\r' +
     '               }"></div>';
@@ -3070,9 +3461,7 @@ test('custom attribute collapse with newlines, whitespace, and carriage returns'
 test('do not escape attribute value', async () => {
   let input;
 
-  input = '<div data=\'{\n' +
-    '\t"element": "<div class=\\"test\\"></div>\n"' +
-    '}\'></div>';
+  input = "<div data='{\n" + '\t"element": "<div class=\\"test\\"></div>\n"' + "}'></div>";
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { preventAttributesEscaping: true })).toBe(input);
 
@@ -3083,12 +3472,12 @@ test('do not escape attribute value', async () => {
 });
 
 test('quoteCharacter is single quote', async () => {
-  expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
-  expect(await minify('<div class="bar">foo</div>', { quoteCharacter: '\'' })).toBe('<div class=\'bar\'>foo</div>');
+  expect(await minify("<div class='bar'>foo</div>", { quoteCharacter: "'" })).toBe("<div class='bar'>foo</div>");
+  expect(await minify('<div class="bar">foo</div>', { quoteCharacter: "'" })).toBe("<div class='bar'>foo</div>");
 });
 
 test('quoteCharacter is not single quote or double quote', async () => {
-  expect(await minify('<div class=\'bar\'>foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
+  expect(await minify("<div class='bar'>foo</div>", { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
   expect(await minify('<div class="bar">foo</div>', { quoteCharacter: 'm' })).toBe('<div class="bar">foo</div>');
 });
 
@@ -3098,7 +3487,7 @@ test('remove space between attributes', async () => {
     collapseBooleanAttributes: true,
     keepClosingSlash: true,
     removeAttributeQuotes: true,
-    removeTagWhitespace: true
+    removeTagWhitespace: true,
   };
 
   input = '<input data-attr="example" value="hello world!" checked="checked">';
@@ -3128,7 +3517,8 @@ test('remove space between attributes', async () => {
 
 test('markups from Angular 2', async () => {
   let output;
-  const input = '<template ngFor #hero [ngForOf]="heroes">\n' +
+  const input =
+    '<template ngFor #hero [ngForOf]="heroes">\n' +
     '  <hero-detail *ngIf="hero" [hero]="hero"></hero-detail>\n' +
     '</template>\n' +
     '<form (ngSubmit)="onSubmit(theForm)" #theForm="ngForm">\n' +
@@ -3139,7 +3529,8 @@ test('markups from Angular 2', async () => {
     '  </div>\n' +
     '  <button type="submit" [disabled]="!theForm.form.valid">Submit</button>\n' +
     '</form>';
-  output = '<template ngFor #hero [ngForOf]="heroes">\n' +
+  output =
+    '<template ngFor #hero [ngForOf]="heroes">\n' +
     '  <hero-detail *ngIf="hero" [hero]="hero"></hero-detail>\n' +
     '</template>\n' +
     '<form (ngSubmit)="onSubmit(theForm)" #theForm="ngForm">\n' +
@@ -3150,7 +3541,8 @@ test('markups from Angular 2', async () => {
     '  <button type="submit" [disabled]="!theForm.form.valid">Submit</button>\n' +
     '</form>';
   expect(await minify(input, { caseSensitive: true })).toBe(output);
-  output = '<template ngFor #hero [ngForOf]=heroes>' +
+  output =
+    '<template ngFor #hero [ngForOf]=heroes>' +
     '<hero-detail *ngIf=hero [hero]=hero></hero-detail>' +
     '</template>' +
     '<form (ngSubmit)=onSubmit(theForm) #theForm=ngForm>' +
@@ -3160,20 +3552,22 @@ test('markups from Angular 2', async () => {
     '</div>' +
     '<button type=submit [disabled]=!theForm.form.valid>Submit</button>' +
     '</form>';
-  expect(await minify(input, {
-    caseSensitive: true,
-    collapseBooleanAttributes: true,
-    collapseWhitespace: true,
-    removeAttributeQuotes: true,
-    removeComments: true,
-    removeEmptyAttributes: true,
-    removeOptionalTags: true,
-    removeRedundantAttributes: true,
-    removeScriptTypeAttributes: true,
-    removeStyleLinkTypeAttributes: true,
-    removeTagWhitespace: true,
-    useShortDoctype: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      caseSensitive: true,
+      collapseBooleanAttributes: true,
+      collapseWhitespace: true,
+      removeAttributeQuotes: true,
+      removeComments: true,
+      removeEmptyAttributes: true,
+      removeOptionalTags: true,
+      removeRedundantAttributes: true,
+      removeScriptTypeAttributes: true,
+      removeStyleLinkTypeAttributes: true,
+      removeTagWhitespace: true,
+      useShortDoctype: true,
+    }),
+  ).toBe(output);
 });
 
 test('auto-generated tags', async () => {
@@ -3196,25 +3590,31 @@ test('auto-generated tags', async () => {
   input = '<a href="#"><div>Well, look at me! I\'m a div!</div></a>';
   output = '<a href="#"><div>Well, look at me! I\'m a div!</div>';
   expect(await minify(input, { html5: false, includeAutoGeneratedTags: false })).toBe(output);
-  expect(await minify('<p id=""class=""title="">x', {
-    maxLineLength: 25,
-    includeAutoGeneratedTags: false
-  })).toBe('<p id="" class="" \ntitle="">x');
+  expect(
+    await minify('<p id=""class=""title="">x', {
+      maxLineLength: 25,
+      includeAutoGeneratedTags: false,
+    }),
+  ).toBe('<p id="" class="" \ntitle="">x');
 
   input = '<p>foo';
   expect(await minify(input, { includeAutoGeneratedTags: false })).toBe(input);
-  expect(await minify(input, {
-    includeAutoGeneratedTags: false,
-    removeOptionalTags: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      includeAutoGeneratedTags: false,
+      removeOptionalTags: true,
+    }),
+  ).toBe(input);
 
   input = '</p>';
   expect(await minify(input, { includeAutoGeneratedTags: false })).toBe(input);
   output = '';
-  expect(await minify(input, {
-    includeAutoGeneratedTags: false,
-    removeOptionalTags: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      includeAutoGeneratedTags: false,
+      removeOptionalTags: true,
+    }),
+  ).toBe(output);
 
   input = '<select><option>foo<option>bar</select>';
   expect(await minify(input, { includeAutoGeneratedTags: false })).toBe(input);
@@ -3230,77 +3630,82 @@ test('auto-generated tags', async () => {
 test('sort attributes', async () => {
   let input, output;
 
-  input = '<link href="foo">' +
+  input =
+    '<link href="foo">' +
     '<link rel="bar" href="baz">' +
     '<link type="text/css" href="app.css" rel="stylesheet" async>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { sortAttributes: false })).toBe(input);
-  output = '<link href="foo">' +
+  output =
+    '<link href="foo">' +
     '<link href="baz" rel="bar">' +
     '<link href="app.css" rel="stylesheet" async type="text/css">';
   expect(await minify(input, { sortAttributes: true })).toBe(output);
 
-  input = '<link href="foo">' +
+  input =
+    '<link href="foo">' +
     '<link rel="bar" href="baz">' +
     '<script type="text/html"><link type="text/css" href="app.css" rel="stylesheet" async></script>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { sortAttributes: false })).toBe(input);
-  output = '<link href="foo">' +
+  output =
+    '<link href="foo">' +
     '<link href="baz" rel="bar">' +
     '<script type="text/html"><link type="text/css" href="app.css" rel="stylesheet" async></script>';
   expect(await minify(input, { sortAttributes: true })).toBe(output);
-  output = '<link href="foo">' +
+  output =
+    '<link href="foo">' +
     '<link href="baz" rel="bar">' +
     '<script type="text/html"><link href="app.css" rel="stylesheet" async type="text/css"></script>';
-  expect(await minify(input, {
-    processScripts: [
-      'text/html'
-    ],
-    sortAttributes: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      processScripts: ['text/html'],
+      sortAttributes: true,
+    }),
+  ).toBe(output);
 
-  input = '<link type="text/css" href="foo.css">' +
+  input =
+    '<link type="text/css" href="foo.css">' +
     '<link rel="stylesheet" type="text/abc" href="bar.css">' +
     '<link href="baz.css">';
-  output = '<link href="foo.css" type="text/css">' +
+  output =
+    '<link href="foo.css" type="text/css">' +
     '<link href="bar.css" type="text/abc" rel="stylesheet">' +
     '<link href="baz.css">';
   expect(await minify(input, { sortAttributes: true })).toBe(output);
-  output = '<link href="foo.css">' +
-    '<link href="bar.css" rel="stylesheet" type="text/abc">' +
-    '<link href="baz.css">';
-  expect(await minify(input, {
-    removeStyleLinkTypeAttributes: true,
-    sortAttributes: true
-  })).toBe(output);
+  output = '<link href="foo.css">' + '<link href="bar.css" rel="stylesheet" type="text/abc">' + '<link href="baz.css">';
+  expect(
+    await minify(input, {
+      removeStyleLinkTypeAttributes: true,
+      sortAttributes: true,
+    }),
+  ).toBe(output);
 
-  input = '<a foo moo></a>' +
-    '<a bar foo></a>' +
-    '<a baz bar foo></a>' +
-    '<a baz foo moo></a>' +
-    '<a moo baz></a>';
+  input = '<a foo moo></a>' + '<a bar foo></a>' + '<a baz bar foo></a>' + '<a baz foo moo></a>' + '<a moo baz></a>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { sortAttributes: false })).toBe(input);
-  output = '<a foo moo></a>' +
-    '<a foo bar></a>' +
-    '<a foo bar baz></a>' +
-    '<a foo baz moo></a>' +
-    '<a baz moo></a>';
+  output = '<a foo moo></a>' + '<a foo bar></a>' + '<a foo bar baz></a>' + '<a foo baz moo></a>' + '<a baz moo></a>';
   expect(await minify(input, { sortAttributes: true })).toBe(output);
 
-  input = '<span nav_sv_fo_v_column <#=(j === 0) ? \'nav_sv_fo_v_first\' : \'\' #> foo_bar></span>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/]
-  })).toBe(input);
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/],
-    sortAttributes: false
-  })).toBe(input);
-  output = '<span foo_bar nav_sv_fo_v_column <#=(j === 0) ? \'nav_sv_fo_v_first\' : \'\' #> ></span>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/],
-    sortAttributes: true
-  })).toBe(output);
+  input = "<span nav_sv_fo_v_column <#=(j === 0) ? 'nav_sv_fo_v_first' : '' #> foo_bar></span>";
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+    }),
+  ).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+      sortAttributes: false,
+    }),
+  ).toBe(input);
+  output = "<span foo_bar nav_sv_fo_v_column <#=(j === 0) ? 'nav_sv_fo_v_first' : '' #> ></span>";
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+      sortAttributes: true,
+    }),
+  ).toBe(output);
 
   input = '<a 0 1 2 3 4 5 6 7 8 9 a b c d e f g h i j k l m n o p q r s t u v w x y z></a>';
   expect(await minify(input, { sortAttributes: true })).toBe(input);
@@ -3309,14 +3714,16 @@ test('sort attributes', async () => {
 test('sort style classes', async () => {
   let input, output;
 
-  input = '<a class="foo moo"></a>' +
+  input =
+    '<a class="foo moo"></a>' +
     '<b class="bar foo"></b>' +
     '<i class="baz bar foo"></i>' +
     '<s class="baz foo moo"></s>' +
     '<u class="moo baz"></u>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { sortClassName: false })).toBe(input);
-  output = '<a class="foo moo"></a>' +
+  output =
+    '<a class="foo moo"></a>' +
     '<b class="foo bar"></b>' +
     '<i class="foo bar baz"></i>' +
     '<s class="foo baz moo"></s>' +
@@ -3330,18 +3737,24 @@ test('sort style classes', async () => {
   output = '<a class="baz foo moo bar"></a>';
   expect(await minify(input, { sortClassName: true })).toBe(output);
 
-  input = '<div class="nav_sv_fo_v_column <#=(j === 0) ? \'nav_sv_fo_v_first\' : \'\' #> foo_bar"></div>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/]
-  })).toBe(input);
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/],
-    sortClassName: false
-  })).toBe(input);
-  expect(await minify(input, {
-    ignoreCustomFragments: [/<#[\s\S]*?#>/],
-    sortClassName: true
-  })).toBe(input);
+  input = "<div class=\"nav_sv_fo_v_column <#=(j === 0) ? 'nav_sv_fo_v_first' : '' #> foo_bar\"></div>";
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+    }),
+  ).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+      sortClassName: false,
+    }),
+  ).toBe(input);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/<#[\s\S]*?#>/],
+      sortClassName: true,
+    }),
+  ).toBe(input);
 
   input = '<a class="0 1 2 3 4 5 6 7 8 9 a b c d e f g h i j k l m n o p q r s t u v w x y z"></a>';
   expect(await minify(input, { sortClassName: false })).toBe(input);
@@ -3353,45 +3766,55 @@ test('sort style classes', async () => {
   expect(await minify(input, { sortClassName: true })).toBe(output);
 
   input = '<span class="sprite sprite-{{sprite}}"></span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [/{{.*?}}/],
-    removeAttributeQuotes: true,
-    sortClassName: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/{{.*?}}/],
+      removeAttributeQuotes: true,
+      sortClassName: true,
+    }),
+  ).toBe(input);
 
   input = '<span class="{{sprite}}-sprite sprite"></span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [/{{.*?}}/],
-    removeAttributeQuotes: true,
-    sortClassName: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/{{.*?}}/],
+      removeAttributeQuotes: true,
+      sortClassName: true,
+    }),
+  ).toBe(input);
 
   input = '<span class="sprite-{{sprite}}-sprite"></span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [/{{.*?}}/],
-    removeAttributeQuotes: true,
-    sortClassName: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/{{.*?}}/],
+      removeAttributeQuotes: true,
+      sortClassName: true,
+    }),
+  ).toBe(input);
 
   input = '<span class="{{sprite}}"></span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [/{{.*?}}/],
-    removeAttributeQuotes: true,
-    sortClassName: true
-  })).toBe(input);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/{{.*?}}/],
+      removeAttributeQuotes: true,
+      sortClassName: true,
+    }),
+  ).toBe(input);
 
   input = '<span class={{sprite}}></span>';
   output = '<span class="{{sprite}}"></span>';
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    ignoreCustomFragments: [/{{.*?}}/],
-    removeAttributeQuotes: true,
-    sortClassName: true
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      ignoreCustomFragments: [/{{.*?}}/],
+      removeAttributeQuotes: true,
+      sortClassName: true,
+    }),
+  ).toBe(output);
 
   input = '<div class></div>';
   expect(await minify(input, { sortClassName: false })).toBe(input);
@@ -3445,73 +3868,86 @@ test('decode entity characters', async () => {
 });
 
 test('tests from PHPTAL', async () => {
-  await Promise.all([
-    // trailing </p> removed by minifier, but not by PHPTAL
-    ['<p>foo bar baz', '<p>foo     \t bar\n\n\n baz</p>'],
-    ['<p>foo bar<pre>  \tfoo\t   \nbar   </pre>', '<p>foo   \t\n bar</p><pre>  \tfoo\t   \nbar   </pre>'],
-    ['<p>foo <a href="">bar </a>baz', '<p>foo <a href=""> bar </a> baz  </p>'],
-    ['<p>foo <a href="">bar </a>baz', ' <p>foo <a href=""> bar </a>baz </p>'],
-    ['<p>foo<a href=""> bar </a>baz', ' <p> foo<a href=""> bar </a>baz </p>  '],
-    ['<p>foo <a href="">bar</a> baz', ' <p> foo <a href="">bar</a> baz</p>'],
-    ['<p>foo<br>', '<p>foo <br/></p>'],
-    // PHPTAL remove whitespace after 'foo' - problematic if <span> is used as icon font
-    ['<p>foo <span></span>', '<p>foo <span></span></p>'],
-    ['<p>foo <span></span>', '<p>foo <span></span> </p>'],
-    // comments removed by minifier, but not by PHPTAL
-    ['<p>foo', '<p>foo <!-- --> </p>'],
-    ['<div>a<div>b</div>c<div>d</div>e</div>', '<div>a <div>b</div> c <div> d </div> e </div>'],
-    // unary slashes removed by minifier, but not by PHPTAL
-    ['<div><img></div>', '<div> <img/> </div>'],
-    ['<div>x <img></div>', '<div> x <img/> </div>'],
-    ['<div>x <img> y</div>', '<div> x <img/> y </div>'],
-    ['<div><img> y</div>', '<div><img/> y </div>'],
-    ['<div><button>Z</button></div>', '<div> <button>Z</button> </div>'],
-    ['<div>x <button>Z</button></div>', '<div> x <button>Z</button> </div>'],
-    ['<div>x <button>Z</button> y</div>', '<div> x <button>Z</button> y </div>'],
-    ['<div><button>Z</button> y</div>', '<div><button>Z</button> y </div>'],
-    ['<div><button>Z</button></div>', '<div> <button> Z </button> </div>'],
-    ['<div>x <button>Z</button></div>', '<div> x <button> Z </button> </div>'],
-    ['<div>x <button>Z</button> y</div>', '<div> x <button> Z </button> y </div>'],
-    ['<div><button>Z</button> y</div>', '<div><button> Z </button> y </div>'],
-    ['<script>//foo\nbar()</script>', '<script>//foo\nbar()</script>'],
-    // optional tags removed by minifier, but not by PHPTAL
-    // parser cannot handle <script/>
+  await Promise.all(
     [
-      '<title></title><link><script>" ";</script><script></script><meta><style></style>',
-      '<html >\n' +
-      '<head > <title > </title > <link /> <script >" ";</script> <script>\n</script>\n' +
-      ' <meta /> <style\n' +
-      '  > </style >\n' +
-      '   </head > </html>'
-    ],
-    ['<div><p>test 123<p>456<ul><li>x</ul></div>', '<div> <p> test 123 </p> <p> 456 </p> <ul> <li>x</li> </ul> </div>'],
-    ['<div><p>test 123<pre> 456 </pre><p>x</div>', '<div> <p> test 123 </p> <pre> 456 </pre> <p> x </p> </div>'],
-    /* minifier does not assume <li> as "display: inline"
+      // trailing </p> removed by minifier, but not by PHPTAL
+      ['<p>foo bar baz', '<p>foo     \t bar\n\n\n baz</p>'],
+      ['<p>foo bar<pre>  \tfoo\t   \nbar   </pre>', '<p>foo   \t\n bar</p><pre>  \tfoo\t   \nbar   </pre>'],
+      ['<p>foo <a href="">bar </a>baz', '<p>foo <a href=""> bar </a> baz  </p>'],
+      ['<p>foo <a href="">bar </a>baz', ' <p>foo <a href=""> bar </a>baz </p>'],
+      ['<p>foo<a href=""> bar </a>baz', ' <p> foo<a href=""> bar </a>baz </p>  '],
+      ['<p>foo <a href="">bar</a> baz', ' <p> foo <a href="">bar</a> baz</p>'],
+      ['<p>foo<br>', '<p>foo <br/></p>'],
+      // PHPTAL remove whitespace after 'foo' - problematic if <span> is used as icon font
+      ['<p>foo <span></span>', '<p>foo <span></span></p>'],
+      ['<p>foo <span></span>', '<p>foo <span></span> </p>'],
+      // comments removed by minifier, but not by PHPTAL
+      ['<p>foo', '<p>foo <!-- --> </p>'],
+      ['<div>a<div>b</div>c<div>d</div>e</div>', '<div>a <div>b</div> c <div> d </div> e </div>'],
+      // unary slashes removed by minifier, but not by PHPTAL
+      ['<div><img></div>', '<div> <img/> </div>'],
+      ['<div>x <img></div>', '<div> x <img/> </div>'],
+      ['<div>x <img> y</div>', '<div> x <img/> y </div>'],
+      ['<div><img> y</div>', '<div><img/> y </div>'],
+      ['<div><button>Z</button></div>', '<div> <button>Z</button> </div>'],
+      ['<div>x <button>Z</button></div>', '<div> x <button>Z</button> </div>'],
+      ['<div>x <button>Z</button> y</div>', '<div> x <button>Z</button> y </div>'],
+      ['<div><button>Z</button> y</div>', '<div><button>Z</button> y </div>'],
+      ['<div><button>Z</button></div>', '<div> <button> Z </button> </div>'],
+      ['<div>x <button>Z</button></div>', '<div> x <button> Z </button> </div>'],
+      ['<div>x <button>Z</button> y</div>', '<div> x <button> Z </button> y </div>'],
+      ['<div><button>Z</button> y</div>', '<div><button> Z </button> y </div>'],
+      ['<script>//foo\nbar()</script>', '<script>//foo\nbar()</script>'],
+      // optional tags removed by minifier, but not by PHPTAL
+      // parser cannot handle <script/>
+      [
+        '<title></title><link><script>" ";</script><script></script><meta><style></style>',
+        '<html >\n' +
+          '<head > <title > </title > <link /> <script >" ";</script> <script>\n</script>\n' +
+          ' <meta /> <style\n' +
+          '  > </style >\n' +
+          '   </head > </html>',
+      ],
+      [
+        '<div><p>test 123<p>456<ul><li>x</ul></div>',
+        '<div> <p> test 123 </p> <p> 456 </p> <ul> <li>x</li> </ul> </div>',
+      ],
+      ['<div><p>test 123<pre> 456 </pre><p>x</div>', '<div> <p> test 123 </p> <pre> 456 </pre> <p> x </p> </div>'],
+      /* minifier does not assume <li> as "display: inline"
     ['<div><ul><li><a>a </a></li><li>b </li><li>c</li></ul></div>', '<div> <ul> <li> <a> a </a> </li> <li> b </li> <li> c </li> </ul> </div>'], */
-    ['<table>x<tr>x<td>foo</td>x</tr>x</table>', '<table> x <tr> x <td> foo </td> x </tr> x </table>'],
-    ['<select>x<option></option>x<optgroup>x<option></option>x</optgroup>x</select>', '<select> x <option> </option> x <optgroup> x <option> </option> x </optgroup> x </select> '],
-    // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
-    // attribute ordering differences between minifier and PHPTAL
-    ['<img alt=x height=5 src=foo width=10>', '<img width="10" height="5" src="foo" alt="x" />'],
-    ['<img alpha=1 beta=2 gamma=3>', '<img gamma="3" alpha="1" beta="2" />'],
-    ['<pre>\n\n\ntest</pre>', '<pre>\n\n\ntest</pre>'],
-    /* single line-break preceding <pre> is redundant, assuming <pre> is block element
+      ['<table>x<tr>x<td>foo</td>x</tr>x</table>', '<table> x <tr> x <td> foo </td> x </tr> x </table>'],
+      [
+        '<select>x<option></option>x<optgroup>x<option></option>x</optgroup>x</select>',
+        '<select> x <option> </option> x <optgroup> x <option> </option> x </optgroup> x </select> ',
+      ],
+      // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
+      // attribute ordering differences between minifier and PHPTAL
+      ['<img alt=x height=5 src=foo width=10>', '<img width="10" height="5" src="foo" alt="x" />'],
+      ['<img alpha=1 beta=2 gamma=3>', '<img gamma="3" alpha="1" beta="2" />'],
+      ['<pre>\n\n\ntest</pre>', '<pre>\n\n\ntest</pre>'],
+      /* single line-break preceding <pre> is redundant, assuming <pre> is block element
     ['<pre>test</pre>', '<pre>\ntest</pre>'], */
-    // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
-    // attribute ordering differences between minifier and PHPTAL
-    // redundant inter-attribute spacing removed by minifier, but not by PHPTAL
-    ['<meta content="text/plain;charset=UTF-8"http-equiv=Content-Type>', '<meta http-equiv=\'Content-Type\' content=\'text/plain;charset=UTF-8\'/>'],
-    /* minifier does not optimise <meta/> in HTML5 mode
+      // closing slash and optional attribute quotes removed by minifier, but not by PHPTAL
+      // attribute ordering differences between minifier and PHPTAL
+      // redundant inter-attribute spacing removed by minifier, but not by PHPTAL
+      [
+        '<meta content="text/plain;charset=UTF-8"http-equiv=Content-Type>',
+        "<meta http-equiv='Content-Type' content='text/plain;charset=UTF-8'/>",
+      ],
+      /* minifier does not optimise <meta/> in HTML5 mode
     ['<meta charset=utf-8>', '<meta http-equiv=\'Content-Type\' content=\'text/plain;charset=UTF-8\'/>'], */
-    /* minifier does not optimise <script/> in HTML5 mode
+      /* minifier does not optimise <script/> in HTML5 mode
     [
       '<script></script><style></style>',
       '<script type=\'text/javascript ;charset=utf-8\'\n' +
       'language=\'javascript\'></script><style type=\'text/css\'></style>'
     ], */
-    // minifier removes more javascript type attributes than PHPTAL
-    ['<script></script><script type=text/hack></script>', '<script type="text/javascript;e4x=1"></script><script type="text/hack"></script>']
-    /* trim "title" attribute value in <a>
+      // minifier removes more javascript type attributes than PHPTAL
+      [
+        '<script></script><script type=text/hack></script>',
+        '<script type="text/javascript;e4x=1"></script><script type="text/hack"></script>',
+      ],
+      /* trim "title" attribute value in <a>
     [
       '<title>Foo</title><p><a title="x"href=test>x </a>xu</p><br>foo',
       '<html> <head> <title> Foo </title> </head>\n' +
@@ -3522,27 +3958,34 @@ test('tests from PHPTAL', async () => {
       '<br/>\n' +
       'foo</body> </html>  <!-- bla -->'
     ] */
-  ].map(async function (tokens) {
-    expect(await minify(tokens[1], {
-      collapseBooleanAttributes: true,
-      collapseWhitespace: true,
-      removeAttributeQuotes: true,
-      removeComments: true,
-      removeEmptyAttributes: true,
-      removeOptionalTags: true,
-      removeRedundantAttributes: true,
-      removeScriptTypeAttributes: true,
-      removeStyleLinkTypeAttributes: true,
-      removeTagWhitespace: true,
-      sortAttributes: true,
-      useShortDoctype: true
-    })).toBe(tokens[0]);
-  }));
+    ].map(async function (tokens) {
+      expect(
+        await minify(tokens[1], {
+          collapseBooleanAttributes: true,
+          collapseWhitespace: true,
+          removeAttributeQuotes: true,
+          removeComments: true,
+          removeEmptyAttributes: true,
+          removeOptionalTags: true,
+          removeRedundantAttributes: true,
+          removeScriptTypeAttributes: true,
+          removeStyleLinkTypeAttributes: true,
+          removeTagWhitespace: true,
+          sortAttributes: true,
+          useShortDoctype: true,
+        }),
+      ).toBe(tokens[0]);
+    }),
+  );
 });
 
 test('canCollapseWhitespace and canTrimWhitespace hooks', async () => {
   function canCollapseAndTrimWhitespace(tagName, attrs, defaultFn) {
-    if ((attrs || []).some(function (attr) { return attr.name === 'class' && attr.value === 'leaveAlone'; })) {
+    if (
+      (attrs || []).some(function (attr) {
+        return attr.name === 'class' && attr.value === 'leaveAlone';
+      })
+    ) {
       return false;
     }
     return defaultFn(tagName, attrs);
@@ -3551,43 +3994,51 @@ test('canCollapseWhitespace and canTrimWhitespace hooks', async () => {
   let input = '<div class="leaveAlone"><span> </span> foo  bar</div>';
   let output = '<div class="leaveAlone"><span> </span> foo  bar</div>';
 
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    canTrimWhitespace: canCollapseAndTrimWhitespace,
-    canCollapseWhitespace: canCollapseAndTrimWhitespace
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      canTrimWhitespace: canCollapseAndTrimWhitespace,
+      canCollapseWhitespace: canCollapseAndTrimWhitespace,
+    }),
+  ).toBe(output);
 
   // Regression test: Previously the first </div> would clear the internal
   // stackNo{Collapse,Trim}Whitespace, so that ' foo  bar' turned into ' foo bar'
   input = '<div class="leaveAlone"><div></div><span> </span> foo  bar</div>';
   output = '<div class="leaveAlone"><div></div><span> </span> foo  bar</div>';
 
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    canTrimWhitespace: canCollapseAndTrimWhitespace,
-    canCollapseWhitespace: canCollapseAndTrimWhitespace
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      canTrimWhitespace: canCollapseAndTrimWhitespace,
+      canCollapseWhitespace: canCollapseAndTrimWhitespace,
+    }),
+  ).toBe(output);
 
   // Make sure that the stack does get reset when leaving the element for which
   // the hooks returned false:
   input = '<div class="leaveAlone"></div><div> foo  bar </div>';
   output = '<div class="leaveAlone"></div><div>foo bar</div>';
 
-  expect(await minify(input, {
-    collapseWhitespace: true,
-    canTrimWhitespace: canCollapseAndTrimWhitespace,
-    canCollapseWhitespace: canCollapseAndTrimWhitespace
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      collapseWhitespace: true,
+      canTrimWhitespace: canCollapseAndTrimWhitespace,
+      canCollapseWhitespace: canCollapseAndTrimWhitespace,
+    }),
+  ).toBe(output);
 });
 
 test('minify Content-Security-Policy', async () => {
   let input, output;
 
-  input = '<meta Http-Equiv="Content-Security-Policy"\t\t\t\tContent="default-src \'self\';\n\n\t\timg-src https://*;">';
+  input =
+    '<meta Http-Equiv="Content-Security-Policy"\t\t\t\tContent="default-src \'self\';\n\n\t\timg-src https://*;">';
   output = '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(output);
 
-  input = '<meta http-equiv="content-security-policy"\t\t\t\tcontent="default-src \'self\';\n\n\t\timg-src https://*;">';
+  input =
+    '<meta http-equiv="content-security-policy"\t\t\t\tcontent="default-src \'self\';\n\n\t\timg-src https://*;">';
   output = '<meta http-equiv="content-security-policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(output);
 
@@ -3598,10 +4049,12 @@ test('minify Content-Security-Policy', async () => {
 test('minify CSS multiple ignore in single warning', async () => {
   const input = '<style type="text/css">\n{% ignore1 %}\na {\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
   const output = '<style type="text/css">\n{% ignore1 %}\na{\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
-  expect(await minify(input, {
-    ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
-    minifyCSS: {
-      level: 0
-    }
-  })).toBe(output);
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
+      minifyCSS: {
+        level: 0,
+      },
+    }),
+  ).toBe(output);
 });

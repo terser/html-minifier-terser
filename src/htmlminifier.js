@@ -7,7 +7,6 @@ import { HTMLParser, endTag } from './htmlparser.js';
 import TokenChain from './tokenchain.js';
 import { replaceAsync } from './utils.js';
 
-
 /**
  * @typedef {Object} MinifyOptions
  *
@@ -167,22 +166,28 @@ function trimWhitespace(str) {
 
 function collapseWhitespaceAll(str) {
   // Non-breaking space is specifically handled inside the replacer function here:
-  return str && str.replace(/[ \n\r\t\f\xA0]+/g, function (spaces) {
-    return spaces === '\t' ? '\t' : spaces.replace(/(^|\xA0+)[^\xA0]+/g, '$1 ');
-  });
+  return (
+    str &&
+    str.replace(/[ \n\r\t\f\xA0]+/g, function (spaces) {
+      return spaces === '\t' ? '\t' : spaces.replace(/(^|\xA0+)[^\xA0]+/g, '$1 ');
+    })
+  );
 }
 
 function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
-  let lineBreakBefore = ''; let lineBreakAfter = '';
+  let lineBreakBefore = '';
+  let lineBreakAfter = '';
 
   if (options.preserveLineBreaks) {
-    str = str.replace(/^[ \n\r\t\f]*?[\n\r][ \n\r\t\f]*/, function () {
-      lineBreakBefore = '\n';
-      return '';
-    }).replace(/[ \n\r\t\f]*?[\n\r][ \n\r\t\f]*$/, function () {
-      lineBreakAfter = '\n';
-      return '';
-    });
+    str = str
+      .replace(/^[ \n\r\t\f]*?[\n\r][ \n\r\t\f]*/, function () {
+        lineBreakBefore = '\n';
+        return '';
+      })
+      .replace(/[ \n\r\t\f]*?[\n\r][ \n\r\t\f]*$/, function () {
+        lineBreakAfter = '\n';
+        return '';
+      });
   }
 
   if (trimLeft) {
@@ -216,8 +221,10 @@ function collapseWhitespace(str, options, trimLeft, trimRight, collapseAll) {
 }
 
 // non-empty tags that will maintain whitespace around them
+// oxfmt-ignore
 const inlineTags = new Set(['a', 'abbr', 'acronym', 'b', 'bdi', 'bdo', 'big', 'button', 'cite', 'code', 'del', 'dfn', 'em', 'font', 'i', 'ins', 'kbd', 'label', 'mark', 'math', 'nobr', 'object', 'q', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'select', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'svg', 'textarea', 'time', 'tt', 'u', 'var']);
 // non-empty tags that will maintain whitespace within them
+// oxfmt-ignore
 const inlineTextTags = new Set(['a', 'abbr', 'acronym', 'b', 'big', 'del', 'em', 'font', 'i', 'ins', 'kbd', 'mark', 'nobr', 'rp', 's', 'samp', 'small', 'span', 'strike', 'strong', 'sub', 'sup', 'time', 'tt', 'u', 'var']);
 // self-closing tags that will maintain whitespace around them
 const selfClosingInlineTags = new Set(['comment', 'img', 'input', 'wbr']);
@@ -250,7 +257,7 @@ function isIgnoredComment(text, options) {
 function isEventAttribute(attrName, options) {
   const patterns = options.customEventAttributes;
   if (patterns) {
-    for (let i = patterns.length; i--;) {
+    for (let i = patterns.length; i--; ) {
       if (patterns[i].test(attrName)) {
         return true;
       }
@@ -266,7 +273,7 @@ function canRemoveAttributeQuotes(value) {
 }
 
 function attributesInclude(attributes, attribute) {
-  for (let i = attributes.length; i--;) {
+  for (let i = attributes.length; i--; ) {
     if (attributes[i].name.toLowerCase() === attribute) {
       return true;
     }
@@ -278,29 +285,12 @@ function isAttributeRedundant(tag, attrName, attrValue, attrs) {
   attrValue = attrValue ? trimWhitespace(attrValue.toLowerCase()) : '';
 
   return (
-    (tag === 'script' &&
-      attrName === 'language' &&
-      attrValue === 'javascript') ||
-
-    (tag === 'form' &&
-      attrName === 'method' &&
-      attrValue === 'get') ||
-
-    (tag === 'input' &&
-      attrName === 'type' &&
-      attrValue === 'text') ||
-
-    (tag === 'script' &&
-      attrName === 'charset' &&
-      !attributesInclude(attrs, 'src')) ||
-
-    (tag === 'a' &&
-      attrName === 'name' &&
-      attributesInclude(attrs, 'id')) ||
-
-    (tag === 'area' &&
-      attrName === 'shape' &&
-      attrValue === 'rect')
+    (tag === 'script' && attrName === 'language' && attrValue === 'javascript') ||
+    (tag === 'form' && attrName === 'method' && attrValue === 'get') ||
+    (tag === 'input' && attrName === 'type' && attrValue === 'text') ||
+    (tag === 'script' && attrName === 'charset' && !attributesInclude(attrs, 'src')) ||
+    (tag === 'a' && attrName === 'name' && attributesInclude(attrs, 'id')) ||
+    (tag === 'area' && attrName === 'shape' && attrValue === 'rect')
   );
 }
 
@@ -313,12 +303,10 @@ const executableScriptsMimetypes = new Set([
   'application/javascript',
   'application/x-javascript',
   'application/ecmascript',
-  'module'
+  'module',
 ]);
 
-const keepScriptsMimetypes = new Set([
-  'module'
-]);
+const keepScriptsMimetypes = new Set(['module']);
 
 function isScriptTypeAttribute(attrValue = '') {
   attrValue = trimWhitespace(attrValue.split(/;/, 2)[0]).toLowerCase();
@@ -361,6 +349,7 @@ function isStyleSheet(tag, attrs) {
   return true;
 }
 
+// oxfmt-ignore
 const isSimpleBoolean = new Set(['allowfullscreen', 'async', 'autofocus', 'autoplay', 'checked', 'compact', 'controls', 'declare', 'default', 'defaultchecked', 'defaultmuted', 'defaultselected', 'defer', 'disabled', 'enabled', 'formnovalidate', 'hidden', 'indeterminate', 'inert', 'ismap', 'itemscope', 'loop', 'multiple', 'muted', 'nohref', 'noresize', 'noshade', 'novalidate', 'nowrap', 'open', 'pauseonexit', 'readonly', 'required', 'reversed', 'scoped', 'seamless', 'selected', 'sortable', 'truespeed', 'typemustmatch', 'visible']);
 const isBooleanValue = new Set(['true', 'false']);
 
@@ -444,20 +433,23 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
     return attrValue;
   } else if (isSrcset(attrName, tag)) {
     // https://html.spec.whatwg.org/multipage/embedded-content.html#attr-img-srcset
-    attrValue = trimWhitespace(attrValue).split(/\s+,\s*|\s*,\s+/).map(function (candidate) {
-      let url = candidate;
-      let descriptor = '';
-      const match = candidate.match(/\s+([1-9][0-9]*w|[0-9]+(?:\.[0-9]+)?x)$/);
-      if (match) {
-        url = url.slice(0, -match[0].length);
-        const num = +match[1].slice(0, -1);
-        const suffix = match[1].slice(-1);
-        if (num !== 1 || suffix !== 'x') {
-          descriptor = ' ' + num + suffix;
+    attrValue = trimWhitespace(attrValue)
+      .split(/\s+,\s*|\s*,\s+/)
+      .map(function (candidate) {
+        let url = candidate;
+        let descriptor = '';
+        const match = candidate.match(/\s+([1-9][0-9]*w|[0-9]+(?:\.[0-9]+)?x)$/);
+        if (match) {
+          url = url.slice(0, -match[0].length);
+          const num = +match[1].slice(0, -1);
+          const suffix = match[1].slice(-1);
+          if (num !== 1 || suffix !== 'x') {
+            descriptor = ' ' + num + suffix;
+          }
         }
-      }
-      return options.minifyURLs(url) + descriptor;
-    }).join(', ');
+        return options.minifyURLs(url) + descriptor;
+      })
+      .join(', ');
   } else if (isMetaViewport(tag, attrs) && attrName === 'content') {
     attrValue = attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
       // "0.90000" -> "0.9"
@@ -468,7 +460,9 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
   } else if (isContentSecurityPolicy(tag, attrs) && attrName.toLowerCase() === 'content') {
     return collapseWhitespaceAll(attrValue);
   } else if (options.customAttrCollapse && options.customAttrCollapse.test(attrName)) {
-    attrValue = trimWhitespace(attrValue.replace(/ ?[\n\r]+ ?/g, '').replace(/\s{2,}/g, options.conservativeCollapse ? ' ' : ''));
+    attrValue = trimWhitespace(
+      attrValue.replace(/ ?[\n\r]+ ?/g, '').replace(/\s{2,}/g, options.conservativeCollapse ? ' ' : ''),
+    );
   } else if (tag === 'script' && attrName === 'type') {
     attrValue = trimWhitespace(attrValue.replace(/\s*;\s*/g, ';'));
   } else if (isMediaQuery(tag, attrs, attrName)) {
@@ -532,16 +526,19 @@ function unwrapCSS(text, type) {
 
 async function cleanConditionalComment(comment, options) {
   return options.processConditionalComments
-    ? await replaceAsync(comment, /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/, async function (match, prefix, text, suffix) {
-      return prefix + await minifyHTML(text, options, true) + suffix;
-    })
+    ? await replaceAsync(
+        comment,
+        /^(\[if\s[^\]]+]>)([\s\S]*?)(<!\[endif])$/,
+        async function (match, prefix, text, suffix) {
+          return prefix + (await minifyHTML(text, options, true)) + suffix;
+        },
+      )
     : comment;
 }
 
 async function processScript(text, options, currentAttrs) {
   for (let i = 0, len = currentAttrs.length; i < len; i++) {
-    if (currentAttrs[i].name.toLowerCase() === 'type' &&
-      options.processScripts.indexOf(currentAttrs[i].value) > -1) {
+    if (currentAttrs[i].name.toLowerCase() === 'type' && options.processScripts.indexOf(currentAttrs[i].value) > -1) {
       return await minifyHTML(text, options);
     }
   }
@@ -554,9 +551,11 @@ async function processScript(text, options, currentAttrs) {
 // - </rb>, </rt>, </rtc>, </rp> & </tfoot> follow https://www.w3.org/TR/html5/syntax.html#optional-tags
 // - retain all tags which are adjacent to non-standard HTML tags
 const optionalStartTags = new Set(['html', 'head', 'body', 'colgroup', 'tbody']);
+// oxfmt-ignore
 const optionalEndTags = new Set(['html', 'head', 'body', 'li', 'dt', 'dd', 'p', 'rb', 'rt', 'rtc', 'rp', 'optgroup', 'option', 'colgroup', 'caption', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th']);
 const headerTags = new Set(['meta', 'link', 'script', 'style', 'template', 'noscript']);
 const descriptionTags = new Set(['dt', 'dd']);
+// oxfmt-ignore
 const pBlockTags = new Set(['address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'p', 'pre', 'section', 'table', 'ul']);
 const pInlineTags = new Set(['a', 'audio', 'del', 'ins', 'map', 'noscript', 'video']);
 const rubyTags = new Set(['rb', 'rt', 'rtc', 'rp']);
@@ -569,6 +568,7 @@ const topLevelTags = new Set(['html', 'head', 'body']);
 const compactTags = new Set(['html', 'body']);
 const looseTags = new Set(['head', 'colgroup', 'caption']);
 const trailingTags = new Set(['dt', 'thead']);
+// oxfmt-ignore
 const htmlTags = new Set(['a', 'abbr', 'acronym', 'address', 'applet', 'area', 'article', 'aside', 'audio', 'b', 'base', 'basefont', 'bdi', 'bdo', 'bgsound', 'big', 'blink', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'command', 'content', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'element', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr', 'html', 'i', 'iframe', 'image', 'img', 'input', 'ins', 'isindex', 'kbd', 'keygen', 'label', 'legend', 'li', 'link', 'listing', 'main', 'map', 'mark', 'marquee', 'menu', 'menuitem', 'meta', 'meter', 'multicol', 'nav', 'nobr', 'noembed', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'plaintext', 'pre', 'progress', 'q', 'rb', 'rp', 'rt', 'rtc', 'ruby', 's', 'samp', 'script', 'section', 'select', 'shadow', 'small', 'source', 'spacer', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr', 'xmp']);
 
 function canRemoveParentTag(optionalStartTag, tag) {
@@ -635,7 +635,8 @@ function canRemovePrecedingTag(optionalEndTag, tag) {
 
 const reEmptyAttribute = new RegExp(
   '^(?:class|id|style|title|lang|dir|on(?:focus|blur|change|click|dblclick|mouse(' +
-  '?:down|up|over|move|out)|key(?:press|down|up)))$');
+    '?:down|up|over|move|out)|key(?:press|down|up)))$',
+);
 
 function canDeleteEmptyAttribute(tag, attrName, attrValue, options) {
   const isValueEmpty = !attrValue || /^\s*$/.test(attrValue);
@@ -703,12 +704,18 @@ async function normalizeAttr(attr, attrs, tag, options) {
     attrValue = decodeHTMLStrict(attrValue);
   }
 
-  if ((options.removeRedundantAttributes &&
-    isAttributeRedundant(tag, attrName, attrValue, attrs)) ||
-    (options.removeScriptTypeAttributes && tag === 'script' &&
-      attrName === 'type' && isScriptTypeAttribute(attrValue) && !keepScriptTypeAttribute(attrValue)) ||
-    (options.removeStyleLinkTypeAttributes && (tag === 'style' || tag === 'link') &&
-      attrName === 'type' && isStyleLinkTypeAttribute(attrValue))) {
+  if (
+    (options.removeRedundantAttributes && isAttributeRedundant(tag, attrName, attrValue, attrs)) ||
+    (options.removeScriptTypeAttributes &&
+      tag === 'script' &&
+      attrName === 'type' &&
+      isScriptTypeAttribute(attrValue) &&
+      !keepScriptTypeAttribute(attrValue)) ||
+    (options.removeStyleLinkTypeAttributes &&
+      (tag === 'style' || tag === 'link') &&
+      attrName === 'type' &&
+      isStyleLinkTypeAttribute(attrValue))
+  ) {
     return;
   }
 
@@ -716,8 +723,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
     attrValue = await cleanAttributeValue(tag, attrName, attrValue, options, attrs);
   }
 
-  if (options.removeEmptyAttributes &&
-    canDeleteEmptyAttribute(tag, attrName, attrValue, options)) {
+  if (options.removeEmptyAttributes && canDeleteEmptyAttribute(tag, attrName, attrValue, options)) {
     return;
   }
 
@@ -728,7 +734,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   return {
     attr,
     name: attrName,
-    value: attrValue
+    value: attrValue,
   };
 }
 
@@ -740,15 +746,17 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
   let attrFragment;
   let emittedAttrValue;
 
-  if (typeof attrValue !== 'undefined' && (!options.removeAttributeQuotes ||
-    ~attrValue.indexOf(uidAttr) || !canRemoveAttributeQuotes(attrValue))) {
+  if (
+    typeof attrValue !== 'undefined' &&
+    (!options.removeAttributeQuotes || ~attrValue.indexOf(uidAttr) || !canRemoveAttributeQuotes(attrValue))
+  ) {
     if (!options.preventAttributesEscaping) {
       if (typeof options.quoteCharacter === 'undefined') {
         const apos = (attrValue.match(/'/g) || []).length;
         const quot = (attrValue.match(/"/g) || []).length;
-        attrQuote = apos < quot ? '\'' : '"';
+        attrQuote = apos < quot ? "'" : '"';
       } else {
-        attrQuote = options.quoteCharacter === '\'' ? '\'' : '"';
+        attrQuote = options.quoteCharacter === "'" ? "'" : '"';
       }
       if (attrQuote === '"') {
         attrValue = attrValue.replace(/"/g, '&#34;');
@@ -767,8 +775,10 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
     emittedAttrValue = attrValue + ' ';
   }
 
-  if (typeof attrValue === 'undefined' || (options.collapseBooleanAttributes &&
-    isBooleanAttribute(attrName.toLowerCase(), attrValue.toLowerCase()))) {
+  if (
+    typeof attrValue === 'undefined' ||
+    (options.collapseBooleanAttributes && isBooleanAttribute(attrName.toLowerCase(), attrValue.toLowerCase()))
+  ) {
     attrFragment = attrName;
     if (!isLast) {
       attrFragment += ' ';
@@ -797,19 +807,13 @@ const processOptions = (inputOptions) => {
     canCollapseWhitespace,
     canTrimWhitespace,
     html5: true,
-    ignoreCustomComments: [
-      /^!/,
-      /^\s*#/
-    ],
-    ignoreCustomFragments: [
-      /<%[\s\S]*?%>/,
-      /<\?[\s\S]*?\?>/
-    ],
+    ignoreCustomComments: [/^!/, /^\s*#/],
+    ignoreCustomFragments: [/<%[\s\S]*?%>/, /<\?[\s\S]*?\?>/],
     includeAutoGeneratedTags: true,
     log: identity,
     minifyCSS: identityAsync,
     minifyJS: identity,
-    minifyURLs: identity
+    minifyURLs: identity,
   };
 
   Object.keys(inputOptions).forEach(function (key) {
@@ -831,7 +835,7 @@ const processOptions = (inputOptions) => {
       const cleanCssOptions = typeof option === 'object' ? option : {};
 
       options.minifyCSS = async function (text, type) {
-        text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/ig, function (match, prefix, quote, url, suffix) {
+        text = text.replace(/(url\s*\(\s*)("|'|)(.*?)\2(\s*\))/gi, function (match, prefix, quote, url, suffix) {
           return prefix + quote + options.minifyURLs(url) + quote + suffix;
         });
 
@@ -858,7 +862,7 @@ const processOptions = (inputOptions) => {
 
       terserOptions.parse = {
         ...terserOptions.parse,
-        bare_returns: false
+        bare_returns: false,
       };
 
       options.minifyJS = async function (text, inline) {
@@ -906,7 +910,9 @@ const processOptions = (inputOptions) => {
 function uniqueId(value) {
   let id;
   do {
-    id = Math.random().toString(36).replace(/^0\.[0-9]*/, '');
+    id = Math.random()
+      .toString(36)
+      .replace(/^0\.[0-9]*/, '');
   } while (~value.indexOf(id));
   return id;
 }
@@ -944,7 +950,11 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
         for (let i = 0, len = attrs.length; i < len; i++) {
           const attr = attrs[i];
           if (classChain && attr.value && options.name(attr.name) === 'class') {
-            classChain.add(trimWhitespace(attr.value).split(/[ \t\n\f\r]+/).filter(shouldSkipUIDs));
+            classChain.add(
+              trimWhitespace(attr.value)
+                .split(/[ \t\n\f\r]+/)
+                .filter(shouldSkipUIDs),
+            );
           } else if (options.processScripts && attr.name.toLowerCase() === 'type') {
             currentTag = tag;
             currentType = attr.value;
@@ -955,11 +965,14 @@ async function createSortFns(value, options, uidIgnore, uidAttr) {
         currentTag = '';
       },
       chars: async function (text) {
-        if (options.processScripts && specialContentTags.has(currentTag) &&
-          options.processScripts.indexOf(currentType) > -1) {
+        if (
+          options.processScripts &&
+          specialContentTags.has(currentTag) &&
+          options.processScripts.indexOf(currentType) > -1
+        ) {
           await scan(text);
         }
-      }
+      },
     });
 
     await parser.parse();
@@ -1068,28 +1081,30 @@ async function minifyHTML(value, options, partialMarkup) {
                   // There are no warnings.
                   break;
                 }
-                if (!minifyTest.warnings.every(function (warning) {
-                  // It is very important to reset the RegExp before searching
-                  // as it's re-used each time.
-                  uidPattern.lastIndex = 0;
-                  const match = uidPattern.exec(warning);
-                  if (match) {
-                    const id = uidAttr + match[2] + uidAttr;
-                    // Only substitute each ID once, if this has come up
-                    // multiple times, then we need to abort.
-                    if (!ids.includes(id)) {
-                      text = text.replace(id, ignoreCSS(id));
-                      ids.push(id);
-                      return true;
+                if (
+                  !minifyTest.warnings.every(function (warning) {
+                    // It is very important to reset the RegExp before searching
+                    // as it's re-used each time.
+                    uidPattern.lastIndex = 0;
+                    const match = uidPattern.exec(warning);
+                    if (match) {
+                      const id = uidAttr + match[2] + uidAttr;
+                      // Only substitute each ID once, if this has come up
+                      // multiple times, then we need to abort.
+                      if (!ids.includes(id)) {
+                        text = text.replace(id, ignoreCSS(id));
+                        ids.push(id);
+                        return true;
+                      }
                     }
-                  }
-                  return false;
-                })) {
+                    return false;
+                  })
+                ) {
                   break;
                 }
               }
 
-              return fn(text, type).then(chunk => {
+              return fn(text, type).then((chunk) => {
                 ids.forEach(function (id) {
                   chunk = chunk.replace(ignoreCSS(id), id);
                 });
@@ -1103,10 +1118,13 @@ async function minifyHTML(value, options, partialMarkup) {
         if (options.minifyJS) {
           options.minifyJS = (function (fn) {
             return function (text, type) {
-              return fn(text.replace(uidPattern, function (match, prefix, index) {
-                const chunks = ignoredCustomMarkupChunks[+index];
-                return chunks[1] + uidAttr + index + uidAttr + chunks[2];
-              }), type);
+              return fn(
+                text.replace(uidPattern, function (match, prefix, index) {
+                  const chunks = ignoredCustomMarkupChunks[+index];
+                  return chunks[1] + uidAttr + index + uidAttr + chunks[2];
+                }),
+                type,
+              );
             };
           })(options.minifyJS);
         }
@@ -1118,8 +1136,10 @@ async function minifyHTML(value, options, partialMarkup) {
     });
   }
 
-  if ((options.sortAttributes && typeof options.sortAttributes !== 'function') ||
-    (options.sortClassName && typeof options.sortClassName !== 'function')) {
+  if (
+    (options.sortAttributes && typeof options.sortAttributes !== 'function') ||
+    (options.sortClassName && typeof options.sortClassName !== 'function')
+  ) {
     await createSortFns(value, options, uidIgnore, uidAttr);
   }
 
@@ -1244,7 +1264,7 @@ async function minifyHTML(value, options, partialMarkup) {
       }
 
       const parts = [];
-      for (let i = attrs.length, isLast = true; --i >= 0;) {
+      for (let i = attrs.length, isLast = true; --i >= 0; ) {
         const normalized = await normalizeAttr(attrs[i], attrs, tag, options);
         if (normalized) {
           parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr));
@@ -1281,8 +1301,10 @@ async function minifyHTML(value, options, partialMarkup) {
         } else {
           squashTrailingWhitespace('/' + tag);
         }
-        if (stackNoCollapseWhitespace.length &&
-          tag === stackNoCollapseWhitespace[stackNoCollapseWhitespace.length - 1]) {
+        if (
+          stackNoCollapseWhitespace.length &&
+          tag === stackNoCollapseWhitespace[stackNoCollapseWhitespace.length - 1]
+        ) {
           stackNoCollapseWhitespace.pop();
         }
       }
@@ -1303,7 +1325,12 @@ async function minifyHTML(value, options, partialMarkup) {
         // </head> may be omitted if not followed by space or comment
         // </p> may be omitted if no more content in non-</a> parent
         // except for </dt> or </thead>, end tags may be omitted if no more content in parent element
-        if (htmlTags.has(tag) && optionalEndTag && !trailingTags.has(optionalEndTag) && (optionalEndTag !== 'p' || !pInlineTags.has(tag))) {
+        if (
+          htmlTags.has(tag) &&
+          optionalEndTag &&
+          !trailingTags.has(optionalEndTag) &&
+          (optionalEndTag !== 'p' || !pInlineTags.has(tag))
+        ) {
           removeEndTag();
         }
         optionalEndTag = optionalEndTags.has(tag) ? tag : '';
@@ -1342,7 +1369,10 @@ async function minifyHTML(value, options, partialMarkup) {
               if (!prevComment) {
                 prevTag = charsPrevTag;
               }
-              if (buffer.length > 1 && (!prevComment || (!options.conservativeCollapse && currentChars.endsWith(' ')))) {
+              if (
+                buffer.length > 1 &&
+                (!prevComment || (!options.conservativeCollapse && currentChars.endsWith(' ')))
+              ) {
                 const charsIndex = buffer.length - 2;
                 buffer[charsIndex] = buffer[charsIndex].replace(/\s+$/, function (trailingSpaces) {
                   text = trailingSpaces + text;
@@ -1407,7 +1437,12 @@ async function minifyHTML(value, options, partialMarkup) {
         // 2) or any other character reference (i.e. one that does end with `;`)
         // Note that `&` can be escaped as `&amp`, without the semi-colon.
         // https://mathiasbynens.be/notes/ambiguous-ampersands
-        text = text.replace(/&((?:Iacute|aacute|uacute|plusmn|Otilde|otilde|agrave|Agrave|Yacute|yacute|Oslash|oslash|atilde|Atilde|brvbar|ccedil|Ccedil|Ograve|curren|divide|eacute|Eacute|ograve|Oacute|egrave|Egrave|Ugrave|frac12|frac14|frac34|ugrave|oacute|iacute|Ntilde|ntilde|Uacute|middot|igrave|Igrave|iquest|Aacute|cedil|laquo|micro|iexcl|Icirc|icirc|acirc|Ucirc|Ecirc|ocirc|Ocirc|ecirc|ucirc|Aring|aring|AElig|aelig|acute|pound|raquo|Acirc|times|THORN|szlig|thorn|COPY|auml|ordf|ordm|Uuml|macr|uuml|Auml|ouml|Ouml|para|nbsp|euml|quot|QUOT|Euml|yuml|cent|sect|copy|sup1|sup2|sup3|iuml|Iuml|ETH|shy|reg|not|yen|amp|AMP|REG|uml|eth|deg|gt|GT|LT|lt)(?!;)|(?:#?[0-9a-zA-Z]+;))/g, '&amp$1').replace(/</g, '&lt;');
+        text = text
+          .replace(
+            /&((?:Iacute|aacute|uacute|plusmn|Otilde|otilde|agrave|Agrave|Yacute|yacute|Oslash|oslash|atilde|Atilde|brvbar|ccedil|Ccedil|Ograve|curren|divide|eacute|Eacute|ograve|Oacute|egrave|Egrave|Ugrave|frac12|frac14|frac34|ugrave|oacute|iacute|Ntilde|ntilde|Uacute|middot|igrave|Igrave|iquest|Aacute|cedil|laquo|micro|iexcl|Icirc|icirc|acirc|Ucirc|Ecirc|ocirc|Ocirc|ecirc|ucirc|Aring|aring|AElig|aelig|acute|pound|raquo|Acirc|times|THORN|szlig|thorn|COPY|auml|ordf|ordm|Uuml|macr|uuml|Auml|ouml|Ouml|para|nbsp|euml|quot|QUOT|Euml|yuml|cent|sect|copy|sup1|sup2|sup3|iuml|Iuml|ETH|shy|reg|not|yen|amp|AMP|REG|uml|eth|deg|gt|GT|LT|lt)(?!;)|(?:#?[0-9a-zA-Z]+;))/g,
+            '&amp$1',
+          )
+          .replace(/</g, '&lt;');
       }
       if (uidPattern && options.collapseWhitespace && stackNoTrimWhitespace.length) {
         text = text.replace(uidPattern, function (match, prefix, index) {
@@ -1424,7 +1459,7 @@ async function minifyHTML(value, options, partialMarkup) {
       const prefix = nonStandard ? '<!' : '<!--';
       const suffix = nonStandard ? '>' : '-->';
       if (isConditionalComment(text)) {
-        text = prefix + await cleanConditionalComment(text, options) + suffix;
+        text = prefix + (await cleanConditionalComment(text, options)) + suffix;
       } else if (options.removeComments) {
         if (isIgnoredComment(text, options)) {
           text = '<!--' + text + '-->';
@@ -1442,11 +1477,12 @@ async function minifyHTML(value, options, partialMarkup) {
       buffer.push(text);
     },
     doctype: function (doctype) {
-      buffer.push(options.useShortDoctype
-        ? '<!doctype' +
-        (options.removeTagWhitespace ? '' : ' ') + 'html>'
-        : collapseWhitespaceAll(doctype));
-    }
+      buffer.push(
+        options.useShortDoctype
+          ? '<!doctype' + (options.removeTagWhitespace ? '' : ' ') + 'html>'
+          : collapseWhitespaceAll(doctype),
+      );
+    },
   });
 
   await parser.parse();
@@ -1466,32 +1502,42 @@ async function minifyHTML(value, options, partialMarkup) {
     squashTrailingWhitespace('br');
   }
 
-  return joinResultSegments(buffer, options, uidPattern
-    ? function (str) {
-      return str.replace(uidPattern, function (match, prefix, index, suffix) {
-        let chunk = ignoredCustomMarkupChunks[+index][0];
-        if (options.collapseWhitespace) {
-          if (prefix !== '\t') {
-            chunk = prefix + chunk;
-          }
-          if (suffix !== '\t') {
-            chunk += suffix;
-          }
-          return collapseWhitespace(chunk, {
-            preserveLineBreaks: options.preserveLineBreaks,
-            conservativeCollapse: !options.trimCustomFragments
-          }, /^[ \n\r\t\f]/.test(chunk), /[ \n\r\t\f]$/.test(chunk));
+  return joinResultSegments(
+    buffer,
+    options,
+    uidPattern
+      ? function (str) {
+          return str.replace(uidPattern, function (match, prefix, index, suffix) {
+            let chunk = ignoredCustomMarkupChunks[+index][0];
+            if (options.collapseWhitespace) {
+              if (prefix !== '\t') {
+                chunk = prefix + chunk;
+              }
+              if (suffix !== '\t') {
+                chunk += suffix;
+              }
+              return collapseWhitespace(
+                chunk,
+                {
+                  preserveLineBreaks: options.preserveLineBreaks,
+                  conservativeCollapse: !options.trimCustomFragments,
+                },
+                /^[ \n\r\t\f]/.test(chunk),
+                /[ \n\r\t\f]$/.test(chunk),
+              );
+            }
+            return chunk;
+          });
         }
-        return chunk;
-      });
-    }
-    : identity, uidIgnore
-    ? function (str) {
-      return str.replace(new RegExp('<!--' + uidIgnore + '([0-9]+)-->', 'g'), function (match, index) {
-        return ignoredMarkupChunks[+index];
-      });
-    }
-    : identity);
+      : identity,
+    uidIgnore
+      ? function (str) {
+          return str.replace(new RegExp('<!--' + uidIgnore + '([0-9]+)-->', 'g'), function (match, index) {
+            return ignoredMarkupChunks[+index];
+          });
+        }
+      : identity,
+  );
 }
 
 function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
@@ -1500,7 +1546,8 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
   const noNewlinesBeforeTagClose = options.noNewlinesBeforeTagClose;
 
   if (maxLineLength) {
-    let line = ''; const lines = [];
+    let line = '';
+    const lines = [];
     while (results.length) {
       const len = line.length;
       const end = results[0].indexOf('\n');
@@ -1536,12 +1583,12 @@ function joinResultSegments(results, options, restoreCustom, restoreIgnore) {
  * @param {MinifyOptions} options
  * @returns {Promise<string>}
  */
-export async function minify (value, options = {}) {
+export async function minify(value, options = {}) {
   const start = Date.now();
   options = processOptions(options);
   const result = await minifyHTML(value, options);
   options.log(`minified in: ${Date.now() - start} ms`);
   return result;
-};
+}
 
 export default { minify };

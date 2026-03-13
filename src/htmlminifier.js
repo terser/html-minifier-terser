@@ -1073,14 +1073,19 @@ async function minifyHTML(value, options, partialMarkup) {
 
               const idPattern = new RegExp(uidAttr + '[0-9]+' + uidAttr, 'g');
               const keptTokens = new Set(new CleanCSS().minify(wrapCSS(text, type)).styles.match(idPattern) || []);
+              const droppedIds = [];
               (text.match(idPattern) || []).forEach(function (id) {
                 if (!keptTokens.has(id)) {
                   text = text.replace(id, ignoreCSS(id));
+                  droppedIds.push(id);
                 }
               });
 
               return fn(text, type).then((chunk) => {
-                return chunk.replace(/\/\* clean-css ignore:start \*\/([\s\S]*?)\/\* clean-css ignore:end \*\//g, '$1');
+                droppedIds.forEach(function (id) {
+                  chunk = chunk.replace(ignoreCSS(id), id);
+                });
+                return chunk;
               });
             };
           })(options.minifyCSS);

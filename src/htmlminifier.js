@@ -1071,45 +1071,16 @@ async function minifyHTML(value, options, partialMarkup) {
                 return chunks[1] + uidAttr + index + uidAttr + chunks[2];
               });
 
-              const ids = [];
-              // Loop removing a single ID at a time from the warnings, a
-              // warning might contain multiple IDs in the context, but we only
-              // handle the first match on each attempt.
-              while (true) {
-                const minifyTest = new CleanCSS().minify(wrapCSS(text, type));
-                if (minifyTest.warnings.length === 0) {
-                  // There are no warnings.
-                  break;
+              const idPattern = new RegExp(uidAttr + '[0-9]+' + uidAttr, 'g');
+              const keptTokens = new Set(new CleanCSS().minify(wrapCSS(text, type)).styles.match(idPattern) || []);
+              (text.match(idPattern) || []).forEach(function (id) {
+                if (!keptTokens.has(id)) {
+                  text = text.replace(id, ignoreCSS(id));
                 }
-                if (
-                  !minifyTest.warnings.every(function (warning) {
-                    // It is very important to reset the RegExp before searching
-                    // as it's re-used each time.
-                    uidPattern.lastIndex = 0;
-                    const match = uidPattern.exec(warning);
-                    if (match) {
-                      const id = uidAttr + match[2] + uidAttr;
-                      // Only substitute each ID once, if this has come up
-                      // multiple times, then we need to abort.
-                      if (!ids.includes(id)) {
-                        text = text.replace(id, ignoreCSS(id));
-                        ids.push(id);
-                        return true;
-                      }
-                    }
-                    return false;
-                  })
-                ) {
-                  break;
-                }
-              }
+              });
 
               return fn(text, type).then((chunk) => {
-                ids.forEach(function (id) {
-                  chunk = chunk.replace(ignoreCSS(id), id);
-                });
-
-                return chunk;
+                return chunk.replace(/\/\* clean-css ignore:start \*\/([\s\S]*?)\/\* clean-css ignore:end \*\//g, '$1');
               });
             };
           })(options.minifyCSS);

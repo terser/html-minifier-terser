@@ -2275,6 +2275,29 @@ test('Ignore custom fragments', async () => {
   input = '<style>body{font-size:<%=1%>2pt}</style>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { minifyCSS: true })).toBe(input);
+
+  // ignore multiple
+  input = '<style type="text/css">\n{% ignore1 %}\na {\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  output = '<style type="text/css">\n{% ignore1 %}\na{\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
+      minifyCSS: {
+        level: 0,
+      },
+    }),
+  ).toBe(output);
+
+  input = '<style type="text/css">\n{% ignore1 %}\na {\n    {% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  output = '<style type="text/css"> {% ignore1 %} a{ {% ignore2 %} } {% ignore3 %} </style>';
+  expect(
+    await minify(input, {
+      ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
+      collapseWhitespace: true,
+      conservativeCollapse: true,
+      minifyCSS: { level: 0 },
+    }),
+  ).toBe(output);
 });
 
 test("bootstrap's span > button > span", async () => {
@@ -4044,17 +4067,4 @@ test('minify Content-Security-Policy', async () => {
 
   input = '<meta http-equiv="content-security-policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(input);
-});
-
-test('minify CSS multiple ignore in single warning', async () => {
-  const input = '<style type="text/css">\n{% ignore1 %}\na {\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
-  const output = '<style type="text/css">\n{% ignore1 %}\na{\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
-  expect(
-    await minify(input, {
-      ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
-      minifyCSS: {
-        level: 0,
-      },
-    }),
-  ).toBe(output);
 });

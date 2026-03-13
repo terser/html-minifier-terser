@@ -904,14 +904,35 @@ async function minifyHTML(value, options, partialMarkup) {
               });
 
               const ids = [];
-              new CleanCSS().minify(wrapCSS(text, type)).warnings.forEach(function (warning) {
-                const match = uidPattern.exec(warning);
-                if (match) {
-                  const id = uidAttr + match[2] + uidAttr;
-                  text = text.replace(id, ignoreCSS(id));
-                  ids.push(id);
+              // Loop removing a single ID at a time from the warnings, a
+              // warning might contain multiple IDs in the context, but we only
+              // handle the first match on each attempt.
+              while (true) {
+                const minifyTest = new CleanCSS().minify(wrapCSS(text, type));
+                if (minifyTest.warnings.length === 0) {
+                  // There are no warnings.
+                  break;
                 }
-              });
+                if (!minifyTest.warnings.every(function (warning) {
+                  // It is very important to reset the RegExp before searching
+                  // as it's re-used each time.
+                  uidPattern.lastIndex = 0;
+                  const match = uidPattern.exec(warning);
+                  if (match) {
+                    const id = uidAttr + match[2] + uidAttr;
+                    // Only substitute each ID once, if this has come up
+                    // multiple times, then we need to abort.
+                    if (!ids.includes(id)) {
+                      text = text.replace(id, ignoreCSS(id));
+                      ids.push(id);
+                      return true;
+                    }
+                  }
+                  return false;
+                })) {
+                  break;
+                }
+              }
 
               return fn(text, type).then(chunk => {
                 ids.forEach(function (id) {

@@ -6,10 +6,10 @@
     "benchmark": "node benchmark.cjs"
   },
   "dependencies": {
-    "chalk": "^4.1.2",
-    "cli-table3": "^0.6.1",
+    "cli-table3": "^0.6.5",
     "lzma": "^2.3.2",
     "minimize": "^2.2.0",
+    "picocolors": "^1.1.1",
     "progress": "^2.0.3"
   }
 }

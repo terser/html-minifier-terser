@@ -1,4 +1,4 @@
-import { test, expect } from '@jest/globals';
+import { test, expect } from 'vitest';
 import { minify } from '../src/htmlminifier';
 
 test('`minifiy` exists', () => {
@@ -2106,7 +2106,7 @@ test('script minification', async () => {
   expect(await minify(input, { minifyJS: true })).toBe(output);
 
   input = '<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\'gtm.start\':new Date().getTime(),event:\'gtm.js\'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!=\'dataLayer\'?\'&l=\'+l:\'\';j.async=true;j.src=\'//www.googletagmanager.com/gtm.js?id=\'+i+dl;f.parentNode.insertBefore(j,f);})(window,document,\'script\',\'dataLayer\',\'GTM-67NT\');</script>';
-  output = '<script>!function(w,d,s,l,i){w[l]=w[l]||[],w[l].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=!0,j.src="//www.googletagmanager.com/gtm.js?id=GTM-67NT",f.parentNode.insertBefore(j,f)}(window,document,"script","dataLayer")</script>';
+  output = '<script>!function(w,d,s,l){w[l]=w[l]||[],w[l].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=!0,j.src="//www.googletagmanager.com/gtm.js?id=GTM-67NT",f.parentNode.insertBefore(j,f)}(window,document,"script","dataLayer")</script>';
 
   expect(await minify(input, { minifyJS: { mangle: false } })).toBe(output);
 
@@ -2119,7 +2119,7 @@ test('script minification', async () => {
     '    });\n' +
     '  //-->\n' +
     '</script>';
-  output = '<script>Platform.Mobile.Bootstrap.init((function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})}))</script>';
+  output = '<script>Platform.Mobile.Bootstrap.init(function(){Platform.Mobile.Core.Navigation.go("Login",{error:""})})</script>';
 
   expect(await minify(input, { minifyJS: true })).toBe(output);
 });
@@ -3593,4 +3593,15 @@ test('minify Content-Security-Policy', async () => {
 
   input = '<meta http-equiv="content-security-policy" content="default-src \'self\'; img-src https://*;">';
   expect(await minify(input)).toBe(input);
+});
+
+test('minify CSS multiple ignore in single warning', async () => {
+  const input = '<style type="text/css">\n{% ignore1 %}\na {\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  const output = '<style type="text/css">\n{% ignore1 %}\na{\n{% ignore2 %}\n}\n{% ignore3 %}\n</style>';
+  expect(await minify(input, {
+    ignoreCustomFragments: [/\{%[\s\S]*?%\}/],
+    minifyCSS: {
+      level: 0
+    }
+  })).toBe(output);
 });

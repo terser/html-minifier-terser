@@ -5,7 +5,7 @@ on:
     tags: v*
 
 env:
-  NODE_VERSION: 16
+  NODE_VERSION: 24
 
 jobs:
   publish:
@@ -15,12 +15,16 @@ jobs:
       name: npm
       url: https://npm.im/html-minifier-terser
 
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: "https://registry.npmjs.org"
@@ -39,5 +43,3 @@ jobs:
         run: npm run test
 
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

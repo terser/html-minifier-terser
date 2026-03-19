@@ -318,7 +318,7 @@ if (inputDir || outputDir) {
     fatal('You need to specify where to write the output files with the option --output-dir');
   }
   processDirectory(inputDir, outputDir, fileExt);
-} else if (content) {
+} else if (content !== undefined) {
   // Minifying one or more files specified on the CMD line
   writeMinify();
 } else {

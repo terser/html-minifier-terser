@@ -204,7 +204,7 @@ Alpine.data('minifier', () => ({
     this.selectedVariant = selectedVariant;
     this.input = selectedVariant.value;
     this.output = selectedVariant.data;
-    this.code = `await HTMLMinifier.minify(${JSON.stringify(selectedVariant.options, null, 2)});`;
+    this.code = `import HTMLMinifier from 'html-minifier-terser';\nawait HTMLMinifier.minify(source, ${JSON.stringify(selectedVariant.options, null, 2)});`;
     this.stats.variants.forEach((variant) => {
       variant.ratio = {
         size: percentage(

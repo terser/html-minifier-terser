@@ -32,8 +32,8 @@
           </template>
         </div>
         <textarea rows="8" cols="40" class="output-content" readonly x-model="output"></textarea>
+        <pre><code x-text="code"></code></pre>
         <template x-if="stats.variants.length != 0">
-          <pre><code x-text="code"></code></pre>
           <table width="100%" cellpadding="5" border="1">
             <thead>
               <tr>

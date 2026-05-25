@@ -11,27 +11,27 @@ const minifierVariants = [
   [
     'Sorted Attributes', {
       sortAttributes: true,
-      sortClassName: true,
+      sortClassName: true
     }
   ],
   [
     'Unsorted Attributes', {
       sortAttributes: false,
-      sortClassName: false,
+      sortClassName: false
     }
   ],
   [
     'Attribute With Quotes',
     {
       removeAttributeQuotes: false,
-      removeTagWhitespace: false,
+      removeTagWhitespace: false
     }
   ],
   [
     'Attribute Without Quotes',
     {
       removeAttributeQuotes: true,
-      removeTagWhitespace: true,
+      removeTagWhitespace: true
     }
   ]
 ];
@@ -83,6 +83,7 @@ Alpine.data('minifier', () => ({
   options: sillyClone(defaultOptions),
   input: '',
   output: '',
+  code: '',
   stats: {
     result: '',
     text: '',
@@ -145,7 +146,7 @@ Alpine.data('minifier', () => ({
         minifierOptions = { ...options, ...minifierOptions };
         const [minifierErr, data] = await this.minifyHTML(value, minifierOptions);
         err = minifierErr;
-        return { name, data };
+        return { name, data, options: minifierOptions };
       })
     );
     const levels = (options.compressionLevels || '').split(',').filter(Boolean).filter(Boolean).map(
@@ -157,12 +158,13 @@ Alpine.data('minifier', () => ({
       ..._.product(algorithms, levels)
     ];
     const variants = _.product(sources, algLevels).map(
-      async ([{ name: optionName, data }, [alg, level]]) => {
+      async ([{ name: optionName, data, options }, [alg, level]]) => {
         const minifiedTitle = optionName === 'raw' ? '' : ` ${optionName}`;
         const algTitle = alg === 'raw' ? '' : ` ${alg} ${level}`;
         return ({
           name,
           value,
+          options,
           data,
           title: `${name}${minifiedTitle}${algTitle}`,
           compression: this.compress(alg, data, level)
@@ -202,6 +204,7 @@ Alpine.data('minifier', () => ({
     this.selectedVariant = selectedVariant;
     this.input = selectedVariant.value;
     this.output = selectedVariant.data;
+    this.code = `await HTMLMinifier.minify(${JSON.stringify(selectedVariant.options, null, 2)});`;
     this.stats.variants.forEach((variant) => {
       variant.ratio = {
         size: percentage(

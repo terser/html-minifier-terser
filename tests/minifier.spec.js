@@ -2073,7 +2073,7 @@ test('Ignore custom fragments', async () => {
   expect(await minify(input, { ignoreCustomFragments: reFragments })).toBe(input);
 
   input = '<img src="{% static "images/logo.png" %}">';
-  output = '<img src="{% static "images/logo.png" %}">';
+  output = '<img src=\'{% static "images/logo.png" %}\'>';
   expect(await minify(input, { ignoreCustomFragments: [/\{%[^%]*?%\}/g] })).toBe(output);
 
   input =
@@ -2263,6 +2263,16 @@ test('Ignore custom fragments', async () => {
   input = '<link href="<?php echo \'http://foo/\' ?>">';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { removeAttributeQuotes: true })).toBe(input);
+
+  input = '<link href=\'<?php echo "http://foo/" ?>\'>';
+  expect(await minify(input)).toBe(input);
+  expect(await minify(input, { removeAttributeQuotes: true })).toBe(input);
+
+  input = '<div title=\'a<?php echo "b" ?>c\'>x</div>';
+  expect(await minify(input)).toBe(input);
+
+  input = '<div title=\'a&#39;b<?php echo "c" ?>\'>x</div>';
+  expect(await minify(input)).toBe(input);
 
   input = '<pre>\nfoo\n<? bar ?>\nbaz\n</pre>';
   expect(await minify(input)).toBe(input);

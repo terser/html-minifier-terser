@@ -80,6 +80,11 @@ import { replaceAsync } from './utils.js';
  * Minify URLs in various attributes (uses relateurl or function specified)
  * @property {boolean|RelateUrl.Options|function(string):string} [minifyURLs=false]
  *
+ * Trim and collapse white space and apply other equivalent rewrites in attribute
+ * values. Set to false to keep values as written (e.g. to avoid hydration
+ * mismatches); explicitly enabled options such as minifyCSS still apply
+ * @property {boolean} [normalizeAttributeValues=true]
+ *
  * Always collapse to 1 line break (never remove it entirely) when whitespace
  * between tags include a line break. Must be used in conjunction with
  * collapseWhitespace=true

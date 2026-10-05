@@ -139,4 +139,17 @@ describe('cli', () => {
     const minifedHTML = await minify(input, minfiyOptions);
     expect(cliMinifiedHTML).toBe(minifedHTML);
   });
+
+  test('should not override config file with default of negated option', async () => {
+    await fs.promises.mkdir(path.resolve(fixturesDir, 'tmp'), { recursive: true });
+    await fs.promises.writeFile(
+      path.resolve(fixturesDir, 'tmp/config.json'),
+      JSON.stringify({ normalizeAttributeValues: false }),
+    );
+    await fs.promises.writeFile(path.resolve(fixturesDir, 'tmp/attr.html'), '<p class=" a ">foo</p>');
+
+    expect(execCli(['tmp/attr.html', '--config-file=tmp/config.json'])).toBe('<p class=" a ">foo</p>');
+    expect(execCli(['tmp/attr.html'])).toBe('<p class="a">foo</p>');
+    expect(execCli(['tmp/attr.html', '--no-normalize-attribute-values'])).toBe('<p class=" a ">foo</p>');
+  });
 });

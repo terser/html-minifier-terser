@@ -223,9 +223,11 @@ function createOptions() {
   const options = {};
 
   mainOptionKeys.forEach(function (key) {
-    const param = programOptions[key === 'minifyURLs' ? 'minifyUrls' : camelCase(key)];
+    const name = key === 'minifyURLs' ? 'minifyUrls' : camelCase(key);
+    const param = programOptions[name];
 
-    if (typeof param !== 'undefined') {
+    // Commander gives `--no-*` options a default of `true`, which must not override the config file
+    if (typeof param !== 'undefined' && program.getOptionValueSource(name) !== 'default') {
       options[key] = param;
     } else if (key in config) {
       options[key] = config[key];
@@ -251,7 +253,7 @@ function processFile(inputFile, outputFile) {
     let minified;
     try {
       minified = await minify(data, createOptions());
-    } catch {
+    } catch (e) {
       fatal('Minification error on ' + inputFile + '\n' + e.message);
     }
     fs.writeFile(outputFile, minified, { encoding: 'utf8' }, function (err) {

@@ -765,7 +765,7 @@ async function processAttribute(attr, attrs, tag, options) {
   };
 }
 
-function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
+function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, restoreIgnored) {
   const attrName = normalized.name;
   let attrValue = normalized.value;
   const attr = normalized.attr;
@@ -779,8 +779,11 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
   ) {
     if (!options.preventAttributesEscaping) {
       if (typeof options.quoteCharacter === 'undefined') {
-        const apos = (attrValue.match(/'/g) || []).length;
-        const quot = (attrValue.match(/"/g) || []).length;
+        // ignored fragments are put back verbatim once minification is done, so
+        // the quotes inside them cannot be escaped and have to be counted here
+        const quoted = restoreIgnored ? restoreIgnored(attrValue) : attrValue;
+        const apos = (quoted.match(/'/g) || []).length;
+        const quot = (quoted.match(/"/g) || []).length;
         attrQuote = apos < quot ? "'" : '"';
       } else {
         attrQuote = options.quoteCharacter === "'" ? "'" : '"';
@@ -1147,6 +1150,14 @@ async function minifyHTML(value, options, partialMarkup) {
     await createSortFns(value, options, uidIgnore, uidAttr);
   }
 
+  function restoreIgnoredFragments(str) {
+    return uidPattern
+      ? str.replace(uidPattern, function (match, prefix, index) {
+          return ignoredCustomMarkupChunks[+index][0];
+        })
+      : str;
+  }
+
   function _canCollapseWhitespace(tag, attrs) {
     return options.canCollapseWhitespace(tag, attrs, canCollapseWhitespace);
   }
@@ -1271,7 +1282,7 @@ async function minifyHTML(value, options, partialMarkup) {
       for (let i = attrs.length, isLast = true; --i >= 0;) {
         const normalized = await processAttribute(attrs[i], attrs, tag, options);
         if (normalized) {
-          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr));
+          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, restoreIgnoredFragments));
           isLast = false;
         }
       }

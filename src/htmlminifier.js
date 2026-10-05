@@ -262,7 +262,7 @@ function isIgnoredComment(text, options) {
 function isEventAttribute(attrName, options) {
   const patterns = options.customEventAttributes;
   if (patterns) {
-    for (let i = patterns.length; i--; ) {
+    for (let i = patterns.length; i--;) {
       if (patterns[i].test(attrName)) {
         return true;
       }
@@ -278,7 +278,7 @@ function canRemoveAttributeQuotes(value) {
 }
 
 function attributesInclude(attributes, attribute) {
-  for (let i = attributes.length; i--; ) {
+  for (let i = attributes.length; i--;) {
     if (attributes[i].name.toLowerCase() === attribute) {
       return true;
     }
@@ -1268,7 +1268,7 @@ async function minifyHTML(value, options, partialMarkup) {
       }
 
       const parts = [];
-      for (let i = attrs.length, isLast = true; --i >= 0; ) {
+      for (let i = attrs.length, isLast = true; --i >= 0;) {
         const normalized = await processAttribute(attrs[i], attrs, tag, options);
         if (normalized) {
           parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr));

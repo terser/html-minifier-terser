@@ -213,7 +213,10 @@ let content;
 program
   .arguments('[files...]')
   .action(function (files) {
-    content = files.map(readFile).join('');
+    // Commander also calls the action with an empty list when no files are given
+    if (files.length) {
+      content = files.map(readFile).join('');
+    }
   })
   .parse(process.argv);
 
@@ -321,7 +324,7 @@ if (inputDir || outputDir) {
     fatal('You need to specify where to write the output files with the option --output-dir');
   }
   processDirectory(inputDir, outputDir, fileExt);
-} else if (content) {
+} else if (content !== undefined) {
   // Minifying one or more files specified on the CMD line
   writeMinify();
 } else {

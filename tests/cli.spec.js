@@ -31,9 +31,10 @@ const removeFixture = async (p) => {
   }
 };
 
-const execCli = (args = []) => {
+const execCli = (args = [], input) => {
   const spawnOptions = {
     cwd: fixturesDir,
+    input,
   };
 
   const { stdout, stderr } = spawnSync('node', [cliPath, ...args], spawnOptions);
@@ -151,5 +152,15 @@ describe('cli', () => {
     expect(execCli(['tmp/attr.html', '--config-file=tmp/config.json'])).toBe('<p class=" a ">foo</p>');
     expect(execCli(['tmp/attr.html'])).toBe('<p class="a">foo</p>');
     expect(execCli(['tmp/attr.html', '--no-normalize-attribute-values'])).toBe('<p class=" a ">foo</p>');
+  });
+
+  test('should minify input from stdin', () => {
+    const result = execCli(['--collapse-whitespace'], '<p>  hello  </p>');
+    expect(result).toBe('<p>hello</p>');
+  });
+
+  test('should not fall back to stdin for an empty file', () => {
+    const result = execCli(['empty.html'], '<p>from stdin</p>');
+    expect(result).toBe('');
   });
 });

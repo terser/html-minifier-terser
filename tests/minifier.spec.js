@@ -2309,6 +2309,16 @@ test('Ignore custom fragments', async () => {
   input = '<div title=\'a&#39;b<?php echo "c" ?>\'>x</div>';
   expect(await minify(input)).toBe(input);
 
+  input = '<div title=\'it&#39;s &#39;b&#39; <?php echo "c" ?>\'>x</div>';
+  output = '<div title=\'it&#39;s &#39;b&#39; <?php echo "c" ?>\'>x</div>';
+  expect(await minify(input)).toBe(output);
+  expect(await minify(input, { decodeEntities: true })).toBe(output);
+
+  input = '<div title="say &#34;a&#34; &#34;b&#34; <?php echo \'c\' ?>">x</div>';
+  output = '<div title="say &#34;a&#34; &#34;b&#34; <?php echo \'c\' ?>">x</div>';
+  expect(await minify(input)).toBe(output);
+  expect(await minify(input, { decodeEntities: true })).toBe(output);
+
   input = '<pre>\nfoo\n<? bar ?>\nbaz\n</pre>';
   expect(await minify(input)).toBe(input);
   expect(await minify(input, { collapseWhitespace: true })).toBe(input);

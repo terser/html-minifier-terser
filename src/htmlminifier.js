@@ -765,7 +765,7 @@ async function processAttribute(attr, attrs, tag, options) {
   };
 }
 
-function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, restoreIgnored) {
+function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, getIgnoredFragments) {
   const attrName = normalized.name;
   let attrValue = normalized.value;
   const attr = normalized.attr;
@@ -780,11 +780,19 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, restoreI
     if (!options.preventAttributesEscaping) {
       if (typeof options.quoteCharacter === 'undefined') {
         // ignored fragments are put back verbatim once minification is done, so
-        // the quotes inside them cannot be escaped and have to be counted here
-        const quoted = restoreIgnored ? restoreIgnored(attrValue) : attrValue;
-        const apos = (quoted.match(/'/g) || []).length;
-        const quot = (quoted.match(/"/g) || []).length;
-        attrQuote = apos < quot ? "'" : '"';
+        // the quotes inside them cannot be escaped and must decide the quote
+        // character; quotes elsewhere in the value are escaped either way
+        const fragments = getIgnoredFragments ? getIgnoredFragments(attrValue) : '';
+        const fragmentApos = fragments.indexOf("'") !== -1;
+        const fragmentQuot = fragments.indexOf('"') !== -1;
+        if (fragmentApos !== fragmentQuot) {
+          attrQuote = fragmentQuot ? "'" : '"';
+        } else {
+          const quoted = attrValue + fragments;
+          const apos = (quoted.match(/'/g) || []).length;
+          const quot = (quoted.match(/"/g) || []).length;
+          attrQuote = apos < quot ? "'" : '"';
+        }
       } else {
         attrQuote = options.quoteCharacter === "'" ? "'" : '"';
       }
@@ -1150,12 +1158,15 @@ async function minifyHTML(value, options, partialMarkup) {
     await createSortFns(value, options, uidIgnore, uidAttr);
   }
 
-  function restoreIgnoredFragments(str) {
-    return uidPattern
-      ? str.replace(uidPattern, function (match, prefix, index) {
-          return ignoredCustomMarkupChunks[+index][0];
-        })
-      : str;
+  function getIgnoredFragments(str) {
+    let fragments = '';
+    if (uidPattern) {
+      str.replace(uidPattern, function (match, prefix, index) {
+        fragments += ignoredCustomMarkupChunks[+index][0];
+        return match;
+      });
+    }
+    return fragments;
   }
 
   function _canCollapseWhitespace(tag, attrs) {
@@ -1282,7 +1293,7 @@ async function minifyHTML(value, options, partialMarkup) {
       for (let i = attrs.length, isLast = true; --i >= 0;) {
         const normalized = await processAttribute(attrs[i], attrs, tag, options);
         if (normalized) {
-          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, restoreIgnoredFragments));
+          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, getIgnoredFragments));
           isLast = false;
         }
       }

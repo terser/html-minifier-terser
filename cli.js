@@ -213,7 +213,10 @@ let content;
 program
   .arguments('[files...]')
   .action(function (files) {
-    content = files.map(readFile).join('');
+    // Commander also calls the action with an empty list when no files are given
+    if (files.length) {
+      content = files.map(readFile).join('');
+    }
   })
   .parse(process.argv);
 

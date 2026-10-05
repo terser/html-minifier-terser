@@ -201,6 +201,41 @@ test('space normalization between attributes', async () => {
   );
 });
 
+test('do not normalize attribute values', async () => {
+  const keep = async (input) => expect(await minify(input, { normalizeAttributeValues: false })).toBe(input);
+  await keep('<div class=" a  b ">foo</div>');
+  await keep('<a href=" foo ">foo</a>');
+  await keep('<input maxlength=" 5 ">');
+  await keep('<p style=" color: red ; ">foo</p>');
+  await keep('<img srcset=" a.png 1x ,b.png   2x ">');
+  await keep('<p onclick=" javascript: foo() ">foo</p>');
+  await keep('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+  await keep('<meta http-equiv="Content-Security-Policy" content="default-src  \'self\'">');
+  await keep('<script type=" text/javascript ; charset=utf-8 "></script>');
+  await keep('<link rel="stylesheet" href="a.css" media=" screen ">');
+
+  expect(await minify('<div class=" a  b ">foo</div>')).toBe('<div class="a b">foo</div>');
+  expect(await minify('<img srcset=" a.png 1x ,b.png   2x ">')).toBe('<img srcset="a.png, b.png 2x">');
+});
+
+test('explicit options still apply without attribute value normalization', async () => {
+  const options = { normalizeAttributeValues: false };
+  expect(await minify('<p style=" color: red ; ">foo</p>', { ...options, minifyCSS: true })).toBe(
+    '<p style="color:red">foo</p>',
+  );
+  expect(await minify('<p onclick=" javascript: foo( 1 ) ">foo</p>', { ...options, minifyJS: true })).toBe(
+    '<p onclick="foo(1)">foo</p>',
+  );
+  expect(await minify('<p class="b a b">foo</p>', { ...options, sortClassName: true })).toBe(
+    '<p class="b b a">foo</p>',
+  );
+  expect(await minify('<form method="get" class=" a "></form>', { ...options, removeRedundantAttributes: true })).toBe(
+    '<form class=" a "></form>',
+  );
+  expect(await minify('<p class="">foo</p>', { ...options, removeEmptyAttributes: true })).toBe('<p>foo</p>');
+  expect(await minify('<P TITLE=" a ">foo</P>', options)).toBe('<p title=" a ">foo</p>');
+});
+
 test('space normalization around text', async () => {
   let input, output;
   input = '   <p>blah</p>\n\n\n   ';

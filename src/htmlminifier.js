@@ -80,6 +80,11 @@ import { replaceAsync } from './utils.js';
  * Minify URLs in various attributes (uses relateurl or function specified)
  * @property {boolean|RelateUrl.Options|function(string):string} [minifyURLs=false]
  *
+ * Trim and collapse white space and apply other equivalent rewrites in attribute
+ * values. Set to false to keep values as written (e.g. to avoid hydration
+ * mismatches); explicitly enabled options such as minifyCSS still apply
+ * @property {boolean} [normalizeAttributeValues=true]
+ *
  * Always collapse to 1 line break (never remove it entirely) when whitespace
  * between tags include a line break. Must be used in conjunction with
  * collapseWhitespace=true
@@ -257,7 +262,7 @@ function isIgnoredComment(text, options) {
 function isEventAttribute(attrName, options) {
   const patterns = options.customEventAttributes;
   if (patterns) {
-    for (let i = patterns.length; i--; ) {
+    for (let i = patterns.length; i--;) {
       if (patterns[i].test(attrName)) {
         return true;
       }
@@ -273,7 +278,7 @@ function canRemoveAttributeQuotes(value) {
 }
 
 function attributesInclude(attributes, attribute) {
-  for (let i = attributes.length; i--; ) {
+  for (let i = attributes.length; i--;) {
     if (attributes[i].name.toLowerCase() === attribute) {
       return true;
     }
@@ -406,34 +411,57 @@ function isSrcset(attrName, tag) {
 }
 
 async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
+  if (options.normalizeAttributeValues) {
+    attrValue = normalizeAttributeValue(tag, attrName, attrValue, attrs, options);
+  }
+
   if (isEventAttribute(attrName, options)) {
-    attrValue = trimWhitespace(attrValue).replace(/^javascript:\s*/i, '');
     return options.minifyJS(attrValue, true);
   } else if (attrName === 'class') {
-    attrValue = trimWhitespace(attrValue);
-    if (options.sortClassName) {
-      attrValue = options.sortClassName(attrValue);
-    } else {
-      attrValue = collapseWhitespaceAll(attrValue);
-    }
-    return attrValue;
+    return options.sortClassName ? options.sortClassName(trimWhitespace(attrValue)) : attrValue;
+  } else if (attrName === 'style') {
+    return attrValue ? options.minifyCSS(attrValue, 'inline') : attrValue;
+  } else if (isSrcset(attrName, tag)) {
+    // Minify each candidate's URL, keeping separators, descriptors and white space as they are
+    return attrValue
+      .split(/(\s+,\s*|\s*,\s+)/)
+      .map(function (part, i) {
+        if (i % 2) {
+          return part;
+        }
+        const [, before, url, descriptor = '', after] = part.match(
+          /^(\s*)([\s\S]*?)(\s+(?:[1-9][0-9]*w|[0-9]+(?:\.[0-9]+)?x))?(\s*)$/,
+        );
+        return before + (url && options.minifyURLs(url)) + descriptor + after;
+      })
+      .join('');
   } else if (isUriTypeAttribute(attrName, tag)) {
-    attrValue = trimWhitespace(attrValue);
     return isLinkType(tag, attrs, 'canonical') ? attrValue : options.minifyURLs(attrValue);
-  } else if (isNumberTypeAttribute(attrName, tag)) {
-    return trimWhitespace(attrValue);
+  } else if (isMediaQuery(tag, attrs, attrName)) {
+    return options.minifyCSS(attrValue, 'media');
+  } else if (options.customAttrCollapse && options.customAttrCollapse.test(attrName)) {
+    return trimWhitespace(
+      attrValue.replace(/ ?[\n\r]+ ?/g, '').replace(/\s{2,}/g, options.conservativeCollapse ? ' ' : ''),
+    );
+  }
+  return attrValue;
+}
+
+// Rewrites a value into an equivalent canonical form (e.g. trims and collapses insignificant white space)
+function normalizeAttributeValue(tag, attrName, attrValue, attrs, options) {
+  if (isEventAttribute(attrName, options)) {
+    return trimWhitespace(attrValue).replace(/^javascript:\s*/i, '');
+  } else if (attrName === 'class') {
+    return collapseWhitespaceAll(trimWhitespace(attrValue));
   } else if (attrName === 'style') {
     attrValue = trimWhitespace(attrValue);
-    if (attrValue) {
-      if (attrValue.endsWith(';') && !/&#?[0-9a-zA-Z]+;$/.test(attrValue)) {
-        attrValue = attrValue.replace(/\s*;$/, ';');
-      }
-      attrValue = await options.minifyCSS(attrValue, 'inline');
+    if (attrValue.endsWith(';') && !/&#?[0-9a-zA-Z]+;$/.test(attrValue)) {
+      attrValue = attrValue.replace(/\s*;$/, ';');
     }
     return attrValue;
   } else if (isSrcset(attrName, tag)) {
     // https://html.spec.whatwg.org/multipage/embedded-content.html#attr-img-srcset
-    attrValue = trimWhitespace(attrValue)
+    return trimWhitespace(attrValue)
       .split(/\s+,\s*|\s*,\s+/)
       .map(function (candidate) {
         let url = candidate;
@@ -447,11 +475,11 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
             descriptor = ' ' + num + suffix;
           }
         }
-        return options.minifyURLs(url) + descriptor;
+        return url + descriptor;
       })
       .join(', ');
   } else if (isMetaViewport(tag, attrs) && attrName === 'content') {
-    attrValue = attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
+    return attrValue.replace(/\s+/g, '').replace(/[0-9]+\.[0-9]+/g, function (numString) {
       // "0.90000" -> "0.9"
       // "1.0" -> "1"
       // "1.0001" -> "1.0001" (unchanged)
@@ -459,15 +487,14 @@ async function cleanAttributeValue(tag, attrName, attrValue, options, attrs) {
     });
   } else if (isContentSecurityPolicy(tag, attrs) && attrName.toLowerCase() === 'content') {
     return collapseWhitespaceAll(attrValue);
-  } else if (options.customAttrCollapse && options.customAttrCollapse.test(attrName)) {
-    attrValue = trimWhitespace(
-      attrValue.replace(/ ?[\n\r]+ ?/g, '').replace(/\s{2,}/g, options.conservativeCollapse ? ' ' : ''),
-    );
   } else if (tag === 'script' && attrName === 'type') {
-    attrValue = trimWhitespace(attrValue.replace(/\s*;\s*/g, ';'));
-  } else if (isMediaQuery(tag, attrs, attrName)) {
-    attrValue = trimWhitespace(attrValue);
-    return options.minifyCSS(attrValue, 'media');
+    return trimWhitespace(attrValue.replace(/\s*;\s*/g, ';'));
+  } else if (
+    isUriTypeAttribute(attrName, tag) ||
+    isNumberTypeAttribute(attrName, tag) ||
+    isMediaQuery(tag, attrs, attrName)
+  ) {
+    return trimWhitespace(attrValue);
   }
   return attrValue;
 }
@@ -696,7 +723,7 @@ function canTrimWhitespace(tag) {
   return !/^(?:pre|textarea)$/.test(tag);
 }
 
-async function normalizeAttr(attr, attrs, tag, options) {
+async function processAttribute(attr, attrs, tag, options) {
   const attrName = options.name(attr.name);
   let attrValue = attr.value;
 
@@ -738,7 +765,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
   };
 }
 
-function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
+function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, getIgnoredFragments) {
   const attrName = normalized.name;
   let attrValue = normalized.value;
   const attr = normalized.attr;
@@ -752,9 +779,20 @@ function buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr) {
   ) {
     if (!options.preventAttributesEscaping) {
       if (typeof options.quoteCharacter === 'undefined') {
-        const apos = (attrValue.match(/'/g) || []).length;
-        const quot = (attrValue.match(/"/g) || []).length;
-        attrQuote = apos < quot ? "'" : '"';
+        // ignored fragments are put back verbatim once minification is done, so
+        // the quotes inside them cannot be escaped and must decide the quote
+        // character; quotes elsewhere in the value are escaped either way
+        const fragments = getIgnoredFragments ? getIgnoredFragments(attrValue) : '';
+        const fragmentApos = fragments.indexOf("'") !== -1;
+        const fragmentQuot = fragments.indexOf('"') !== -1;
+        if (fragmentApos !== fragmentQuot) {
+          attrQuote = fragmentQuot ? "'" : '"';
+        } else {
+          const quoted = attrValue + fragments;
+          const apos = (quoted.match(/'/g) || []).length;
+          const quot = (quoted.match(/"/g) || []).length;
+          attrQuote = apos < quot ? "'" : '"';
+        }
       } else {
         attrQuote = options.quoteCharacter === "'" ? "'" : '"';
       }
@@ -814,6 +852,7 @@ const processOptions = (inputOptions) => {
     minifyCSS: identityAsync,
     minifyJS: identity,
     minifyURLs: identity,
+    normalizeAttributeValues: true,
   };
 
   Object.keys(inputOptions).forEach(function (key) {
@@ -1119,6 +1158,17 @@ async function minifyHTML(value, options, partialMarkup) {
     await createSortFns(value, options, uidIgnore, uidAttr);
   }
 
+  function getIgnoredFragments(str) {
+    let fragments = '';
+    if (uidPattern) {
+      str.replace(uidPattern, function (match, prefix, index) {
+        fragments += ignoredCustomMarkupChunks[+index][0];
+        return match;
+      });
+    }
+    return fragments;
+  }
+
   function _canCollapseWhitespace(tag, attrs) {
     return options.canCollapseWhitespace(tag, attrs, canCollapseWhitespace);
   }
@@ -1240,10 +1290,10 @@ async function minifyHTML(value, options, partialMarkup) {
       }
 
       const parts = [];
-      for (let i = attrs.length, isLast = true; --i >= 0; ) {
-        const normalized = await normalizeAttr(attrs[i], attrs, tag, options);
+      for (let i = attrs.length, isLast = true; --i >= 0;) {
+        const normalized = await processAttribute(attrs[i], attrs, tag, options);
         if (normalized) {
-          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr));
+          parts.unshift(buildAttr(normalized, hasUnarySlash, options, isLast, uidAttr, getIgnoredFragments));
           isLast = false;
         }
       }

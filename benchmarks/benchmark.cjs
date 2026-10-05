@@ -161,7 +161,7 @@ function generateMarkdownTable() {
   function output(row) {
     widths.forEach(function (width, index) {
       const text = row[index];
-      content += '| ' + text + new Array(width - text.length + 2).join(' ');
+      content += '| ' + text + ' '.repeat(width - text.length + 1);
     });
     content += '|\n';
   }
@@ -170,7 +170,7 @@ function generateMarkdownTable() {
   widths.forEach(function (width, index) {
     content += '|';
     content += index === 1 ? ':' : ' ';
-    content += new Array(width + 1).join('-');
+    content += '-'.repeat(width);
     content += index === 0 ? ' ' : ':';
   });
   content += '|\n';
@@ -376,7 +376,7 @@ run(
                 .on('end', function () {
                   try {
                     response = JSON.parse(response);
-                  } catch (e) {
+                  } catch {
                     response = {};
                   }
                   if (info && response.success) {

@@ -201,10 +201,21 @@ test('space normalization between attributes', async () => {
   );
 });
 
-test('not normalize attributes', async () => {
+test('do not normalize attributes', async () => {
   expect(await minify('<p title="bar">foo</p>', { normalizeAttributes: false })).toBe('<p title="bar">foo</p>');
   expect(await minify('<img src="test"/>', { normalizeAttributes: false })).toBe('<img src="test">');
   expect(await minify('<img src=" test "/>', { normalizeAttributes: false })).toBe('<img src=" test ">');
+  expect(await minify('<div class=" xyz ">foo</div>', { normalizeAttributes: false })).toBe(
+    '<div class=" xyz ">foo</div>',
+  );
+  expect(await minify('<P TITLE=" a ">foo</P>', { normalizeAttributes: false })).toBe('<p TITLE=" a ">foo</p>');
+  expect(
+    await minify('<form method="get" class="">foo</form>', {
+      normalizeAttributes: false,
+      removeRedundantAttributes: true,
+      removeEmptyAttributes: true,
+    }),
+  ).toBe('<form method="get" class="">foo</form>');
 });
 
 test('space normalization around text', async () => {

@@ -701,7 +701,7 @@ async function normalizeAttr(attr, attrs, tag, options) {
     return {
       attr,
       name: attr.name,
-      value: attr.value
+      value: attr.value,
     };
   }
 

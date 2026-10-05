@@ -97,6 +97,13 @@ const defaultOptions = [
     helpText: 'Never add a newline before a tag that closes an element',
   },
   {
+    id: 'normalizeAttributes',
+    type: 'checkbox',
+    label: 'Normalize attributes',
+    helpText: 'Normalize attribute names and values',
+    checked: true,
+  },
+  {
     id: 'preserveLineBreaks',
     type: 'checkbox',
     label: 'Preserve line-breaks',

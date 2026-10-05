@@ -97,10 +97,10 @@ const defaultOptions = [
     helpText: 'Never add a newline before a tag that closes an element',
   },
   {
-    id: 'normalizeAttributes',
+    id: 'normalizeAttributeValues',
     type: 'checkbox',
-    label: 'Normalize attributes',
-    helpText: 'Normalize attribute names and values',
+    label: 'Normalize attribute values',
+    helpText: 'Trim and collapse white space in attribute values',
     checked: true,
   },
   {

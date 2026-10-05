@@ -94,7 +94,7 @@ Most of the options are disabled by default.
 | `minifyJS`                      | Minify JavaScript in script elements and event attributes (uses [Terser](https://github.com/terser/terser))                                                              | `false` (could be `true`, `Object`, `Function(text, inline)`) |
 | `minifyURLs`                    | Minify URLs in various attributes (uses [relateurl](https://github.com/stevenvachon/relateurl))                                                                          | `false` (could be `String`, `Object`, `Function(text)`)       |
 | `noNewlinesBeforeTagClose`      | Never add a newline before a tag that closes an element                                                                                                                  | `false`                                                       |
-| `normalizeAttributes`           | [Normalize attribute names and values](#preserving-attributes-as-written)                                                                                                | `true`                                                        |
+| `normalizeAttributeValues`      | [Trim and collapse white space in attribute values](#preserving-attribute-values)                                                                                        | `true`                                                        |
 | `preserveLineBreaks`            | Always collapse to 1 line break (never remove it entirely) when whitespace between tags include a line break. Must be used in conjunction with `collapseWhitespace=true` | `false`                                                       |
 | `preventAttributesEscaping`     | Prevents the escaping of the values of attributes                                                                                                                        | `false`                                                       |
 | `processConditionalComments`    | Process contents of conditional comments through minifier                                                                                                                | `false`                                                       |
@@ -114,11 +114,11 @@ Most of the options are disabled by default.
 | `trimCustomFragments`           | Trim white space around `ignoreCustomFragments`.                                                                                                                         | `false`                                                       |
 | `useShortDoctype`               | [Replaces the `doctype` with the short (HTML5) doctype](http://perfectionkills.com/experimenting-with-html-minifier#use_short_doctype)                                   | `false`                                                       |
 
-### Preserving attributes as written
+### Preserving attribute values
 
-By default, attributes are normalized: names are lowercased (unless `caseSensitive` is set) and values are cleaned up (e.g. white space is trimmed and collapsed in `class`, `style`, `srcset` and URL attributes). Some frameworks compare the server-rendered markup with the client during hydration, so a change such as `class=" xyz "` → `class="xyz"` can cause a mismatch.
+By default, attribute values are normalized into an equivalent canonical form: white space is trimmed and collapsed (e.g. in `class`, `style`, `srcset`, URL and number attributes), `javascript:` is removed from event handlers, `1x` descriptors are removed from `srcset`, and numbers in `<meta name="viewport">` are shortened. Some frameworks compare the server-rendered markup with the client during hydration, so a change such as `class=" xyz "` → `class="xyz"` can cause a mismatch.
 
-Set `normalizeAttributes: false` (CLI: `--no-normalize-attributes`) to keep every attribute exactly as written. This is a master switch: it also skips all other attribute processing, including `decodeEntities`, `minifyCSS`, `minifyJS` and `minifyURLs` on attribute values, `sortClassName`, `customAttrCollapse`, `removeRedundantAttributes`, `removeEmptyAttributes`, `removeScriptTypeAttributes` and `removeStyleLinkTypeAttributes`.
+Set `normalizeAttributeValues: false` (CLI: `--no-normalize-attribute-values`) to skip these rewrites. Options that you enable explicitly, such as `minifyCSS`, `minifyJS`, `minifyURLs`, `sortClassName`, `customAttrCollapse`, `removeRedundantAttributes` or `removeEmptyAttributes`, still apply.
 
 ### Sorting attributes / style classes
 

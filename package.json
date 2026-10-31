@@ -81,7 +81,7 @@
     "@commitlint/cli": "^21.2.3",
     "alpinejs": "^3.17.4",
     "commitlint-config-non-conventional": "^1.0.1",
-    "happy-dom": "^20.14.5",
+    "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "lint-staged": "^17.6.0",

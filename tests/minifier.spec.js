@@ -1871,6 +1871,31 @@ test('removing optional tags', async () => {
   expect(await minify(input, { removeOptionalTags: true })).toBe(input);
 });
 
+test('sections of nested tables', async () => {
+  const nested = {
+    tbody: '<table><tbody><tr><td>foo</td></tr></tbody></table>',
+    'thead and tbody': '<table><thead><tr><th>foo</th></tr></thead><tbody><tr><td>bar</td></tr></tbody></table>',
+    'thead and tfoot': '<table><thead><tr><th>foo</th></tr></thead><tfoot><tr><td>bar</td></tr></tfoot></table>',
+    'tr and tfoot': '<table><tr><td>foo</td></tr><tfoot><tr><td>bar</td></tr></tfoot></table>',
+  };
+  for (const table of Object.values(nested)) {
+    for (const section of ['thead', 'tbody', 'tfoot']) {
+      const input = `<table><${section}><tr><td>${table}baz</td></tr></${section}></table>`;
+      expect(await minify(input)).toBe(input);
+    }
+  }
+
+  // A section still closes the one before it in the same table
+  const input =
+    '<table><thead><tr><td><table><thead><tr><td>foo<tbody><tr><td>bar<tfoot><tr><td>baz</table>' +
+    '<tbody><tr><td>qux<tfoot><tr><td>moo</table>';
+  const output =
+    '<table><thead><tr><td><table><thead><tr><td>foo</td></tr></thead><tbody><tr><td>bar</td></tr></tbody>' +
+    '<tfoot><tr><td>baz</td></tr></tfoot></table></td></tr></thead>' +
+    '<tbody><tr><td>qux</td></tr></tbody><tfoot><tr><td>moo</td></tr></tfoot></table>';
+  expect(await minify(input)).toBe(output);
+});
+
 test('removing optional tags in tables', async () => {
   let input, output;
 

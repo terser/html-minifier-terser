@@ -296,8 +296,9 @@ export class HTMLParser {
       }
     }
 
-    async function closeIfFound(tagName) {
-      if (findTag(tagName) >= 0) {
+    async function closeIfFoundInCurrentTable(tagName) {
+      // Sections of an outer table stay open while a nested table is parsed
+      if (findTag(tagName) > findTag('table')) {
         await parseEndTag('', tagName);
         return true;
       }
@@ -311,10 +312,10 @@ export class HTMLParser {
         if (lastTag === 'p' && nonPhrasing.has(tagName)) {
           await parseEndTag('', lastTag);
         } else if (tagName === 'tbody') {
-          await closeIfFound('thead');
+          await closeIfFoundInCurrentTable('thead');
         } else if (tagName === 'tfoot') {
-          if (!(await closeIfFound('tbody'))) {
-            await closeIfFound('thead');
+          if (!(await closeIfFoundInCurrentTable('tbody'))) {
+            await closeIfFoundInCurrentTable('thead');
           }
         }
         if (tagName === 'col' && findTag('colgroup') < 0) {

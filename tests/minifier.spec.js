@@ -2355,6 +2355,26 @@ test('Ignore custom fragments', async () => {
   ).toBe(output);
 });
 
+test('Custom fragments keep their surrounding whitespace', async () => {
+  // The whitespace around a fragment is split off and restored on output
+  let input = '<p>  <?php echo 1; ?>\n</p>';
+  expect(await minify(input, {})).toBe(input);
+
+  // A fragment made of whitespace only on one side
+  input = '<p><?php echo 1; ?>   </p>';
+  expect(await minify(input, {})).toBe(input);
+});
+
+test('Long whitespace runs inside a custom fragment do not backtrack', async () => {
+  // GHSA-9wmg-23wv-h297: splitting the fragment with a regex was quadratic in
+  // the length of the run, so this input took several seconds
+  const input = '<p><?php a' + ' '.repeat(200000) + 'a ?></p>';
+  const start = performance.now();
+
+  expect(await minify(input, {})).toBe(input);
+  expect(performance.now() - start).toBeLessThan(2000);
+});
+
 test("bootstrap's span > button > span", async () => {
   const input =
     '<span class="input-group-btn">' +

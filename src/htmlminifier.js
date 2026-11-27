@@ -1146,7 +1146,11 @@ async function minifyHTML(value, options, partialMarkup) {
       }
 
       const token = uidAttr + ignoredCustomMarkupChunks.length + uidAttr;
-      ignoredCustomMarkupChunks.push(/^(\s*)[\s\S]*?(\s*)$/.exec(match));
+      // Split off the surrounding whitespace without a regex: `/^(\s*)[\s\S]*?(\s*)$/`
+      // backtracks quadratically on a long whitespace run inside the fragment.
+      const leading = match.length - match.trimStart().length;
+      const trailing = leading === match.length ? 0 : match.length - match.trimEnd().length;
+      ignoredCustomMarkupChunks.push([match, match.slice(0, leading), match.slice(match.length - trailing)]);
       return '\t' + token + '\t';
     });
   }
